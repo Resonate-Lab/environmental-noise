@@ -23629,7 +23629,9 @@ setInitialCollapseState();
           };
         });
         // Site pin — explicit site location anchoring the regulatory framework (v6+)
-        data.sitePin = _sitePin ? { lat: _sitePin.lat, lng: _sitePin.lng, label: _sitePin.label || 'Site location', timestamp: _sitePin.timestamp || Date.now(), visible: _sitePinVisible } : null;
+        var _sp = typeof window._getSitePin === 'function' ? window._getSitePin() : null;
+        var _spVis = typeof window._getSitePinVisible === 'function' ? window._getSitePinVisible() : true;
+        data.sitePin = _sp ? { lat: _sp.lat, lng: _sp.lng, label: _sp.label || 'Site location', timestamp: _sp.timestamp || Date.now(), visible: _spVis } : null;
         // Subject site (SA) — first source lat/lng, detected zone, and display name
         data._subjectSiteLatlng  = window._subjectSiteLatlng || null;
         data._subjectSiteZone    = window._subjectSiteZone   || null;
@@ -24934,35 +24936,39 @@ setInitialCollapseState();
       if (typeof renderSourcePins === 'function') renderSourcePins();
 
       // ── Site pin restore / v5→v6 migration ───────────────────────────────
+      // Use window setters so initMap's local _sitePin is updated (cross-scope-safe)
+      var _setSP  = typeof window._setSitePin === 'function' ? window._setSitePin.bind(window) : function(v) { /* pre-init fallback: no-op, renderSitePin guard handles */ };
+      var _setVis = typeof window._setSitePinVisible === 'function' ? window._setSitePinVisible.bind(window) : function(v) { /* pre-init fallback: no-op */ };
       if (data.sitePin && data.sitePin.lat != null) {
         // v6 save: explicit site pin
-        _sitePin = { lat: data.sitePin.lat, lng: data.sitePin.lng,
-                     label: data.sitePin.label || 'Site location',
-                     timestamp: data.sitePin.timestamp || Date.now() };
-        _sitePinVisible = (data.sitePin.visible !== false); /* default true for old saves */
+        _setSP({ lat: data.sitePin.lat, lng: data.sitePin.lng,
+                 label: data.sitePin.label || 'Site location',
+                 timestamp: data.sitePin.timestamp || Date.now() });
+        _setVis(data.sitePin.visible !== false); /* default true for old saves */
       } else if ((!data._version || data._version <= 5)) {
         // v5 migration: infer site pin from S1's position
         var _sp5 = sourcePins.filter(function(p) { return p.lat !== null; })[0];
         if (_sp5) {
-          _sitePin = { lat: _sp5.lat, lng: _sp5.lng,
-                       label: 'Site location (inferred from S1)',
-                       timestamp: Date.now() };
+          _setSP({ lat: _sp5.lat, lng: _sp5.lng,
+                   label: 'Site location (inferred from S1)',
+                   timestamp: Date.now() });
           if (typeof showToast === 'function') {
             setTimeout(function() {
               showToast('Assessment updated to v6 — site location pin inferred from S1. You can move it independently.', 5000);
             }, 1200);
           }
         } else {
-          _sitePin = null;
+          _setSP(null);
         }
       } else {
-        _sitePin = null;
+        _setSP(null);
       }
-      // Render site pin on map
-      renderSitePin();
-      // Restore subject site reference (SA)
-      if (_sitePin) {
-        window._subjectSiteLatlng = L.latLng(_sitePin.lat, _sitePin.lng);
+      // Render site pin on map (typeof guard: window._renderSitePin set by initMap on DOMContentLoaded)
+      if (typeof window._renderSitePin === 'function') window._renderSitePin();
+      // Restore subject site reference (SA) — use getter so we see initMap's current _sitePin
+      var _spLoaded = typeof window._getSitePin === 'function' ? window._getSitePin() : null;
+      if (_spLoaded) {
+        window._subjectSiteLatlng = L.latLng(_spLoaded.lat, _spLoaded.lng);
       } else if (data._subjectSiteLatlng) {
         window._subjectSiteLatlng = data._subjectSiteLatlng;
       } else {
@@ -26467,8 +26473,10 @@ setInitialCollapseState();
         };
       });
 
-      // Site pin (v6+)
-      data.sitePin = (typeof _sitePin !== 'undefined' && _sitePin) ? { lat: _sitePin.lat, lng: _sitePin.lng, label: _sitePin.label || 'Site location', timestamp: _sitePin.timestamp || Date.now(), visible: (typeof _sitePinVisible !== 'undefined' ? _sitePinVisible : true) } : null;
+      // Site pin (v6+) — use window getters to read initMap's local state cross-scope
+      var _spSnap = typeof window._getSitePin === 'function' ? window._getSitePin() : null;
+      var _spVisSnap = typeof window._getSitePinVisible === 'function' ? window._getSitePinVisible() : true;
+      data.sitePin = _spSnap ? { lat: _spSnap.lat, lng: _spSnap.lng, label: _spSnap.label || 'Site location', timestamp: _spSnap.timestamp || Date.now(), visible: _spVisSnap } : null;
       // Subject site
       data._subjectSiteLatlng  = window._subjectSiteLatlng  || null;
       data._subjectSiteZone    = window._subjectSiteZone    || null;
@@ -30288,6 +30296,14 @@ if (window.pdfjsLib) {
     window._placeSitePin          = function(lat, lng) { placeSitePin(lat, lng); };
     window._removeSitePin         = function()          { removeSitePin(); };
     window._getSitePin            = function()          { return _sitePin; };
+    window._setSitePin            = function(sp)        { _sitePin = sp; };
+    window._renderSitePin         = function()          { renderSitePin(); };
+    window._getSitePinVisible     = function()          { return _sitePinVisible; };
+    window._setSitePinVisible     = function(v)         {
+      _sitePinVisible = v;
+      if (_sitePinMarker) _sitePinMarker.setOpacity(v ? 1 : 0);
+      if (typeof _renderObjectList === 'function') _renderObjectList();
+    };
     window._toggleSitePinVisible  = function()          { _toggleSitePinVisible(); };
 
     function placeMarker(mode, latlng) {
