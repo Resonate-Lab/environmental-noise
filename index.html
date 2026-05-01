@@ -25527,7 +25527,7 @@ setInitialCollapseState();
 
       // Restore area sources (always call to clear orphaned layers from undo/redo)
       if (window._setAreaSources) {
-        window._setAreaSources(data.areaSources || []);
+        window._setAreaSources(data.areaSources || [], opts);
       }
 
       // Restore building sources (always call to clear orphaned layers from undo/redo)
@@ -27869,8 +27869,8 @@ if (window.pdfjsLib) {
     var zoneToggle = document.getElementById('zoneToggleBtn');
     if (zoneToggle) {
       zoneToggle.addEventListener('click', function() {
-        // SA: delegate to static GeoJSON layer via planning IIFE
-        if (currentState === 'SA') {
+        // SA (or null = pre-detection default): delegate to static GeoJSON layer via planning IIFE
+        if (currentState === 'SA' || currentState === null) {
           if (typeof window._togglePlanZones === 'function') {
             window._togglePlanZones(!window._isPlanZonesOn());
           }
@@ -38229,18 +38229,22 @@ if (window.pdfjsLib) {
 
     // Window exports for area sources
     window._getAreaSources = function() { return areaSources; };
-    window._setAreaSources = function(arr) {
+    window._setAreaSources = function(arr, opts) {
       areaSourceLayer.clearLayers();
       areaSources.length = 0;
       if (!arr) return;
+      // Scenario/undo restores always use current-invariant data (lwValue is Lw/m²).
+      // Skip migration to avoid double-converting, and deep-copy to prevent
+      // the migration — if it ever ran — from corrupting the snapshot object.
+      var skipMigration = !!(opts && opts.preserveScenarios);
       arr.forEach(function(as) {
         var obj = {
           id: as.id, name: as.name, vertices: as.vertices,
           height_m: as.height_m || 0.5,
           lwMode: as.lwMode || 'per_m2',
           _lwStored: as._lwStored || null,
-          lwValue: as.lwValue || { day: null, eve: null, night: null },
-          spectrum: as.spectrum || { day: null, eve: null, night: null },
+          lwValue: as.lwValue ? JSON.parse(JSON.stringify(as.lwValue)) : { day: null, eve: null, night: null },
+          spectrum: as.spectrum ? JSON.parse(JSON.stringify(as.spectrum)) : { day: null, eve: null, night: null },
           activeInPeriod: as.activeInPeriod || { day: true, eve: true, night: true },
           operatingPct: as.operatingPct || { day: 100, eve: 100, night: 100 },
           quantity: as.quantity || { day: 1, eve: 1, night: 1 },
@@ -38259,7 +38263,8 @@ if (window.pdfjsLib) {
         }
         // Migrate: old saves (pre-May 2026) stored Total Lw in lwValue when lwMode='total'.
         // New invariant: lwValue is always Lw/m². Saves with _lwStored='per_m2' are already correct.
-        if (obj.lwMode === 'total' && obj.lwValue && !obj._lwStored) {
+        // Never migrate during scenario/undo restore — those snapshots always use the new invariant.
+        if (!skipMigration && obj.lwMode === 'total' && obj.lwValue && !obj._lwStored) {
           var migArea = _asPolygonArea(obj.vertices || []);
           if (migArea > 0) {
             var migDelta = -10 * Math.log10(migArea);
