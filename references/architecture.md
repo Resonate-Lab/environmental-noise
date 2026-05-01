@@ -572,7 +572,7 @@ _regenerateNoiseMapForViewport()   (also window._regenerateNoiseMapForViewport)
 
 1. Gets `map.getBounds().pad(0.10)` — **10% padding on each side** so contours extend slightly beyond the visible edge.
 2. Computes the padded area in km² (`widthKm × heightKm`, WGS84 approximation at mid-latitude).
-3. **Maximum area cap: 25 km².** If the padded extent exceeds this, a 6-second inline error is shown in `#noiseMapGridWarning` and computation is aborted. At the adaptive 50 m grid resolution, 25 km² = 10,000 cells (sub-second); at 5 m it would be 1 M cells (slow), so the cap prevents runaway calculations.
+3. **Cell-count cap: 2 million cells.** The cap is computed from the padded extent and the current grid resolution (same adaptive formula as `computeNoiseMap`). If `ceil(widthM/gridRes) × ceil(heightM/gridRes) > 2,000,000`, a 7-second inline error is shown in `#noiseMapGridWarning` and computation is aborted. This scales correctly with resolution: at auto-50 m the cap is never reached in normal use; at 5 m it triggers above ~22 km²; at 1 m above ~0.9 km². The error message names the grid resolution and cell count so users know whether to zoom in or switch to a coarser grid.
 4. Calls `computeNoiseMap(paddedBounds)` — terrain re-fetch fires automatically for the new extent via the existing `DEMCache.getTileForBounds()` call.
 
 ### UI elements (`#noiseMapControls`)

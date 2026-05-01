@@ -38690,19 +38690,23 @@ if (window.pdfjsLib) {
     function _regenerateNoiseMapForViewport() {
       var vb = map.getBounds();
       var paddedBounds = vb.pad(0.10);
-      // Area check on padded extent (deg → km approximation at centre lat)
-      var midLat = (paddedBounds.getNorth() + paddedBounds.getSouth()) / 2;
-      var widthKm  = (paddedBounds.getEast()  - paddedBounds.getWest())  * 111.32 * Math.cos(midLat * Math.PI / 180);
-      var heightKm = (paddedBounds.getNorth() - paddedBounds.getSouth()) * 110.574;
-      var areaKm2  = widthKm * heightKm;
-      var MAX_AREA_KM2 = 25; // cap: 25 km² prevents runaway calculations at coarse grids
-      if (areaKm2 > MAX_AREA_KM2) {
+      // Cell-count cap: derive the same adaptive resolution used by computeNoiseMap
+      var zoom = map.getZoom();
+      var gridRes = (_noiseMapGridSize !== 'auto')
+        ? parseInt(_noiseMapGridSize, 10)
+        : (zoom >= 18 ? 5 : zoom >= 16 ? 10 : zoom >= 14 ? 25 : 50);
+      var midLat  = (paddedBounds.getNorth() + paddedBounds.getSouth()) / 2;
+      var widthM  = (paddedBounds.getEast()  - paddedBounds.getWest())  * 111320 * Math.cos(midLat * Math.PI / 180);
+      var heightM = (paddedBounds.getNorth() - paddedBounds.getSouth()) * 110574;
+      var cellCount = Math.ceil(widthM / gridRes) * Math.ceil(heightM / gridRes);
+      var MAX_CELLS = 2000000; // 2 M cells: fine at any auto-resolution; only trips at fine grid + large area
+      if (cellCount > MAX_CELLS) {
         var warnEl = document.getElementById('noiseMapGridWarning');
         if (warnEl) {
-          warnEl.textContent = 'View too large — zoom in before regenerating (' + Math.round(areaKm2) + ' km² > ' + MAX_AREA_KM2 + ' km² limit)';
+          warnEl.textContent = 'View too large at ' + gridRes + ' m grid (' + (cellCount / 1e6).toFixed(1) + ' M cells) — zoom in or switch to a coarser grid';
           warnEl.style.color = '#f87171';
           warnEl.style.display = 'block';
-          setTimeout(function() { if (warnEl) { warnEl.style.display = 'none'; warnEl.textContent = ''; } }, 6000);
+          setTimeout(function() { if (warnEl) { warnEl.style.display = 'none'; warnEl.textContent = ''; } }, 7000);
         }
         return;
       }
