@@ -534,6 +534,57 @@ Edit shape uses `_ctxStartShapeEdit` with `isPolyline: true` for barriers and li
 
 Menu closes on: action chosen, click outside, Escape, map pan/zoom (handled by existing `_hideMapCtxMenu` infrastructure).
 
+## ISO 9613-2 Noise Map Grid
+
+### Key variables
+
+| Variable | Location | Description |
+|---|---|---|
+| `_lastNoiseData` | `initMap()` local | Full worker `complete` message; `null` until first grid computed |
+| `_contoursStale` | `initMap()` local | `true` when current viewport extends beyond cached grid |
+| `_noiseMapOn` | `initMap()` local | Whether the noise map is currently active |
+
+### `computeNoiseMap(overrideBounds?)`
+
+Main entry point. Reads `map.getBounds()` as the grid extent (or `overrideBounds` if supplied by `_regenerateNoiseMapForViewport`). Posts a `{bounds, gridResolutionM, sources, …}` message to `noise-worker.js`. On `complete`, stores the result in `_lastNoiseData` and calls `renderNoiseCanvas()`.
+
+The optional `overrideBounds` parameter is the only change from the default path — all propagation, terrain, and contour rendering is identical.
+
+### Stale-extent detection
+
+```
+isContourExtentStale() → bool
+```
+
+Returns `true` when `map.getBounds()` extends beyond the actual rendered grid boundary (reconstructed from `_lastNoiseData.startLat / startLng + rows×dLat / cols×dLng`, matching `renderNoiseCanvas`). A **5% tolerance** on each axis prevents the indicator from flapping when the viewport sits exactly at the grid edge.
+
+`_updateContoursStaleState()` is called on every `map.on('moveend')` event. It compares the current stale result against `_contoursStale` and calls `_updateContoursStaleUI()` only when the state changes.
+
+The indicator (`#nmStaleIndicator`) is shown only when `_noiseMapOn && _contoursStale`. It clears automatically when:
+- A fresh grid computation completes (the `complete` worker message)
+- The noise map is switched off
+
+### Viewport regeneration
+
+```
+_regenerateNoiseMapForViewport()   (also window._regenerateNoiseMapForViewport)
+```
+
+1. Gets `map.getBounds().pad(0.10)` — **10% padding on each side** so contours extend slightly beyond the visible edge.
+2. Computes the padded area in km² (`widthKm × heightKm`, WGS84 approximation at mid-latitude).
+3. **Maximum area cap: 25 km².** If the padded extent exceeds this, a 6-second inline error is shown in `#noiseMapGridWarning` and computation is aborted. At the adaptive 50 m grid resolution, 25 km² = 10,000 cells (sub-second); at 5 m it would be 1 M cells (slow), so the cap prevents runaway calculations.
+4. Calls `computeNoiseMap(paddedBounds)` — terrain re-fetch fires automatically for the new extent via the existing `DEMCache.getTileForBounds()` call.
+
+### UI elements (`#noiseMapControls`)
+
+| Element | Purpose |
+|---|---|
+| `#nmStaleIndicator` | Amber pill, hidden until stale; contains the Regenerate button |
+| `#nmRegenBtn` | "Regenerate for current view" — calls `window._regenerateNoiseMapForViewport()` |
+| `#noiseMapGridWarning` | Existing element reused for the "View too large" error message |
+
+---
+
 ## CoRTN Road Traffic Sources (`cortnRoads[]`) — Phases 1–5
 
 Dedicated source type for UK CoRTN (Calculation of Road Traffic Noise) with Australian adjustments. Completely independent of `lineSources[]` — different inputs (AADT/speed/%CV/gradient) and different calculation method.

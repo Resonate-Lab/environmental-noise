@@ -2979,6 +2979,11 @@ body.disclaimer-visible .container {
                     </div>
                   </div>
                   <span id="legendError" style="color:#f87171;font-size:10px;display:none;padding:0 8px;"></span>
+                  <!-- Stale-extent indicator: shown when map viewport exceeds cached grid -->
+                  <div id="nmStaleIndicator" style="display:none;flex-direction:column;gap:4px;margin:2px 4px;padding:5px 7px;background:rgba(245,158,11,0.12);border-left:2px solid #f59e0b;border-radius:3px;">
+                    <span style="font-size:10px;color:#fbbf24;line-height:1.4;">&#9651; Map view extends beyond contour area</span>
+                    <button id="nmRegenBtn" class="mp-btn" style="font-size:10px;padding:3px 6px;justify-content:center;background:rgba(245,158,11,0.18);border-color:#f59e0b;color:#fbbf24;" onclick="if(typeof _regenerateNoiseMapForViewport==='function')_regenerateNoiseMapForViewport();">Regenerate for current view</button>
+                  </div>
                 </div>
                 <span id="noiseMapLmaxNote" style="display:none;font-size:10px;color:#93c5fd;padding:2px 8px;white-space:normal;line-height:1.4;">&#x2139; Simple propagation &mdash; no ground or atmospheric corrections applied; barrier and terrain screening applied</span>
                 <div id="noiseMapLmaxMethodRow" style="display:none;font-size:11px;padding:4px 8px;flex-direction:column;gap:5px;">
@@ -38603,6 +38608,8 @@ if (window.pdfjsLib) {
 
     // Update rays on marker move/place
     map.on('moveend', function() { updateRayLines(); });
+    // Stale-extent check: evaluate after every pan/zoom completes
+    map.on('moveend', function() { _updateContoursStaleState(); });
     // Also hook into marker drag events
     var origSetMode = window._setMode;
     window._updateRayLines = updateRayLines;
@@ -38641,7 +38648,71 @@ if (window.pdfjsLib) {
         _terrainWarningBanner = null;
       }
     }
+    /* ── Stale-extent detection ──────────────────────────────────────────────
+       Returns true when the current map viewport extends beyond the computed
+       grid boundary (with 5% tolerance to avoid flapping at the edge).       The actual rendered grid extent is reconstructed from _lastNoiseData
+       (startLat/startLng + rows×dLat / cols×dLng), matching renderNoiseCanvas.
+    ── */
+    function isContourExtentStale() {
+      if (!_lastNoiseData) return false;
+      var d = _lastNoiseData;
+      // Actual rendered grid corners (south-west origin, row 0 = south)
+      var gS = (d.startLat !== undefined) ? d.startLat : d.bounds.south;
+      var gW = (d.startLng !== undefined) ? d.startLng : d.bounds.west;
+      var gN = gS + d.rows * d.dLat;
+      var gE = gW + d.cols * d.dLng;
+      // 5% tolerance of grid span on each axis
+      var tolLat = 0.05 * (gN - gS);
+      var tolLng = 0.05 * (gE - gW);
+      var vb = map.getBounds();
+      return (vb.getNorth() > gN + tolLat ||
+              vb.getSouth() < gS - tolLat ||
+              vb.getEast()  > gE + tolLng ||
+              vb.getWest()  < gW - tolLng);
+    }
+
+    function _updateContoursStaleUI() {
+      var el = document.getElementById('nmStaleIndicator');
+      if (!el) return;
+      el.style.display = (_noiseMapOn && _contoursStale) ? 'flex' : 'none';
+    }
+
+    function _updateContoursStaleState() {
+      var stale = isContourExtentStale();
+      if (stale !== _contoursStale) {
+        _contoursStale = stale;
+        _updateContoursStaleUI();
+      }
+    }
+
+    /* Regenerate noise map for the current viewport with 10% padding.
+       Validates area cap (25 km²) before starting computation. */
+    function _regenerateNoiseMapForViewport() {
+      var vb = map.getBounds();
+      var paddedBounds = vb.pad(0.10);
+      // Area check on padded extent (deg → km approximation at centre lat)
+      var midLat = (paddedBounds.getNorth() + paddedBounds.getSouth()) / 2;
+      var widthKm  = (paddedBounds.getEast()  - paddedBounds.getWest())  * 111.32 * Math.cos(midLat * Math.PI / 180);
+      var heightKm = (paddedBounds.getNorth() - paddedBounds.getSouth()) * 110.574;
+      var areaKm2  = widthKm * heightKm;
+      var MAX_AREA_KM2 = 25; // cap: 25 km² prevents runaway calculations at coarse grids
+      if (areaKm2 > MAX_AREA_KM2) {
+        var warnEl = document.getElementById('noiseMapGridWarning');
+        if (warnEl) {
+          warnEl.textContent = 'View too large — zoom in before regenerating (' + Math.round(areaKm2) + ' km² > ' + MAX_AREA_KM2 + ' km² limit)';
+          warnEl.style.color = '#f87171';
+          warnEl.style.display = 'block';
+          setTimeout(function() { if (warnEl) { warnEl.style.display = 'none'; warnEl.textContent = ''; } }, 6000);
+        }
+        return;
+      }
+      computeNoiseMap(paddedBounds);
+    }
+    // Expose so HTML onclick can reach it across the non-strict IIFE boundary
+    window._regenerateNoiseMapForViewport = function() { _regenerateNoiseMapForViewport(); };
+
     var _lastNoiseData = null;
+    var _contoursStale = false; // true when viewport extends beyond cached grid extent
     var _nmGenMethod = null;   // propagation method used for the displayed contours
     var _nmGenMetCat = null;   // CONCAWE met category used for the displayed contours
     var _complianceMode = false;
@@ -39781,6 +39852,8 @@ if (window.pdfjsLib) {
             } else if (msg.type === 'complete') {
               if (noiseMapBtnC) noiseMapBtnC.innerHTML = _svgC + ' Noise Map';
               _lastNoiseData = msg;
+              _contoursStale = false; // fresh grid — clear stale flag
+              _updateContoursStaleUI();
               _nmCaseCache[caseId] = { msg: msg, ts: Date.now() };
               var _nvRowC2 = document.getElementById('noiseViewRow');
               if (_nvRowC2) _nvRowC2.style.display = 'flex';
@@ -39836,7 +39909,7 @@ if (window.pdfjsLib) {
       });
     }
 
-    function computeNoiseMap() {
+    function computeNoiseMap(overrideBounds) {
       if (_nmSelectedCase) { _nmComputeCase(_nmSelectedCase); return; }
       if (_noiseWorker) { _noiseWorker.terminate(); _noiseWorker = null; }
       if (_noiseCanvasLayer) { map.removeLayer(_noiseCanvasLayer); _noiseCanvasLayer = null; }
@@ -39851,7 +39924,9 @@ if (window.pdfjsLib) {
         return;
       }
 
-      var mapBounds = map.getBounds();
+      // overrideBounds is supplied by _regenerateNoiseMapForViewport (viewport + 10% pad)
+      // Default falls back to the current map viewport (existing behaviour)
+      var mapBounds = overrideBounds || map.getBounds();
       var zoom = map.getZoom();
       // Adaptive resolution: finer at higher zoom, or fixed if user overrides
       var gridRes;
@@ -39948,6 +40023,8 @@ if (window.pdfjsLib) {
           } else if (msg.type === 'complete') {
             if (noiseMapBtn) noiseMapBtn.innerHTML = _nmSvg + ' Noise Map';
             _lastNoiseData = msg;
+            _contoursStale = false; // fresh grid — clear stale flag
+            _updateContoursStaleUI();
             var _nvRow = document.getElementById('noiseViewRow');
             if (_nvRow) _nvRow.style.display = 'flex';
             if (_complianceMode) {
@@ -40206,6 +40283,8 @@ if (window.pdfjsLib) {
           if (_noiseContourLayer) { map.removeLayer(_noiseContourLayer); _noiseContourLayer = null; }
           hideNoiseLegend();
           hideTerrainWarning();
+          _contoursStale = false; // clear stale state when noise map is switched off
+          _updateContoursStaleUI();
           noiseMapBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><path d="M3 17h2l3-6 4 8 3-4 2 2h4"/></svg> Noise Map';
           clearComplianceMap();
           _complianceMode = false;
