@@ -2,6 +2,10 @@
 
 ## May 2026
 
+- **Fixed scenario restore corrupting area source lwValue (migration double-applied).** `serialiseState()` — used by the scenario save handler and undo manager — was missing the `_lwStored: 'per_m2'` marker on area source objects. When a scenario was restored, `_setAreaSources` saw `lwMode='total'` with no `_lwStored` and applied the `−10·log₁₀(area)` migration a second time, corrupting `lwValue` by ~27 dB. Fix: `_lwStored: 'per_m2'` added to the area source map inside `serialiseState()` so the migration guard fires correctly on restore.
+
+- **Fixed scenario list disappearing on restore.** `loadAssessment` had an `else { _scenarios.length = 0 }` fallback that cleared the entire scenarios list whenever the loaded data had no `_scenarios` key — which is always the case for scenario snapshots (produced by `serialiseState()`, which deliberately excludes scenarios). This wiped all scenarios on every restore. Fix: `loadAssessment` now accepts an `opts` argument; when `opts.preserveScenarios` is true the `else` clear is skipped. `restoreScenario` and `restoreState` (undo manager) both pass `{ preserveScenarios: true }`.
+
 - **Fixed area source library load: library Lw values are now interpreted as Total Lw per source unit (not Lw/m²).** Selecting e.g. "People per person, raised voice — Lw 74 dB(A)" on a 554 m² area previously stored 74 dB/m² and displayed 101.4 dB(A) Total Lw — implying ~6500 people instead of one. `_applyAsLibEntry` now always converts: `stored_lwValue = library_Lw − 10·log₁₀(area_m²)`. Same per-band conversion for the octave spectrum. Display shows library Total Lw in total mode, converted Lw/m² in per_m2 mode. If area is 0 on selection a console warning fires and Lw assignment is skipped.
 
 - **Default "Enter as" mode for new area sources changed from Lw/m² to Total Lw (across area).** New area sources initialise with `lwMode: 'total'`. Existing saved sources retain their `lwMode`.

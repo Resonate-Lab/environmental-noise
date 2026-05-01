@@ -468,9 +468,17 @@ Named snapshots of assessment state saved within the current session and persist
 
 `window.SCENARIO_SCHEMA_VERSION = 1` — used for forward-compatibility checks on load.
 
+### Snapshot scope
+
+`_serialiseState()` captures **assessment state only** — sources, receivers, propagation settings, barriers, terrain, criteria inputs, etc. It does **not** include `_scenarios`, UI preferences, undo history, or project library. This is intentional: scenarios capture a point-in-time canvas state, not the full app state.
+
 ### Save/load JSON
 
 Serialised as `data._scenarios` (array of scenario objects). `state` is stored as a plain object (not a JSON string). `stripData` is deep-cloned at export time. On load, scenarios with `schemaVersion` newer than `SCENARIO_SCHEMA_VERSION` are skipped with a `console.warn`; all others are deep-copied and pushed to `_scenarios[]`. The current canvas state is NOT auto-applied from any scenario — it comes from the file root as normal.
+
+### `loadAssessment(data, opts)` and the `preserveScenarios` flag
+
+`loadAssessment` clears `_scenarios` only when the loaded data includes a `_scenarios` key (explicit file load) or when no `opts.preserveScenarios` flag is set. Scenario restore and undo restore both call `_loadAssessment(state, { preserveScenarios: true })` so the active scenarios list is never wiped by a restore operation. Scenario snapshots produced by `_serialiseState()` do not include `_scenarios`, so without this flag they would trigger the `else { _scenarios.length = 0 }` fallback — a former bug fixed May 2026.
 
 ### Toolbar button
 
@@ -488,7 +496,7 @@ Separate `<script>` block immediately after the save/load IIFE. Provides:
 |---|---|
 | `_generateScenarioId()` | `'sc_' + Date.now() + '_' + random6` |
 | `saveScenario()` | Prompt for name, capture `_serialiseState()` + deep-copy `_stripData`, push to `window._scenarios` |
-| `restoreScenario(id)` | Push current canvas onto undo stack, call `_loadAssessment(scenario.state)` (parsed object, no re-parse), close modal, toast with Ctrl+Z hint |
+| `restoreScenario(id)` | Push current canvas onto undo stack, call `_loadAssessment(scenario.state, { preserveScenarios: true })` (parsed object, no re-parse), close modal, toast with Ctrl+Z hint |
 | `updateScenario(id)` | Confirm dialog, overwrite `state`/`stripData`/`timestamp` in-place (id/name/schemaVersion unchanged), re-render modal, toast; **no** undo push |
 | `renameScenario(id)` | Prompt with current name, update in-place |
 | `deleteScenario(id)` | Confirm dialog, splice from array |

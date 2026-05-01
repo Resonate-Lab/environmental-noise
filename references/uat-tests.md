@@ -2091,6 +2091,16 @@ Prerequisite: Phase 1 tests pass. Two scenarios saved: "Base Case" (no barrier) 
 
 11. **Toast non-blocking** — While toast is visible, clicking map controls works normally (pointer-events:none on toast).
 
+12. **Scenario list preserved after restore** — Restore "Base Case". Reopen Scenarios modal. Both "Base Case" **and** "With Barrier" are still listed. Neither vanishes on restore.
+
+13. **Scenario list preserved after undo** — After restoring "Base Case", press Ctrl+Z. Reopen Scenarios modal. Both scenarios still present. Undo does not clear the scenario list.
+
+14. **Area source lwValue stable through restore (library load)** — Load library entry "People per person, raised voice — Lw 74 dB(A)" on a ~533 m² area source with N=100. Display: Total Lw 74.0, Effective Lw/m² 66.7. Save scenario "A". Add a barrier. Save scenario "B". Restore "A". Area source still shows Total Lw **74.0**, Effective Lw/m² **66.7** — no ~27 dB drop.
+
+15. **Area source lwValue stable through restore (manual entry)** — Fresh area source, manually type Total Lw = 80 dB(A). Save scenario. Modify. Restore. Total Lw reads **80.0**, not 80 − 10·log₁₀(area). Fix is not library-specific.
+
+16. **Multi-source restore** — Assessment with point, line, area, and building sources. Save scenario. Modify each. Restore. All source values return to pre-save state unchanged.
+
 12. **Update cancel** — Click Update → cancel confirm dialog. Scenario timestamp and state unchanged.
 
 13. **Restore pre-terrain state** — Save a scenario before enabling terrain, then enable terrain, then Restore the pre-terrain scenario. Canvas updates cleanly; no console errors.

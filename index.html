@@ -24805,7 +24805,7 @@ setInitialCollapseState();
       console.info('[migrateV2ToV3] v' + fromVersion + '\u21923. Converted:', counts);
     }
 
-    function loadAssessment(data) {
+    function loadAssessment(data, opts) {
       // Guard: warn if the file was saved by a future version of this app.
       if (data._version && data._version > 5) {
         console.warn('[loadAssessment] File is format v' + data._version +
@@ -24843,7 +24843,10 @@ setInitialCollapseState();
           };
         }).filter(function(s) { return s !== null; })
           .forEach(function(s) { _scenarios.push(s); });
-      } else {
+      } else if (!(opts && opts.preserveScenarios)) {
+        // Full file load with no scenarios — clear the list.
+        // Skip when called from scenario restore or undo, which have no _scenarios key
+        // but must not wipe the currently active scenario list.
         _scenarios.length = 0;
       }
 
@@ -25720,7 +25723,7 @@ setInitialCollapseState();
     }
 
     // state is already a parsed object (Phase 1 stores JSON.parse result)
-    window._loadAssessment(scenario.state);
+    window._loadAssessment(scenario.state, { preserveScenarios: true });
 
     closeScenariosModal();
     if (typeof showToast === 'function') {
@@ -26692,7 +26695,7 @@ setInitialCollapseState();
       if (typeof areaSources !== 'undefined' && areaSources.length) {
         data.areaSources = areaSources.map(function(as) {
           return { id:as.id, name:as.name, vertices:as.vertices, height_m:as.height_m||0.5,
-            lwMode:as.lwMode||'per_m2', lwValue:as.lwValue, spectrum:as.spectrum,
+            lwMode:as.lwMode||'per_m2', _lwStored:'per_m2', lwValue:as.lwValue, spectrum:as.spectrum,
             activeInPeriod:as.activeInPeriod, operatingPct:as.operatingPct, quantity:as.quantity,
             manualOverride:as.manualOverride, libraryEntry:as.libraryEntry?{name:as.libraryEntry.name}:null,
             vertexElevations:as.vertexElevations||null };
@@ -26800,7 +26803,7 @@ setInitialCollapseState();
     window._undoRestoring = true;
     var gen = ++_restoreGen;
     try {
-      window._loadAssessment(JSON.parse(json));
+      window._loadAssessment(JSON.parse(json), { preserveScenarios: true });
     } catch(e) {
       console.error('[undoManager] restoreState failed:', e);
     }
