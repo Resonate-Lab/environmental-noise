@@ -2576,7 +2576,8 @@ The area source edit panel exposes a "Power input" dropdown (`per_m2` | `total`)
 | Field | Type | Meaning |
 |-------|------|---------|
 | `as.lwValue` | `{day, eve, night}` | Lw/m² dB(A) — always, never Total Lw |
-| `as.lwMode` | `'per_m2'` \| `'total'` | Display mode only; stored in save JSON |
+| `as.lwMode` | `'per_m2'` \| `'total'` | Display mode only; stored in save JSON. New area sources default to `'total'` (May 2026). |
+| `as._lwStored` | `'per_m2'` | Written to save JSON to guard against stale migration on reload. Absent from pre-May 2026 saves. |
 | `as.spectrum[p][freq]` | dB(Z) Lw/m² per octave band | Always per-m²; never scaled to total |
 
 ### Conversion at UI boundaries
@@ -2585,6 +2586,19 @@ The area source edit panel exposes a "Power input" dropdown (`per_m2` | `total`)
 |-----------|---------|
 | Display in Total Lw mode | `displayed = lwValue + 10·log₁₀(area_m²)` |
 | Store from Total Lw input | `lwValue = typed_value − 10·log₁₀(area_m²)` |
+
+### Library load conversion
+
+**Library entries (`AREA_SOURCE_LIBRARY_GROUPED[cat][i].lw_m2_dba`) provide Total Lw per source unit — not Lw/m², despite the field name.** `_applyAsLibEntry` always converts on selection:
+
+```
+as.lwValue[period]     = library_Lw_total − 10·log₁₀(area_m²)
+as.spectrum[period][f] = library_band_f   − 10·log₁₀(area_m²)   (each octave band)
+```
+
+Display: `total` mode shows the raw library Total Lw; `per_m2` mode shows the stored Lw/m². If `area_m²` is 0 at selection time a console warning fires and assignment is skipped.
+
+Quantity (N) and Op% are multiplicative factors applied at calculation time on top of the stored `lwValue` — they are not baked into `lwValue`.
 
 ### Acoustic helpers
 
@@ -2595,9 +2609,11 @@ The area source edit panel exposes a "Power input" dropdown (`per_m2` | `total`)
 
 Both functions always use the per-m² formula regardless of `as.lwMode`. Neither has a mode branch.
 
-### Migration
+### Migration and `_lwStored` guard
 
-Old saves (pre–April 2026) stored Total Lw in `lwValue` when `lwMode='total'`. `_setAreaSources` (load path) detects `lwMode='total'` and back-converts `lwValue` by subtracting `10·log₁₀(area)` before pushing to `areaSources[]`. This migration runs once on load; saved JSON is not rewritten until the user saves again.
+Old saves (pre–April 2026) stored Total Lw in `lwValue` when `lwMode='total'`. `_setAreaSources` detects `lwMode='total' && !_lwStored` and back-converts `lwValue` by subtracting `10·log₁₀(area)`.
+
+New saves (May 2026+) include `_lwStored: 'per_m2'` to signal that `lwValue` is already in Lw/m² — the migration skips these. This prevents double-conversion when `lwMode='total'` is the new default.
 
 ## Cache Invalidation Convention
 

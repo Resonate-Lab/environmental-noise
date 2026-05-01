@@ -1153,3 +1153,34 @@ hs = 2 m, hr = 1.5 m, dp = 500 m, C0 = 2 dB:
 - non-negativity invariant
 - integration with `calcISOatPoint` (cmet=1.86 shifts Lp by exactly 1.86 dB)
 - regression anchor: omitting cmet leaves Lp unchanged at 11.8968 dB(A)
+
+---
+
+## Area Source — Power Level Calculation
+
+Area sources store power density as Lw/m² (`as.lwValue[period]`). The effective
+total power level used in propagation is computed by `_asGetEffectiveLw`:
+
+    Effective_Lw_total = lwValue_per_m² + 10·log₁₀(area_m²)
+                       + 10·log₁₀(N) + 10·log₁₀(Op% / 100)
+
+where:
+- `lwValue_per_m²` — stored value (always Lw/m², from `as.lwValue[period]`)
+- `area_m²`        — polygon area from `_asPolygonArea(as.vertices)`
+- `N`              — quantity (`as.quantity[period]`, default 1)
+- `Op%`            — operating percentage (`as.operatingPct[period]`, default 100)
+
+The effective Lw/m² (for display and cross-checking):
+
+    Effective_Lw_m² = lwValue_per_m² + 10·log₁₀(N) + 10·log₁₀(Op% / 100)
+                    = Effective_Lw_total − 10·log₁₀(area_m²)
+
+### Library load conversion
+
+Library entries provide **Total Lw per source unit** — not Lw/m². On selection,
+`_applyAsLibEntry` converts for storage:
+
+    as.lwValue[period] = library_Lw_total − 10·log₁₀(area_m²)
+
+Same formula applied per octave band. Quantity and Op% are not baked into
+`lwValue` — they multiply at calculation time.

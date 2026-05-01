@@ -753,7 +753,14 @@ Prerequisite: Page loaded with network access so `SourceLibrary.status` becomes 
 ### Area source dropdown
 
 - [ ] **Library populated** — Place an area source, open its panel. The library select shows optgroups with Sheet entries.
-- [ ] **Selecting entry pre-fills** — Choose an entry → Lw/m² field, spectrum bands, and height update for all periods.
+- [ ] **Selecting entry pre-fills** — Choose an entry → Lw field, spectrum bands, and height update for all periods.
+- [ ] **Default Enter as mode — Total Lw** — Draw a new area source. Before any library selection, the "Enter as" dropdown shows "Total Lw (across area)" as the selected option.
+- [ ] **Library load — Total Lw interpretation (554 m² area, N=1, Op%=100)** — Draw an area source of ~554 m². Select "People per person, raised voice — Lw 74 dB(A)". Day Total Lw shows **74.0**; Effective Lw/m² shows **46.6** (= 74 − 10·log₁₀(554)). Not 101.4.
+- [ ] **Library load — mode switch** — Switch Enter as to "Lw/m²". Input shows 46.6; read-only Total Lw shows 74.0.
+- [ ] **Library load — N=10** — Set Quantity to 10. Total Lw rises to **84.0**. Effective Lw/m² = 56.6.
+- [ ] **Library load — Op%=50** — Reset N to 1, set Op%=50. Total Lw drops 3 dB to **71.0**.
+- [ ] **Library load — save/reload** — Save assessment, reload, load saved file. Area source restores with Total Lw = 74.0 (not 101.4). No `_lwStored` migration double-conversion.
+- [ ] **Manual entry unaffected** — Fresh area source (no library), type 80 into Total Lw input. Effective Lw/m² = 80 − 10·log₁₀(area). Manual-entry path unchanged.
 
 ### Building source — Interior Lp
 

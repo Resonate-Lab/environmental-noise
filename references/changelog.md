@@ -2,6 +2,12 @@
 
 ## May 2026
 
+- **Fixed area source library load: library Lw values are now interpreted as Total Lw per source unit (not Lw/m²).** Selecting e.g. "People per person, raised voice — Lw 74 dB(A)" on a 554 m² area previously stored 74 dB/m² and displayed 101.4 dB(A) Total Lw — implying ~6500 people instead of one. `_applyAsLibEntry` now always converts: `stored_lwValue = library_Lw − 10·log₁₀(area_m²)`. Same per-band conversion for the octave spectrum. Display shows library Total Lw in total mode, converted Lw/m² in per_m2 mode. If area is 0 on selection a console warning fires and Lw assignment is skipped.
+
+- **Default "Enter as" mode for new area sources changed from Lw/m² to Total Lw (across area).** New area sources initialise with `lwMode: 'total'`. Existing saved sources retain their `lwMode`.
+
+- **Save format: `_lwStored: 'per_m2'` marker added to area source saves.** Guards the April 2026 migration (back-converts `lwValue` when `lwMode='total'`) from double-converting new saves that correctly store Lw/m² with `lwMode='total'`. Old saves without the marker still migrate correctly.
+
 - **Noise map stale-extent detection and viewport regeneration.** When the user zooms or pans so that the current map viewport extends beyond the cached contour grid, a stale indicator appears inside the Modelling panel (amber left-border pill: "▽ Map view extends beyond contour area") and a "Regenerate for current view" button activates. Clicking the button recomputes the grid using `map.getBounds().pad(0.10)` — 10% padding on each side so contours don't clip immediately on a small pan. A 25 km² area cap prevents runaway calculations on very wide viewports; exceeding it shows an inline error and aborts without starting computation. Detection: `isContourExtentStale()` compares the current viewport to the actual rendered grid extent (reconstructed from `_lastNoiseData.startLat/startLng + rows×dLat / cols×dLng`) with 5% tolerance to avoid flapping at the edge. `map.on('moveend')` drives the check. Stale state clears automatically when a fresh grid completes or the noise map is switched off. `computeNoiseMap()` accepts an optional `overrideBounds` parameter (default: `map.getBounds()`) — the existing "Noise map" button's behaviour and source-centroid workflow are unchanged. Terrain re-fetch fires for the new extent automatically (existing `getTileForBounds` call uses the new bounds). No changes to propagation, criteria, save/load schema, grid resolution, or contour rendering.
 
 ## April 2026

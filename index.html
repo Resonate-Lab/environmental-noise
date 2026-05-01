@@ -23951,6 +23951,7 @@ setInitialCollapseState();
               id: as.id, name: as.name, vertices: as.vertices,
               height_m: as.height_m || 0.5,
               lwMode: as.lwMode || 'per_m2',
+              _lwStored: 'per_m2',
               lwValue: as.lwValue,
               spectrum: as.spectrum,
               activeInPeriod: as.activeInPeriod,
@@ -33666,7 +33667,7 @@ if (window.pdfjsLib) {
             name: 'Area source ' + _asIdCtr,
             vertices: asVerts,
             height_m: 0.5,
-            lwMode: 'per_m2',
+            lwMode: 'total',
             lwValue: { day: null, eve: null, night: null },
             spectrum: { day: null, eve: null, night: null },
             activeInPeriod: { day: true, eve: true, night: true },
@@ -34305,32 +34306,33 @@ if (window.pdfjsLib) {
           as.height_m = found.height_m;
           var htInp = document.getElementById('asPanelHeight');
           if (htInp) htInp.value = found.height_m;
-          // Respect the user's current "Enter as" mode.
-          // per_m2 mode: treat library lw_m2_dba as Lw/m\u00b2 \u2192 store directly.
-          // total mode:  treat library lw_m2_dba as Total Lw \u2192 back-convert to
-          //              Lw/m\u00b2 = Total Lw \u2212 10\u00b7log\u2081\u2080(area) for storage; display
-          //              shows the library value unchanged in the Total Lw input.
+          // Library Lw values are ALWAYS Total Lw per source unit \u2014 never Lw/m\u00b2.
+          // Convert to Lw/m\u00b2 for storage regardless of the current display mode:
+          //   stored_lwValue = library_Lw \u2212 10\u00b7log\u2081\u2080(area)
+          // Display input shows: Total Lw mode \u2192 library value; per_m2 \u2192 stored Lw/m\u00b2.
           var _libCurrentMode = as.lwMode || 'per_m2';
           var _libArea = _asPolygonArea(as.vertices || []);
-          var _libDelta = (_libCurrentMode === 'total' && _libArea > 0)
-            ? -10 * Math.log10(_libArea)
-            : 0;
-          var bands = [63,125,250,500,1000,2000,4000,8000];
-          ['day','eve','night'].forEach(function(p) {
-            as.lwValue  = as.lwValue  || {};
-            as.spectrum = as.spectrum || {};
-            // Store always as Lw/m\u00b2; delta = 0 in per_m2 mode, negative in total mode.
-            as.lwValue[p] = Math.round((found.lw_m2_dba + _libDelta) * 10) / 10;
-            as.spectrum[p] = {};
-            var lwInp = document.getElementById('asPanelLw_' + p);
-            // Display the library value unchanged (it IS what the user chose from the library).
-            if (lwInp) lwInp.value = found.lw_m2_dba;
-            bands.forEach(function(f) {
-              as.spectrum[p][f] = found.spectrum_m2[f] !== undefined ? found.spectrum_m2[f] : '';
-              var bandEl = document.getElementById('asPanelBand_' + p + '_' + f);
-              if (bandEl) { bandEl.value = as.spectrum[p][f]; }
+          if (!(_libArea > 0)) {
+            console.warn('[AS library] area is 0 \u2014 cannot convert library Total Lw to Lw/m\u00b2; skipping Lw assignment');
+          } else {
+            var _libDelta = -10 * Math.log10(_libArea);
+            var bands = [63,125,250,500,1000,2000,4000,8000];
+            ['day','eve','night'].forEach(function(p) {
+              as.lwValue  = as.lwValue  || {};
+              as.spectrum = as.spectrum || {};
+              as.lwValue[p] = Math.round((found.lw_m2_dba + _libDelta) * 10) / 10;
+              as.spectrum[p] = {};
+              var lwInp = document.getElementById('asPanelLw_' + p);
+              // Show Total Lw (library value) in total mode; show Lw/m\u00b2 (stored) in per_m2 mode.
+              if (lwInp) lwInp.value = (_libCurrentMode === 'total' ? found.lw_m2_dba : as.lwValue[p]);
+              bands.forEach(function(f) {
+                var rawBand = found.spectrum_m2[f] !== undefined ? found.spectrum_m2[f] : '';
+                as.spectrum[p][f] = (rawBand !== '') ? Math.round((rawBand + _libDelta) * 10) / 10 : '';
+                var bandEl = document.getElementById('asPanelBand_' + p + '_' + f);
+                if (bandEl) { bandEl.value = as.spectrum[p][f]; }
+              });
             });
-          });
+          }
           _asPanelUpdateCalc(as);
           triggerRecompute();
         }
@@ -38233,6 +38235,7 @@ if (window.pdfjsLib) {
           id: as.id, name: as.name, vertices: as.vertices,
           height_m: as.height_m || 0.5,
           lwMode: as.lwMode || 'per_m2',
+          _lwStored: as._lwStored || null,
           lwValue: as.lwValue || { day: null, eve: null, night: null },
           spectrum: as.spectrum || { day: null, eve: null, night: null },
           activeInPeriod: as.activeInPeriod || { day: true, eve: true, night: true },
@@ -38251,9 +38254,9 @@ if (window.pdfjsLib) {
           var num = parseInt((as.id + '').replace('as_', ''));
           if (Number.isFinite(num) && num > _asIdCtr) _asIdCtr = num;
         }
-        // Migrate: old saves stored Total Lw in lwValue when lwMode='total'.
-        // New invariant: lwValue is always Lw/m². Convert on load if needed.
-        if (obj.lwMode === 'total' && obj.lwValue) {
+        // Migrate: old saves (pre-May 2026) stored Total Lw in lwValue when lwMode='total'.
+        // New invariant: lwValue is always Lw/m². Saves with _lwStored='per_m2' are already correct.
+        if (obj.lwMode === 'total' && obj.lwValue && !obj._lwStored) {
           var migArea = _asPolygonArea(obj.vertices || []);
           if (migArea > 0) {
             var migDelta = -10 * Math.log10(migArea);

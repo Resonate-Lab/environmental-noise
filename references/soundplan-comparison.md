@@ -156,6 +156,18 @@ where `Lp_in` is the reverberant (diffuse-field) interior SPL entered by the use
 
 ---
 
+### 10. Area source library load — prior benchmark invalidity (FIXED May 2026)
+
+**Status: BUG FIXED. Any prior benchmark comparison using a library-assigned area source is INVALID and must be re-run.**
+
+Before May 2026, selecting a library entry for an area source incorrectly treated the library Total Lw value as Lw/m². This inflated the stored power level by `10·log₁₀(area)` — e.g. selecting "People per person, raised voice — Lw 74 dB(A)" on a 554 m² area was computed as **101.4 dB(A)** Total Lw instead of the correct **74.0 dB(A)** — an overstatement of ~27 dB.
+
+Any SoundPLAN benchmark scenario using a library-assigned area source from before this fix was therefore comparing SoundPLAN against an incorrectly inflated source level. If such scenarios showed agreement with SoundPLAN, the agreement was coincidental. These scenarios must be re-run with the corrected source levels.
+
+**Not affected:** area sources with manually-typed Lw values (entered directly into the Lw input fields — not via library selection).
+
+---
+
 ## Comparison Workflow
 
 Standard procedure when comparing this tool against SoundPLAN:
