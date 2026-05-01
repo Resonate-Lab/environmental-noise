@@ -7338,6 +7338,16 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   </ul>
   <div class="h2" style="font-size:12px;margin-top:10px;">Security</div>
   <div class="p">User-entered data (source names, receiver names) is escaped before insertion into the interface using DOM-native <code>escapeHTML()</code> to prevent cross-site scripting (XSS). No user data is transmitted to any server &mdash; all calculations run entirely in the browser.</div>
+  <div class="h2" style="font-size:13px;margin-top:18px;">Recommended treatments (reverse calculations)</div>
+  <div class="p">The Recommended treatments panel performs three reverse calculations for receivers that exceed their criteria. All outputs are indicative and subject to detailed acoustic design.</div>
+  <div class="h2" style="font-size:12px;margin-top:10px;">Maximum allowable L<sub>w</sub></div>
+  <div class="p">For each point source and exceedance period, the panel computes the maximum source sound power level that would just hold the receiver at the criterion. The method energetically subtracts the subject source's contribution from the total predicted level to obtain the &ldquo;other sources&rdquo; linear sum. The allowable contribution for the subject source is then criterion_linear &minus; other_linear, and the allowable L<sub>w</sub> follows from the same attenuation path as the forward calculation. A source is flagged <em>Others exceed</em> (amber) when the combined contribution of all other sources alone exceeds the criterion, meaning no reduction of this source alone can achieve compliance.</div>
+  <div class="h2" style="font-size:12px;margin-top:10px;">Indicative barrier height</div>
+  <div class="p">Barrier height is estimated using the simplified Maekawa formula at 500&thinsp;Hz:</div>
+  <div class="p" style="font-style:italic;margin:4px 0 4px 12px;">IL = min(20, 10 &middot; log<sub>10</sub>(3 + 20 &middot; 2&delta;f/c))</div>
+  <div class="p">where &delta; is the diffraction path-length difference (m), f&nbsp;=&nbsp;500&thinsp;Hz, and c&nbsp;=&nbsp;340&thinsp;m/s. The barrier is placed at the midpoint of the source&ndash;receiver path; placement closer to the source or receiver yields greater attenuation for the same height. The source height used is that of the dominant contributing source at the specific receiver and period. The search covers 1.5&thinsp;m to 10.5&thinsp;m in 0.5&thinsp;m steps; a required insertion loss that cannot be achieved within this range is flagged as impractical (&gt;10&thinsp;m). A 2&thinsp;dB robustness margin is included in the required insertion loss. The 500&thinsp;Hz approximation is conservative for broadband sources but may overestimate barrier effectiveness for low-frequency-dominated sources (e.g. transformers, large reciprocating machinery) &mdash; detailed octave-band modelling is required in those cases.</div>
+  <div class="h2" style="font-size:12px;margin-top:10px;">Operating time restrictions</div>
+  <div class="p">The tool applies a 10&thinsp;&middot;&thinsp;log<sub>10</sub>(%/100) weighting to source levels for the entered operating percentage. The maximum allowable operating percentage is the inverse of this weighting applied to the required contribution reduction: new% = current% &times; 10<sup>&Delta;/10</sup>, where &Delta; is the required reduction in contribution (negative). The output is presented as a percentage only &mdash; conversion to hours depends on the assessment period definition for the applicable jurisdiction and is the responsibility of the user.</div>
   <div class="h2" style="font-size:12px;margin-top:10px;">Limitations</div>
   <div class="p" style="margin-bottom:0;">This tool is a screening tool intended to indicate whether more detailed assessment is warranted. It should not be used as a substitute for a full acoustic assessment by a qualified acoustic consultant. Predicted levels should be verified against site measurements before use in formal reports. Results are sensitive to source power level inputs &mdash; users are responsible for the accuracy of L<sub>w</sub> values entered.</div>
 </div>
@@ -20987,7 +20997,21 @@ function renderRecommendations() {
     .map(function(p, i) { return {pin: p, si: i}; })
     .filter(function(x) { return x.pin.lat !== null; });
 
-  if (!placedRecvs.length || !activePins.length) { card.style.display = 'none'; return; }
+  var showMsg = function(msg) {
+    card.style.display = '';
+    body.innerHTML = '<div style="padding:10px 14px;font-size:12px;color:var(--muted);">' + msg + '</div>';
+  };
+
+  if (!placedRecvs.length) {
+    showMsg('Place at least one receiver with a noise criterion to see recommended treatments.');
+    return;
+  }
+
+  if (!activePins.length) {
+    showMsg('Recommended treatments are computed for point sources only. ' +
+      'For road / rail line sources, area sources, or building sources, consult detailed acoustic modelling for treatment options.');
+    return;
+  }
 
   // ── per-period exceedance matrix ──────────────────────────────────────────
   var hasAnyPred = false;
@@ -21017,7 +21041,11 @@ function renderRecommendations() {
     return {period: period, label: pDef.label, rows: rows};
   }).filter(function(pr) { return pr.rows.length > 0; });
 
-  if (!hasAnyPred) { card.style.display = 'none'; return; }
+  if (!hasAnyPred) {
+    card.style.display = '';
+    body.innerHTML = '<div style="padding:10px 14px;font-size:12px;color:var(--muted);">Place receivers with criteria and sources to see recommended treatments.</div>';
+    return;
+  }
   card.style.display = '';
 
   var html = '<div style="padding:10px 14px;">';
@@ -21114,7 +21142,10 @@ function renderRecommendations() {
           if (allowLw < minAllow) { minAllow = allowLw; minGov = e.label; }
         });
 
-        if (!isFinite(minAllow) || minAllow >= lwP) {
+        if (minAllow === -Infinity) {
+          // Other sources alone exceed the criterion — reducing this source cannot achieve compliance
+          cells.push({text:'⚠ Others exceed', color:'#d97706', gov:''});
+        } else if (!isFinite(minAllow) || minAllow >= lwP) {
           cells.push({text:'OK', color:'#16a34a', gov:''});
         } else {
           cells.push({text: Math.round(minAllow) + ' dB(A)', color:'#dc2626', gov: minGov});
@@ -21150,12 +21181,17 @@ function renderRecommendations() {
 
       var requiredIL = e.delta + 2; // 2 dB robustness margin
 
-      // Use max height of active point sources this period as representative source height
-      var hs = activePins.reduce(function(mxH, x) {
-        if (x.pin.activeInPeriod && x.pin.activeInPeriod[period] === false) return mxH;
-        var h = x.pin.height_m || 1.5;
-        return h > mxH ? h : mxH;
-      }, 1.5);
+      // Use the height of the dominant contributing source at this receiver/period
+      var hs = 1.5;
+      var hsMaxContrib = -Infinity;
+      activePins.forEach(function(x) {
+        if (x.pin.activeInPeriod && x.pin.activeInPeriod[period] === false) return;
+        var c = singlePinContrib(x.si, period, e.ri);
+        if (Number.isFinite(c) && c > hsMaxContrib) {
+          hsMaxContrib = c;
+          hs = x.pin.height_m || 1.5;
+        }
+      });
       var hr   = getReceiverHeight(e.ri);
       var barH = findBarrierH(dist, hs, hr, requiredIL);
       var barText, barNote;
@@ -21166,7 +21202,8 @@ function renderRecommendations() {
       } else {
         barText = barH.toFixed(1) + ' m'; barNote = '';
       }
-      barrierRows.push({period: pr.label, recv: e.label, exc: '+' + e.delta.toFixed(1) + ' dB', h: barText, note: barNote});
+      barrierRows.push({period: pr.label, recv: e.label, exc: '+' + e.delta.toFixed(1) + ' dB',
+        h: barText, note: barNote, impractical: barH === null, reqReduction: e.delta + 2});
     });
   });
 
@@ -21191,6 +21228,36 @@ function renderRecommendations() {
     html += '<div style="font-size:10px;color:var(--muted);margin-bottom:10px;">Simplified Maekawa formula at 500 Hz, barrier at midpoint between source and receiver. ' +
       'Includes 2 dB robustness margin. Closer placement to source or receiver is more effective. ' +
       'Verify with detailed acoustic modelling before use in design.</div>';
+
+    // ── RT-6: combination flag ────────────────────────────────────────────────
+    var impracticalRows = barrierRows.filter(function(r) { return r.impractical; });
+    if (impracticalRows.length) {
+      html += '<div style="font-size:11px;color:#d97706;margin-bottom:10px;padding:6px 8px;' +
+        'background:rgba(217,119,6,0.08);border-left:3px solid #d97706;border-radius:3px;">' +
+        '<b>Combination treatment may be required.</b> Where a single barrier is impractical, compliance is unlikely to be achieved by any one measure alone. ' +
+        'Consider a combination of partial barrier, partial source L<sub>w</sub> reduction, and/or operating time restriction. ' +
+        'Detailed acoustic modelling is recommended.</div>';
+
+      // ── RT-5: receiver treatment alternatives ─────────────────────────────
+      html += '<div style="font-weight:600;font-size:12px;margin:4px 0 4px;">Receiver treatment — alternative pathway</div>';
+      html += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px;">';
+      html += '<thead><tr style="border-bottom:1px solid var(--border);">' +
+        '<th style="text-align:left;padding:3px 5px;">Period</th>' +
+        '<th style="text-align:left;padding:3px 5px;">Receiver</th>' +
+        '<th class="num" style="padding:3px 5px;">Noise reduction required</th>' +
+        '<th style="padding:3px 5px;">Treatment options</th></tr></thead><tbody>';
+      impracticalRows.forEach(function(r) {
+        html += '<tr style="border-top:1px solid var(--border);">' +
+          '<td style="padding:3px 5px;">' + r.period + '</td>' +
+          '<td style="padding:3px 5px;">' + escapeHTML(r.recv) + '</td>' +
+          '<td class="num" style="padding:3px 5px;font-weight:600;">' + r.reqReduction.toFixed(0) + ' dB(A)</td>' +
+          '<td style="padding:3px 5px;font-size:10px;">Glazing upgrade / mechanical ventilation (closed-window operation)</td></tr>';
+      });
+      html += '</tbody></table>';
+      html += '<div style="font-size:10px;color:var(--muted);margin-bottom:10px;">' +
+        'Noise reduction required is the exceedance plus 2 dB robustness margin applied at the receiver facade. ' +
+        'Glazing specification (R<sub>w</sub> target) requires knowledge of existing construction — consult an acoustic engineer.</div>';
+    }
   }
 
   // ── operating time restrictions ───────────────────────────────────────────
@@ -21216,14 +21283,11 @@ function renderRecommendations() {
         var curPct = _getPinOpPct(pin, period);
         var newPct = Math.round(Math.min(100, curPct * Math.pow(10, deltaContrib / 10)));
         if (newPct >= curPct) return;
-        var durH = period === 'day' ? 12 : period === 'eve' ? 4 : 8;
         opRows.push({
           src:    pin.name || ('S' + (si + 1)),
           period: pr.label,
           recv:   e.label,
-          pct:    newPct,
-          maxH:   (newPct / 100 * durH).toFixed(1),
-          durH:   durH + ' h'
+          pct:    newPct
         });
       });
     });
@@ -21236,15 +21300,16 @@ function renderRecommendations() {
       '<th style="text-align:left;padding:3px 5px;">Source</th>' +
       '<th style="text-align:left;padding:3px 5px;">Period</th>' +
       '<th style="text-align:left;padding:3px 5px;">Governing receiver</th>' +
-      '<th class="num" style="padding:3px 5px;">Max operating time</th></tr></thead><tbody>';
+      '<th class="num" style="padding:3px 5px;">Max operating&nbsp;%</th></tr></thead><tbody>';
     opRows.forEach(function(r) {
       html += '<tr style="border-top:1px solid var(--border);">' +
         '<td style="padding:3px 5px;">' + escapeHTML(r.src)  + '</td>' +
         '<td style="padding:3px 5px;">' + r.period + '</td>' +
         '<td style="padding:3px 5px;">' + escapeHTML(r.recv) + '</td>' +
-        '<td class="num" style="padding:3px 5px;">' + r.pct + '% (&le;\u2009' + r.maxH + '\u202fh / ' + r.durH + ')</td></tr>';
+        '<td class="num" style="padding:3px 5px;">\u2264\u2009' + r.pct + '%</td></tr>';
     });
     html += '</tbody></table>';
+    html += '<div style="font-size:10px;color:var(--muted);margin-bottom:10px;">Operating % is the fraction of the assessment period during which the source may operate, applying the same 10\u00b7log\u2081\u2080(\u200a%/100\u200a) weighting as the forward calculation.</div>';
   }
 
   html += '<div style="font-size:10px;color:var(--muted);padding:6px 0 2px;">' +
