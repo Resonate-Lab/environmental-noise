@@ -8653,17 +8653,8 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
     try { localStorage.setItem(DRAWER_KEY, open ? (sectionId || '') : ''); } catch(e) {}
   }
 
-  // Auto-open to Results on first compliance data (once per session)
-  var _drawerAutoOpenedThisSession = false;
-  function _maybeAutoOpenDrawer() {
-    if (_drawerAutoOpenedThisSession) return;
-    if (!drawerPanel.classList.contains('drawer-closed')) return;
-    if (document.querySelector('#predNoiseSection table tbody tr, #compliance-strip .cs-row')) {
-      activateSection('results');
-      setDrawerOpen(true, 'results');
-      _drawerAutoOpenedThisSession = true;
-    }
-  }
+  // Auto-open disabled — user opens RHS panels explicitly via icon strip
+  function _maybeAutoOpenDrawer() {}
   window._maybeAutoOpenDrawer = _maybeAutoOpenDrawer;
   (function() {
     var cs = document.getElementById('compliance-strip');
@@ -8703,20 +8694,9 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
     setDrawerOpen(false, window._activeNavSection);
   });
 
-  // Restore saved state (default: closed on fresh load)
-  try {
-    var savedSection = localStorage.getItem(DRAWER_KEY);
-    if (savedSection && _rhsSectionBtnIds[savedSection]) {
-      activateSection(savedSection);
-      setDrawerOpen(true, savedSection);
-    } else {
-      activateSection('setup');
-      setDrawerOpen(false, 'setup');
-    }
-  } catch(e) {
-    activateSection('setup');
-    setDrawerOpen(false, 'setup');
-  }
+  // Always start closed on page load — user opens panels explicitly
+  activateSection('setup');
+  setDrawerOpen(false, 'setup');
 
   // Keyboard shortcut: ] to toggle RHS drawer
   document.addEventListener('keydown', function(e) {
