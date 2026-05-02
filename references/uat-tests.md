@@ -1,5 +1,117 @@
 # UAT Tests
 
+## RHS panel chrome
+
+### Dark header / dynamic title
+
+1. Open Setup panel (click Setup icon). **Expected:** dark header bar visible at top; title reads "SETUP" (CSS uppercases it).
+2. Click Criteria icon. **Expected:** panel stays open; title changes to "CRITERIA".
+3. Click Results icon. **Expected:** title changes to "RESULTS".
+4. Click Treatments icon. **Expected:** title changes to "TREATMENTS".
+5. Click the × close button in the header. **Expected:** panel closes (slides away); active RHS button loses amber highlight.
+6. Re-open any section. **Expected:** compliance strip appears below dark header, above scrollable content, with light background.
+7. No console errors throughout.
+
+## Mapping slide-out panel
+
+### Panel open / close
+
+1. Click "Mapping" in the LHS sidebar. **Expected:** `#mappingPanel` slides out; map shrinks; arrow → ←; aria-expanded "true".
+2. Click "Mapping" again. **Expected:** panel closes; map restores; arrow → →.
+3. Open Mapping, then click "Modelling". **Expected:** Mapping closes automatically (→); Modelling opens (←). Only one panel open at a time.
+4. Open Mapping, click ×. **Expected:** panel closes.
+5. Open Mapping, press Esc. **Expected:** panel closes.
+
+### Card 1 — Basemap
+
+6. Open Mapping panel, click "Aerial". **Expected:** map switches to aerial/satellite imagery. Click again: reverts to street map.
+7. Keyboard shortcut I. **Expected:** same as above regardless of whether Mapping panel is open.
+
+### Card 2 — Map layers
+
+8. After placing a site pin in SA, "Show zones" button becomes visible. Click it: zones overlay appears.
+9. Keyboard shortcut Z: same as clicking "Show zones".
+10. "Cadastral" button toggles cadastral overlay. Keyboard D: same.
+11. MBS 010 button (SA only, display:none otherwise): toggles MBS 010 overlays. Keyboard X.
+12. Urban area button (VIC only): toggles VIC major urban area boundaries. Keyboard U.
+
+### No console errors
+
+13. All steps above: no console errors.
+
+## Modelling slide-out panel
+
+### Panel open / close
+
+1. Click "Modelling" in the LHS sidebar. **Expected:** `#modellingPanel` slides out to the right of the sidebar; map area shrinks; arrow indicator changes → ←; aria-expanded becomes "true".
+2. Click "Modelling" again. **Expected:** panel closes; map area restores; arrow → →.
+3. Open panel, press Esc. **Expected:** panel closes; Esc not propagated further.
+4. Open panel, click ×. **Expected:** panel closes.
+5. Open panel, collapse the sidebar (click the collapse button). **Expected:** panel closes before sidebar collapses; map uses full width.
+
+### Propagation method card (always shown)
+
+6. Open the Modelling panel, click "ISO 9613-2:1996". **Expected:** cards Atmospheric, Ground, Default heights, Validation become visible; C_met card becomes visible.
+7. Click "CONCAWE". **Expected:** Atmospheric, Ground, Default heights, Validation remain visible; C_met card becomes hidden; CONCAWE met panel appears inside Propagation card.
+8. Click "Simple". **Expected:** Atmospheric, Ground, Default heights, Validation hidden; C_met hidden; CONCAWE met panel hidden.
+9. Verify calculations update correctly after each method switch (re-run propagation).
+
+### Per-card content
+
+10. With ISO 9613-2 active, enable the C_met checkbox. **Expected:** C0 row appears. Disable: C0 row hides.
+11. Enable per-region G (advanced checkbox). **Expected:** global Ground type select hides; Gs/Gm/Gr selects appear.
+12. Click "Run" in Validation card. **Expected:** ISO/TR 17534-3 results appear (25 cases, ≥20 ✓).
+
+### Map column shrink / resize interplay
+
+13. With panel open, drag the sidebar resize handle. **Expected:** panel left edge tracks the sidebar right edge; map column right edge stays stationary (no gap or overlap).
+14. Close the panel; resize the sidebar. **Expected:** map column uses the sidebar width only (no 340px offset).
+
+### Prop-method indicator
+
+15. Click the prop-method indicator chip (bottom-left of map). **Expected:** Modelling panel opens.
+
+### No console errors
+
+16. All steps above: no console errors at any point.
+
+## Library slide-out panel
+
+### Panel open / close
+
+1. Click "Library" in the LHS sidebar. **Expected:** `#libraryPanel` (480px wide) slides out; map shrinks by 480px; arrow → ←; aria-expanded "true"; `resonateLibBadge` at top of page updates to "Library: N entries".
+2. Click "Library" again. **Expected:** panel closes; map restores; arrow → →.
+3. Open Library, then click "Mapping". **Expected:** Library closes automatically (→); Mapping opens. Only one slide-out open at a time.
+4. Open Library, click ×. **Expected:** panel closes.
+5. Open Library, press Esc. **Expected:** panel closes.
+6. Open Library, collapse sidebar. **Expected:** Library closes before sidebar collapses.
+
+### Entries table
+
+7. Open Library panel. **Expected:** table loads and shows "Showing 250 of 651" (or current entry count).
+8. `resonateLibBadge` in page header reads "Library: 651 entries" (or current count). No "offline snapshot" text.
+9. Table rows show columns: Name, Type, Category, dB(A), Review.
+10. Canonical entries have a dB(A) value and no ✕ delete button.
+
+### Filters
+
+11. Set Type filter to "Insertion Loss". **Expected:** table immediately filters; count updates to Insertion Loss entries only.
+12. Reset Type, set Category to "Louvres" (or any populated category). **Expected:** only Louvres entries shown.
+13. Type text in Search box (e.g. "fan"). **Expected:** table live-filters to matching names/descriptions/categories.
+14. Combine filters (Type = "Lw dB(Z)" + search = "cooling"). **Expected:** both filters apply simultaneously.
+15. Clear all filters. **Expected:** full 651 entries return.
+
+### Custom entries in table
+
+16. Add a custom source via "Add custom entry" (open wizard, complete, save). **Expected:** new row appears in table with category "Custom", review "Custom", ✕ delete button.
+17. Click ✕ on a custom entry. **Expected:** row removed from table; `_customSources` in localStorage updated; source picker dropdowns updated.
+18. Export custom entries. **Expected:** JSON file downloaded.
+19. Import a valid JSON array. **Expected:** entries merge; table re-renders showing merged rows.
+
+### No console errors
+
+20. All steps above: no console errors.
+
 ## Site location pin
 
 ### New assessment onboarding
@@ -289,6 +401,43 @@
 ### OSM buildings default
 
 1. Import OSM buildings. Open any building popup. **Expected:** Roof mode shows "Follows terrain" selected by default.
+
+## Noise map show/hide toggle
+
+### Toggle button lifecycle
+
+- [ ] **Hidden until generated** — On fresh page load (or after clicking the "Noise map" button to turn it off), the "Hide" / "Show" toggle button is not visible in the Modelling panel.
+- [ ] **Appears after generation** — Compute a noise map (click "Noise map" button, wait for completion). The toggle button appears next to the "Noise map" button with label "Hide" and `aria-pressed="true"`.
+- [ ] **Compact styling** — The toggle button is visually subordinate to the main "Noise map" button (smaller padding, same dark panel style, sits flush next to the main button in a flex row).
+
+### Hide behaviour
+
+- [ ] **Click Hide → heatmap removed** — With a noise map visible, click "Hide". The heatmap canvas disappears from the map. The toggle button label changes to "Show" with `aria-pressed="false"`.
+- [ ] **Click Hide → legend removed** — The noise legend (bottom-right) also disappears after clicking "Hide".
+- [ ] **No recomputation** — No "Computing…" progress appears. The map simply hides instantly.
+
+### Show behaviour
+
+- [ ] **Click Show → instant restore** — Click "Show". Both the heatmap canvas and the noise legend reappear immediately (no recomputation).
+- [ ] **Label resets to "Hide"** — After clicking Show, button label is "Hide" with `aria-pressed="true"`.
+
+### Regeneration resets visibility
+
+- [ ] **Regeneration after Hide restores** — Hide the noise map. Change a parameter (e.g. noise map period from Day to Evening) to trigger regeneration. Wait for completion. The newly computed map appears visible; toggle button shows "Hide".
+- [ ] **Regenerate for current view** — Hide the noise map. Click "Regenerate for current view". After completion, the new map appears visible; toggle shows "Hide".
+
+### Per-session / no persistence
+
+- [ ] **Page reload resets** — Generate a noise map, click "Hide". Reload the page. The toggle button is hidden (no noise map exists). Generate a new noise map — it appears visible; toggle shows "Hide". No "Show" state carried across sessions.
+- [ ] **No JSON field** — Save an assessment while a noise map is generated (in either visible or hidden state). Open the saved JSON in a text editor. Confirm `_noiseMapVisible` does NOT appear anywhere in the file.
+
+### Adjacent features unaffected
+
+- [ ] **Legend popover** — After toggling hide/show multiple times, clicking the legend still opens the appearance popover (opacity/palette controls work normally).
+- [ ] **Compliance view** — Switch to compliance map view. Toggle button is NOT shown (compliance mode is outside the show/hide scope).
+- [ ] **Noise map off** — Click the main "Noise map" button to turn the noise map off. Toggle button disappears. Re-generate — toggle reappears with "Hide".
+
+---
 
 ## Noise map appearance — opacity and palette controls
 

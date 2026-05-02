@@ -15,7 +15,7 @@ The tool has three help-adjacent surfaces. Every meaningful feature must appear 
 | Label | DOM element | Notes |
 |---|---|---|
 | Planning & modelling | `spNametag` (JS-injected) | LHS sidebar label |
-| Criteria & compliance | `#drawer-panel-label` (JS-injected) | RHS sidebar label |
+| Criteria & compliance | `#drawer-panel` (JS-injected) | RHS slide-out panel; opened by RHS icon strip buttons |
 | Tools menu | `#mp-tools .mp-hdr` | Dropdown, click to open |
 | Mapping menu | `#mp-mapping .mp-hdr` | Dropdown, click to open |
 | Modelling menu | `#mp-modelling .mp-hdr` | Dropdown, click to open |
@@ -260,7 +260,7 @@ The corresponding `.mp-body` div carries the matching `id="<section-id>-body"`.
 
 ### Propagation method indicator (`#prop-method-indicator`)
 
-`position: fixed; top: 56px; right: 8px` — white chip, `z-index: 1000`. Shows `Simple method` / `ISO 9613-2:1996` / `CONCAWE` based on the `.active` button in `#propMethodGroup`. Updated by `_updatePropIndicator()`, called on page load and in the prop-method button click handler. Click opens `#mp-propmethod` accordion in the sidebar.
+`position: fixed; top: 56px; right: 8px` — white chip, `z-index: 1000`. Shows `Simple method` / `ISO 9613-2:1996` / `CONCAWE` based on the `.active` button in `#propMethodGroup`. Updated by `_updatePropIndicator()`, called on page load and in the prop-method button click handler. Click opens `#modellingPanel` slide-out panel via `openModellingPanel()`.
 
 ### Background fetch indicator (`#bgFetchIndicator`)
 
@@ -551,6 +551,13 @@ Menu closes on: action chosen, click outside, Escape, map pan/zoom (handled by e
 | `_lastNoiseData` | `initMap()` local | Full worker `complete` message; `null` until first grid computed |
 | `_contoursStale` | `initMap()` local | `true` when current viewport extends beyond cached grid |
 | `_noiseMapOn` | `initMap()` local | Whether the noise map is currently active |
+| `_noiseMapVisible` | `initMap()` local | Per-session show/hide state; `true` by default and on each generation |
+
+**Noise map visibility design decisions:**
+- The heatmap layer object (`_noiseCanvasLayer`) and contour layer (`_noiseContourLayer`) remain in memory when hidden — only removed from the Leaflet map via `map.removeLayer()`. Re-show calls `addTo(map)` with no recomputation; instant.
+- The legend (`_noiseLegend`) is a Leaflet control; hiding calls `hideNoiseLegend()` (removes control, nulls `_noiseLegend`). Re-show calls `showNoiseLegend()` which reconstructs from current palette/opacity settings.
+- Regenerating the noise map always resets `_noiseMapVisible = true` (explicit user action implies wanting to see the result).
+- `_noiseMapVisible` is **not** serialised in the save format and not persisted in localStorage.
 
 ### `computeNoiseMap(overrideBounds?)`
 
@@ -951,8 +958,11 @@ The map area (inside `#map-column`) is flanked by two panels:
 ### LHS additional panels (beyond Mapping/Tools/Modelling)
 
 - **`#mp-objects`** — Objects LHS button (no body); clicking `#objectsToggleBtn` opens `#objectsFloatPanel`, a draggable `position:fixed` overlay (same pattern as `#helpFloatPanel` / `#suggestFloatPanel`). The panel lists all source types: point sources, line sources, area sources, building sources, and CoRTN roads. Unplaced sources (those with `vertices.length < 2`, or for point sources no `latlng`) show "not placed — click to place" in grey italic. Clicking an unplaced row activates the draw tool for that source type using the pending-ID pattern (`window._pendingLsId` / `_pendingAsId` / `_pendingBsId` / `_pendingCortnId`). `_renderObjectList()` re-renders the whole list; `_objRowClick(type, idx)` handles row clicks; `_objMenuBtn(type, idx)` opens the ⋮ context menu; `_objDelete(type, idx)` and `_objDuplicate(type, idx)` handle delete/duplicate for all five source types including CoRTN roads.
-- **`#mp-propmethod`** — Propagation method accordion: method toggle buttons (`#propMethodGroup`), ISO 9613-2 params (`#iso9613Params`), CONCAWE params (`#concaweMetPanel`), ISO validation runner. The old RHS Propagation method `.grid2` is kept in HTML but hidden with `style="display:none"`.
-- **`#mp-customsrc`** — Custom sources accordion containing `#customSrcBody`. The old RHS Custom sources `.grid2` is hidden with `style="display:none"`. All existing JS using `getElementById('customSrcBody')` etc. is unaffected because LHS elements appear first in DOM.
+- **`#mappingPanel`** — SeaSound-style slide-out panel replacing the old `#mp-mapping` accordion. Injected into `#app-layout` by the boot script. Two sub-cards: `#map-basemap` (aerialToggleBtn) and `#map-layers` (zone, MBS 010, cadastral, urban area toggles). Opened by `toggleMappingPanel()`. Mutual exclusivity: opening one slide-out closes any other via `closeAllSlideouts()`. Slide-out registry: `_slideoutPanels` object; generic helpers `_openSlideoutPanel(id)` / `_closeSlideoutPanel(id)` / `closeAllSlideouts()`.
+- **`#modellingPanel`** — SeaSound-style slide-out panel replacing the old `#mp-propmethod` accordion. Injected into `#app-layout` (before `#map-column`) by the boot script. Has 7 sub-cards: `#mc-propagation` (always shown), `#mc-atmospheric`, `#mc-ground`, `#mc-heights`, `#mc-validation` (shown for ISO+CONCAWE), `#mc-cmet` (ISO only). Panel state is per-session; not serialised. Functions: `openModellingPanel()`, `closeModellingPanel()`, `toggleModellingPanel()`. Card visibility managed by `_updateModellingCards(method)`.
+- **`#mp-propmethod`** — **Removed.** Its content now lives in `#modellingPanel`. The old RHS Propagation method `.grid2` with `#iso9613Params` is kept in HTML but hidden with `style="display:none"`.
+- **`#libraryPanel`** — 480px-wide SeaSound-style slide-out replacing the old `#mp-customsrc` accordion body. Injected into `#app-layout` by the boot script. Four sub-cards: `#lib-filters` (data type / category / review / search), `#lib-table` (scrollable table, max 250 rows), `#lib-add` (custom source wizard button), `#lib-share` (export/import). Opened by `toggleLibraryPanel()`. Lazy-loads `data/source-library.json` via `loadCanonicalLibrary(cb)` on first open; cached in `_canonicalLibrary`. Filter state: `_libFilterDataType`, `_libFilterCategory`, `_libFilterReview`, `_libFilterSearch` (globals). Key functions: `getAllLibraryEntries()` (merges canonical + `_customSources`), `renderLibraryTable()`, `populateCategoryFilter()`, `deleteCustomLibEntry(id)`, `computeLibDbA(spectrum)`, `_updateLibBadge(data)`.
+- **`#mp-customsrc`** — LHS sidebar item renamed "Library"; header wired to `toggleLibraryPanel()`. Body (`#mp-customsrc-body`) is now empty — `#customSrcBody`, `#customSrcList`, and the old import file input `customSrcImportFile` are removed. `renderCustomSourceList()` is still called from `deleteCustomLibEntry` but returns early (no `customSrcList` in DOM — safe). `exportCustomSources()` / `importCustomSources()` work via `libImportFile` input in `#libraryPanel`. All `_customSources` localStorage logic and `rebuildSourceLibraries()` calls unchanged.
 
 ### RHS drawer section filtering
 
@@ -1299,15 +1309,17 @@ Inserted during the drawer IIFE inside `#mapInnerWrapper`:
 
 ### Header structure
 
+**Design convention — dark chrome:** `#app-header`, `#lhsIconStrip`, and `#rhsIconStrip` all share `background: #1e2430`. Content surfaces (slide-out panel bodies, dropdown menus) are light. This frames the map and panels with a consistent dark chrome. Toolbar buttons use `background: transparent; color: #cbd5e1; border: 1px solid rgba(203,213,225,0.25)` with a subtle hover lightening — never a darker active variant.
+
 The `#app-header` is a single flex row (`display: flex; align-items: center; column-gap: 18px`). No wrap, no intro paragraph — one compact row only:
 
 ```
 #app-header
 ├── .header-brand
-│   ├── <a href="resonate-consultants.com"><img.logo></a>   (36px logo — the image IS the wordmark, no text duplicate)
+│   ├── <a href="resonate-consultants.com"><img.logo></a>   (46px logo — the image IS the wordmark, no text duplicate)
 │   └── .header-brand-text
-│       ├── .header-title      ("Environmental Noise Screening Tool", 19px, #1f2937, appended #stateBadge)
-│       └── .header-version    ("v2.0 — March 2026", 11px muted)
+│       ├── .header-title      ("Environmental Noise Screening Tool", 19px, #f1f5f9, appended #stateBadge)
+│       └── .header-version    ("v2.0 — March 2026", 12px, #94a3b8)
 ├── .h1                         (original title — kept in DOM but display:none)
 ├── #policyRefText              (original intro — kept in DOM but display:none)
 ├── #collapseAllBtn             (hidden)

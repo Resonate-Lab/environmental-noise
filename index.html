@@ -113,19 +113,20 @@ input[type="number"]{width:100%;border:1px solid var(--border);border-radius:10p
   top: 56px;
   right: 8px;
   z-index: 1000;
-  background: rgba(255,255,255,0.93);
-  color: #1e3a8a;
+  background: rgba(30,36,48,0.96);
+  color: #cbd5e1;
+  border: 1px solid rgba(203,213,225,0.2);
   padding: 4px 10px;
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
 }
 #prop-method-indicator.visible { display: block; }
-#prop-method-indicator:hover { background: #eff6ff; }
+#prop-method-indicator:hover { background: rgba(30,36,48,1); color: #f1f5f9; }
 /* ── R2: Active drawing mode banner ──────────────────────────────── */
 #mode-banner {
   display: none;
@@ -417,6 +418,9 @@ input[type="number"]{width:100%;border:1px solid var(--border);border-radius:10p
 #noiseMapLmaxMethodRow { flex-direction: column; }
 /* noiseMapControls flows as column when shown (JS sets display:flex) */
 #noiseMapControls { flex-direction: column; }
+/* Noise map show/hide toggle — compact, subordinate to main button */
+.map-toggle-btn { padding: 4px 8px; font-size: 12px; flex-shrink: 0; }
+.map-toggle-btn[hidden] { display: none; }
 
 /* ── Save JPG map control ────────────────────────────────────────────── */
 /* Save JPG sits in mapPanelContainer and shares the .mp dark style;
@@ -750,6 +754,10 @@ body.state-sa #pdcProvisionsSection { display: grid; }
 .state-badge-sa { background:#dbeafe; color:#1e40af; }
 .state-badge-vic { background:#fce7f3; color:#9d174d; }
 .state-badge-other { background:#fef3c7; color:#92400e; }
+/* State badges on dark toolbar */
+#app-header .state-badge-sa  { background:rgba(37,99,235,0.2);  color:#93c5fd; border:1px solid rgba(37,99,235,0.3); }
+#app-header .state-badge-vic { background:rgba(157,23,77,0.2);  color:#f9a8d4; border:1px solid rgba(157,23,77,0.3); }
+#app-header .state-badge-other{ background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid rgba(251,191,36,0.3); }
 
 /* Map right-click context menu */
 #mapCtxMenu {
@@ -1384,13 +1392,14 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 #app-header {
   position: relative;
   z-index: 900;
-  background: var(--bg, #fff);
+  background: #1e2430;
   padding: 8px 18px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--border, #e5e7eb);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
   display: flex;
   align-items: center;
   column-gap: 18px;
+  color: #cbd5e1;
 }
 /* Brand block: logo image + title + version */
 #app-header .header-brand {
@@ -1416,7 +1425,7 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 #app-header .header-title {
   font-size: 19px;
   font-weight: 600;
-  color: #1f2937;
+  color: #f1f5f9;
   line-height: 1.15;
   white-space: nowrap;
   letter-spacing: -0.2px;
@@ -1424,7 +1433,7 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 #app-header .header-title .state-badge { margin-left: 8px; font-size: 12px; vertical-align: middle; }
 #app-header .header-version {
   font-size: 12px;
-  color: var(--muted, #6b7280);
+  color: #94a3b8;
   white-space: nowrap;
 }
 /* Original .h1 element is hidden — we use .header-title instead */
@@ -1443,6 +1452,22 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 #app-header-actions .pdf-btn {
   font-size: 11px;
   padding: 5px 11px;
+  background: transparent;
+  color: #cbd5e1;
+  border: 1px solid rgba(203,213,225,0.25);
+  border-radius: 6px;
+  margin-bottom: 0;
+  opacity: 1;
+}
+#app-header-actions .pdf-btn:hover {
+  background: rgba(203,213,225,0.08);
+  border-color: rgba(203,213,225,0.4);
+  color: #f1f5f9;
+  opacity: 1;
+}
+#app-header-actions .pdf-btn:active {
+  background: rgba(203,213,225,0.15);
+  opacity: 1;
 }
 #app-header .collapse-all-btn { font-size: 11px; padding: 4px 10px; margin: 0; }
 
@@ -1511,9 +1536,9 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 #map-column {
   position: absolute;
   top: 0;
-  right: 0;
+  right: var(--rhs-strip-width, 76px);
   bottom: 0;
-  left: 280px;
+  left: var(--side-panel-width);
   z-index: 1;
 }
 #app-layout.side-panel-collapsed #map-column {
@@ -1539,14 +1564,342 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
    real flex sibling of #map-column inside #app-layout, so the Leaflet map
    reflows to the remaining viewport width (not overlaid).
    ═══════════════════════════════════════════════════════════════════════════ */
-:root { --side-panel-width: 280px; }
+:root { --side-panel-width: 76px; }
+
+/* ── Slide-out panels (Mapping, Modelling, Library, …) ─────────────────── */
+#modellingPanel,
+#mappingPanel,
+#libraryPanel,
+#toolsPanel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--side-panel-width); /* JS overrides on open */
+  width: 340px;
+  background: rgba(20, 26, 38, 0.98);
+  color: #f3f4f6;
+  border-right: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.28);
+  z-index: 600;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+#modellingPanel[hidden],
+#mappingPanel[hidden],
+#libraryPanel[hidden],
+#toolsPanel[hidden] { display: none; }
+
+/* Library panel is wider than the standard 340px */
+#libraryPanel { width: 1000px; }
+
+/* Library filter row */
+.lib-filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.lib-filter-label { font-size: 10px; color: #94a3b8; min-width: 56px; font-weight: 500; flex-shrink: 0; }
+.lib-filter-sel,
+.lib-filter-inp {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: #d1d5db;
+  font-size: 11px;
+  padding: 4px 6px;
+  min-width: 0;
+}
+.lib-filter-sel option { background: #1a1f2e; color: #d1d5db; }
+
+/* Library table */
+.lib-table-card { padding-bottom: 0 !important; }
+.lib-table-wrap { overflow-x: auto; max-height: 320px; overflow-y: auto; margin: 8px -12px -12px; }
+.lib-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.lib-table thead th {
+  position: sticky; top: 0;
+  background: rgba(10, 15, 26, 0.97);
+  color: #94a3b8; font-weight: 600;
+  padding: 5px 8px; text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  white-space: nowrap;
+}
+.lib-table tbody tr { border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+.lib-table tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
+.lib-table tbody td { padding: 4px 8px; color: #d1d5db; vertical-align: middle; }
+.lib-col-name { min-width: 130px; max-width: 160px; }
+.lib-col-name span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+.lib-col-type { min-width: 68px; white-space: nowrap; }
+.lib-col-cat  { min-width: 74px; white-space: nowrap; }
+.lib-col-hz   { width: 36px; text-align: right; font-variant-numeric: tabular-nums; color: #9ca3af; }
+.lib-col-dba  { width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+.lib-col-rev  { min-width: 60px; white-space: nowrap; }
+.lib-col-act  { width: 24px; text-align: center; }
+.lib-del-btn  { background: none; border: none; color: #6b7280; cursor: pointer; padding: 1px 4px; font-size: 10px; line-height: 1; }
+.lib-del-btn:hover { color: #ef4444; }
+
+.slideout-header {
+  padding: 13px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 15, 26, 0.55);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.slideout-header h2 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.slideout-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.slideout-close:hover { color: #f3f4f6; }
+
+.slideout-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+.modelling-card {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.modelling-card:last-child { border-bottom: none; }
+.modelling-card h3 {
+  margin: 0 0 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+.modelling-card .card-hint {
+  margin: 0 0 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+.modelling-card .card-hint-tertiary {
+  margin-top: 10px;
+  margin-bottom: 0;
+  font-size: 10px;
+  color: #4b5563;
+  font-style: italic;
+}
+/* mp-hdr arrow override for the Calculation/Modelling panel-openers */
+#mp-modelling .mp-hdr .mp-arrow { font-size: 11px; opacity: 0.75; }
+#mp-tools    .mp-hdr .mp-arrow { font-size: 11px; opacity: 0.75; }
+
+/* Panel mode banner (inside Modelling / toolsPanel) */
+.panel-mode-banner {
+  padding: 10px 16px;
+  background: #fef3c7;
+  border-bottom: 1px solid #fde68a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.panel-mode-banner[hidden] { display: none; }
+.panel-mode-banner span { font-size: 12px; font-weight: 500; color: #78350f; }
+.panel-mode-cancel {
+  background: white;
+  border: 1px solid #fde68a;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.panel-mode-cancel:hover { background: #fef3c7; }
+
+/* tc-button-group — sub-group within a Modelling panel sub-card */
+.tc-button-group { margin: 10px 0 0; }
+.tc-button-group:first-of-type { margin-top: 0; }
+.tc-button-group h4 {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin: 0 0 4px;
+}
+
+/* ── LHS Icon Strip ─────────────────────────────────────────────────── */
+#lhsIconStrip {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  flex: 1;
+  padding: 6px 0 4px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+#lhsIconStrip::-webkit-scrollbar { display: none; }
+.lhs-icon-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 0 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  gap: 1px;
+}
+.lhs-icon-group:last-child { border-bottom: none; padding-bottom: 4px; }
+.lhs-icon-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 46px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #9ca3af;
+  cursor: pointer;
+  gap: 3px;
+  padding: 4px 2px;
+  transition: background 0.12s, color 0.12s;
+  position: relative;
+}
+.lhs-icon-btn:hover { background: rgba(255,255,255,0.08); color: #f3f4f6; }
+.lhs-icon-btn[aria-expanded="true"],
+.lhs-icon-btn.active { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.lhs-icon-btn svg { flex-shrink: 0; }
+.lhs-icon-label {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ── Search popover ─────────────────────────────────────────────────── */
+#searchPopover {
+  position: absolute;
+  top: 8px;
+  left: 76px;
+  width: 280px;
+  background: rgba(20, 26, 38, 0.98);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 0 6px 6px 6px;
+  box-shadow: 4px 4px 16px rgba(0,0,0,0.35);
+  z-index: 650;
+  padding: 8px;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+#searchPopover[hidden] { display: none; }
+#searchPopover #mapSearchWrapper {
+  position: relative;
+  top: auto; left: auto; right: auto; bottom: auto;
+  z-index: auto;
+  flex: none;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  height: 32px;
+  margin-bottom: 0;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 5px;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  overflow: visible;
+}
+#searchPopover #mapSearchInput {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  color: #f3f4f6;
+  font-size: 12px;
+  line-height: 14px;
+  outline: none;
+  border-radius: 5px 0 0 5px;
+}
+#searchPopover #mapSearchInput::placeholder { color: rgba(243,244,246,0.55); }
+#searchPopover #mapSearchBtn {
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border: none;
+  background: rgba(255,255,255,0.06);
+  color: #f3f4f6;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 0 5px 5px 0;
+}
+#searchPopover #mapSearchBtn:hover { background: rgba(255,255,255,0.14); }
+#searchPopover #mapSearchResults {
+  position: absolute !important;
+  top: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 2000 !important;
+  background: #fff !important;
+  color: #111827;
+  margin-top: 4px !important;
+  border-radius: 5px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* Side panel footer — compact icon-strip variant */
+#side-panel-footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  gap: 2px;
+}
+#side-panel-methodology-btn {
+  width: 60px;
+  height: 38px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  text-align: center;
+  padding: 4px 2px;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+}
+#side-panel-methodology-btn:hover { background: rgba(255,255,255,0.08); color: #f3f4f6; }
 
 #side-panel {
   position: absolute;
   top: 0;
   left: 0;
   bottom: 0;
-  width: 280px;
+  width: 76px;
   max-width: 100vw;
   box-sizing: border-box;
   background: rgba(20, 26, 38, 0.98);
@@ -1568,16 +1921,17 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 }
 #side-panel-inner {
   box-sizing: border-box;
-  padding: 12px 14px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-gutter: stable;
+  scrollbar-width: none;
   min-height: 0; /* allow flex child to shrink below content height */
 }
+#side-panel-inner::-webkit-scrollbar { display: none; }
 #side-panel-inner > * { box-sizing: border-box; }
 /* Right-edge collapse/expand toggle — sticks out 14px into the map area */
 #side-panel-toggle {
@@ -1602,23 +1956,7 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 }
 #side-panel-toggle:hover { background: rgba(40, 48, 64, 1); }
 /* Resize handle on right edge of LHS side panel */
-#side-panel-resize-handle {
-  position: absolute;
-  right: -8px;
-  top: 0;
-  bottom: 0;
-  width: 16px;
-  cursor: pointer;
-  z-index: 111;
-  background: transparent;
-  background-clip: content-box;
-  padding: 0 5px;
-  box-sizing: border-box;
-  transition: background 0.15s;
-}
-#side-panel-resize-handle:hover { background: rgba(74, 144, 217, 0.35); }
-#side-panel-resize-handle.dragging { cursor: col-resize; background: rgba(74, 144, 217, 0.35); }
-#side-panel.collapsed #side-panel-resize-handle { display: none; }
+#side-panel-resize-handle { display: none; }
 /* LHS panel label — horizontal header when expanded */
 #side-panel-label {
   padding: 5px 10px 4px;
@@ -1961,21 +2299,74 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   #map-column .map-status-row { max-width: none; }
 }
 
-/* Shift the topleft Leaflet control stack (status row + zoom) right when the
-   sidebar is expanded, to clear the 32px collapse-toggle that protrudes into
-   the map. Both controls share the same container so one rule moves both. */
-#app-layout:not(.side-panel-collapsed) #noise-map .leaflet-top.leaflet-left {
-  margin-left: 53px;
+/* Keep the topleft Leaflet control stack (zoom +/-) close to the left edge
+   of the map area — the collapse toggle no longer protrudes into the map. */
+#noise-map .leaflet-top.leaflet-left {
+  margin-left: 8px;
 }
 
-/* Drawer: right-side overlay */
-#drawer-panel {
+/* RHS icon strip — mirrors LHS #lhsIconStrip */
+:root { --rhs-strip-width: 76px; }
+#rhsIconStrip {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 520px;
-  z-index: 100;
+  width: var(--rhs-strip-width);
+  z-index: 110;
+  background: #1e2430;
+  border-left: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 0 4px;
+  gap: 1px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+#rhsIconStrip::-webkit-scrollbar { display: none; }
+.rhs-icon-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 46px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #9ca3af;
+  cursor: pointer;
+  gap: 3px;
+  padding: 4px 2px;
+  transition: background 0.12s, color 0.12s;
+}
+.rhs-icon-btn:hover { background: rgba(255,255,255,0.08); color: #f3f4f6; }
+.rhs-icon-btn[aria-expanded="true"],
+.rhs-icon-btn.active { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.rhs-icon-label {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Help assistant launcher — pinned to the bottom of the RHS icon strip */
+#ha-launcher {
+  right: 18px !important;  /* centres 40px button within 76px strip */
+  bottom: 20px !important;
+}
+
+/* Drawer panel — slides out from behind RHS icon strip */
+#drawer-panel {
+  position: absolute;
+  top: 0;
+  right: var(--rhs-strip-width);
+  bottom: 0;
+  width: 480px;
+  z-index: 105;
   background: var(--bg, #ffffff);
   border-left: 1px solid var(--border, #e5e7eb);
   box-shadow: -4px 0 20px rgba(0,0,0,0.08);
@@ -2024,14 +2415,17 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 #map-guide-overlay .map-guide-text {
   position: relative;
   display: inline-block;
-  font-size: 15px;
-  color: #374151;
-  background: rgba(255, 255, 255, 0.92);
-  padding: 16px 36px 16px 28px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #f3f4f6;
+  background: rgba(26, 32, 44, 0.92);
+  padding: 10px 30px 10px 14px;
   border-radius: 10px;
-  border: 1px solid var(--border, #e5e7eb);
-  line-height: 1.6;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: none;
+  line-height: 1.5;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
 }
 #map-guide-overlay .map-guide-close {
   position: absolute;
@@ -2043,8 +2437,8 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   margin: 0;
   border: none;
   background: transparent;
-  color: #9ca3af;
-  font-size: 18px;
+  color: #6b7280;
+  font-size: 16px;
   line-height: 1;
   cursor: pointer;
   border-radius: 4px;
@@ -2052,13 +2446,13 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 #map-guide-overlay .map-guide-close:hover {
-  color: #374151;
-  background: rgba(0, 0, 0, 0.06);
+  color: #f3f4f6;
+  background: rgba(255, 255, 255, 0.1);
 }
 #map-guide-overlay .map-guide-close:focus {
   outline: none;
-  color: #374151;
-  background: rgba(0, 0, 0, 0.06);
+  color: #f3f4f6;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* ── Site pin icon ─────────────────────────────────────────────────────── */
@@ -2102,33 +2496,20 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
    so the tool remains usable on small laptops / tablet landscape. */
 @media (max-width: 1024px) {
   #drawer-panel {
-    width: 420px;
-    min-width: 320px;
+    width: 400px;
+    min-width: 280px;
   }
 }
 
 @media (max-width: 767px) {
-  /* Very narrow: drawer takes the full viewport width when open. */
+  /* Very narrow: drawer takes most of the viewport width when open. */
   #drawer-panel {
-    width: 100% !important;
+    width: calc(100vw - var(--rhs-strip-width)) !important;
     min-width: unset;
-    max-width: 100%;
+    max-width: calc(100vw - var(--rhs-strip-width));
   }
-  /* Nothing to resize against at full width. */
-  #drawer-resize-handle {
-    display: none;
-  }
-  /* Move toggle button to bottom-left corner so it's reachable when
-     the full-width drawer is open. */
-  #drawer-toggle {
-    left: 8px;
-    top: auto;
-    bottom: 8px;
-    border-radius: 6px;
-    height: 40px;
-    width: 40px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-  }
+  #rhsIconStrip { display: none; }
+  #map-column { right: 0; }
 }
 
 #drawer-content {
@@ -2167,9 +2548,21 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 /* ── Phase 2: Sticky compliance strip + jump nav ────────────────── */
 #drawer-header {
   flex-shrink: 0;
-  background: var(--bg, #fff);
-  border-bottom: 1px solid var(--border, #e5e7eb);
+  padding: 13px 16px;
+  background: #1e2430;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   z-index: 2;
+}
+#drawer-header h2 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #94a3b8;
 }
 #compliance-strip {
   padding: 8px 12px 4px;
@@ -2177,6 +2570,9 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   line-height: 1.35;
   max-height: 200px;
   overflow-y: auto;
+  flex-shrink: 0;
+  background: var(--bg, #fff);
+  border-bottom: 1px solid var(--border, #e5e7eb);
 }
 #compliance-strip:empty { display: none; }
 #compliance-strip .cs-empty {
@@ -2467,7 +2863,7 @@ body.disclaimer-visible .container {
     <div class="grid2">
 
       <!-- ===== PROJECT NUMBER + NAME + UPLOAD ROW ===== -->
-      <div style="grid-column:1/-1;padding:0 14px 4px;display:flex;align-items:center;gap:10px;">
+      <div data-section="setup" style="grid-column:1/-1;padding:0 14px 4px;display:flex;align-items:center;gap:10px;">
         <input type="text" id="projectNumberInput"
           placeholder="Project #"
           autocomplete="off"
@@ -2565,7 +2961,7 @@ body.disclaimer-visible .container {
                 return;
               }
               // Legacy floating-dropdown behaviour: mutually exclusive.
-              var all = ['mp-mapping', 'mp-tools', 'mp-modelling', 'mp-propmethod', 'mp-customsrc'];
+              var all = ['mp-mapping', 'mp-tools', 'mp-modelling', 'mp-customsrc'];
               all.forEach(function(pid) {
                 var p = document.getElementById(pid);
                 if (!p) return;
@@ -2603,6 +2999,181 @@ body.disclaimer-visible .container {
               });
             });
 
+            // ── Slide-out panel registry ──────────────────────────────────
+            // Each entry: { headerBtnId, arrowId, closeBtnId }
+            var _slideoutPanels = {
+              modellingPanel: { headerBtnId: 'lhsCalculationBtn', arrowId: null, closeBtnId: 'modellingPanelClose' },
+              mappingPanel:   { headerBtnId: 'lhsMappingBtn',     arrowId: null, closeBtnId: 'mappingPanelClose'   },
+              libraryPanel:   { headerBtnId: 'lhsLibraryBtn',     arrowId: null, closeBtnId: 'libraryPanelClose'   },
+              toolsPanel:     { headerBtnId: 'lhsModellingBtn',   arrowId: null, closeBtnId: 'toolsPanelClose'     }
+            };
+
+            function _openSlideoutPanel(panelId) {
+              var cfg = _slideoutPanels[panelId];
+              if (!cfg) return;
+              // Close any other open panel first
+              Object.keys(_slideoutPanels).forEach(function(id) {
+                if (id !== panelId) _closeSlideoutPanel(id);
+              });
+              var panel = document.getElementById(panelId);
+              if (!panel) return;
+              var sp = document.getElementById('side-panel');
+              var spW = sp ? sp.getBoundingClientRect().width : 280;
+              panel.style.left = spW + 'px';
+              panel.hidden = false;
+              var hdr = document.getElementById(cfg.headerBtnId);
+              if (hdr) hdr.setAttribute('aria-expanded', 'true');
+              var arrow = document.getElementById(cfg.arrowId);
+              if (arrow) arrow.innerHTML = '&#8592;';
+              var mc = document.getElementById('map-column');
+              if (mc) mc.style.left = (spW + panel.offsetWidth) + 'px';
+              if (window._map && typeof window._map.invalidateSize === 'function') window._map.invalidateSize();
+            }
+
+            function _closeSlideoutPanel(panelId) {
+              var cfg = _slideoutPanels[panelId];
+              if (!cfg) return;
+              var panel = document.getElementById(panelId);
+              if (!panel || panel.hidden) return;
+              panel.hidden = true;
+              var hdr = document.getElementById(cfg.headerBtnId);
+              if (hdr) hdr.setAttribute('aria-expanded', 'false');
+              var arrow = document.getElementById(cfg.arrowId);
+              if (arrow) arrow.innerHTML = '&#8594;';
+              var sp = document.getElementById('side-panel');
+              var mc = document.getElementById('map-column');
+              if (mc && sp && !sp.classList.contains('collapsed')) {
+                mc.style.left = sp.getBoundingClientRect().width + 'px';
+              }
+              if (window._map && typeof window._map.invalidateSize === 'function') window._map.invalidateSize();
+            }
+
+            function closeAllSlideouts() {
+              Object.keys(_slideoutPanels).forEach(function(id) { _closeSlideoutPanel(id); });
+            }
+
+            /* In-panel mode banner for the Modelling (toolsPanel) slide-out */
+            function setPanelModeBanner(label, cancelFn) {
+              var banner = document.getElementById('toolsModeBanner');
+              var text   = document.getElementById('toolsModeText');
+              var btn    = document.getElementById('toolsModeCancel');
+              if (!banner) return;
+              if (label) {
+                if (text) text.textContent = 'Active: ' + label;
+                banner.hidden = false;
+                if (btn) btn.onclick = function() {
+                  if (cancelFn) cancelFn();
+                  clearPanelModeBanner();
+                };
+              } else {
+                clearPanelModeBanner();
+              }
+            }
+            function clearPanelModeBanner() {
+              var banner = document.getElementById('toolsModeBanner');
+              if (banner) banner.hidden = true;
+            }
+
+            // Named helpers (kept for backwards-compat and clarity)
+            function openModellingPanel()  { _openSlideoutPanel('modellingPanel'); }
+            function closeModellingPanel() { _closeSlideoutPanel('modellingPanel'); }
+            function toggleModellingPanel() {
+              var p = document.getElementById('modellingPanel');
+              if (p && !p.hidden) closeModellingPanel(); else openModellingPanel();
+            }
+            function openMappingPanel()    { _openSlideoutPanel('mappingPanel'); }
+            function closeMappingPanel()   { _closeSlideoutPanel('mappingPanel'); }
+            function toggleMappingPanel() {
+              var p = document.getElementById('mappingPanel');
+              if (p && !p.hidden) closeMappingPanel(); else openMappingPanel();
+            }
+            function openToolsPanel()    { _openSlideoutPanel('toolsPanel'); }
+            function closeToolsPanel()   { _closeSlideoutPanel('toolsPanel'); }
+            function toggleToolsPanel() {
+              var p = document.getElementById('toolsPanel');
+              if (p && !p.hidden) closeToolsPanel(); else openToolsPanel();
+            }
+            function openLibraryPanel() {
+              _openSlideoutPanel('libraryPanel');
+              if (typeof loadCanonicalLibrary === 'function') {
+                loadCanonicalLibrary(function() {
+                  if (typeof populateCategoryFilter === 'function') populateCategoryFilter();
+                  if (typeof renderLibraryTable === 'function') renderLibraryTable();
+                });
+              }
+            }
+            function closeLibraryPanel()  { _closeSlideoutPanel('libraryPanel'); }
+            function toggleLibraryPanel() {
+              var p = document.getElementById('libraryPanel');
+              if (p && !p.hidden) closeLibraryPanel(); else openLibraryPanel();
+            }
+
+            // × close buttons and Esc key (generic)
+            document.addEventListener('DOMContentLoaded', function() {
+              Object.keys(_slideoutPanels).forEach(function(id) {
+                var cfg = _slideoutPanels[id];
+                var btn = document.getElementById(cfg.closeBtnId);
+                if (btn) btn.addEventListener('click', function() { _closeSlideoutPanel(id); });
+              });
+
+              // Mode banner for L.Draw / ruler / move buttons in toolsPanel
+              var _drawModeLabels = {
+                'drawBuildingBtn':       'Drawing new building',
+                'drawBarrierBtn':        'Drawing barrier',
+                'drawGroundZoneBtn':     'Drawing ground zone',
+                'drawLineSourceBtn':     'Drawing line source',
+                'drawAreaSourceBtn':     'Drawing area source',
+                'drawBuildingSourceBtn': 'Drawing building source',
+                'drawCortnRoadBtn':      'Drawing road (CoRTN)',
+                'rulerBtn':              'Measuring distance',
+                'moveGeomBtn':           'Move mode'
+              };
+              var panelBody = document.querySelector('#toolsPanel .slideout-body');
+              if (panelBody) {
+                panelBody.addEventListener('click', function(e) {
+                  var btn = e.target.closest('button');
+                  if (!btn) return;
+                  var label = _drawModeLabels[btn.id];
+                  if (!label) return;
+                  // If already active (toggling off), clear the banner
+                  if (btn.classList.contains('active')) {
+                    clearPanelModeBanner();
+                  } else {
+                    setPanelModeBanner(label, function() {
+                      // Cancel: dispatch Escape to cancel L.Draw / ruler, and placement mode
+                      if (typeof window._cancelPlacementMode === 'function') window._cancelPlacementMode();
+                      if (typeof window._cancelRulerMode === 'function') window._cancelRulerMode();
+                      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+                      clearPanelModeBanner();
+                    });
+                  }
+                }, true); // capture phase so it fires before the button's own handler
+              }
+            });
+            document.addEventListener('keydown', function(e) {
+              if (e.key === 'Escape') {
+                var closed = false;
+                Object.keys(_slideoutPanels).forEach(function(id) {
+                  var el = document.getElementById(id);
+                  if (el && !el.hidden) { _closeSlideoutPanel(id); closed = true; }
+                });
+                if (closed) e.stopPropagation();
+              }
+            });
+
+            // ── Modelling card visibility (specific to modelling panel) ────
+            function _updateModellingCards(method) {
+              var isAdvanced = (method === 'iso9613' || method === 'concawe');
+              ['mc-atmospheric', 'mc-ground', 'mc-heights', 'mc-validation'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.hidden = !isAdvanced;
+              });
+              var mcCmet = document.getElementById('mc-cmet');
+              if (mcCmet) mcCmet.hidden = (method !== 'iso9613');
+              var cmp = document.getElementById('concaweMetPanel');
+              if (cmp) cmp.style.display = (method === 'concawe') ? '' : 'none';
+            }
+
             // ── LHS side panel boot ───────────────────────────────────────
             // Creates #side-panel as a flex sibling of #map-column inside
             // #app-layout, moves Search + Mapping/Tools/Modelling accordions
@@ -2622,195 +3193,152 @@ body.disclaimer-visible .container {
                 var sidePanel = document.createElement('div');
                 sidePanel.id = 'side-panel';
 
-                var toggle = document.createElement('button');
-                toggle.id = 'side-panel-toggle';
-                toggle.type = 'button';
-                toggle.title = 'Collapse/expand side panel';
-                toggle.setAttribute('aria-label', 'Toggle side panel');
-                toggle.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>';
-                sidePanel.appendChild(toggle);
-
-                // Resize handle on right edge
-                var spResizeHandle = document.createElement('div');
-                spResizeHandle.id = 'side-panel-resize-handle';
-                sidePanel.appendChild(spResizeHandle);
-
-                // Vertical nametag strip — shown when collapsed
-                var spNametag = document.createElement('div');
-                spNametag.id = 'side-panel-nametag-tab';
-                spNametag.textContent = 'Planning & modelling';
-                // spNametag appended to appLayout after sidePanel insertion (see below)
-
                 var inner = document.createElement('div');
                 inner.id = 'side-panel-inner';
                 sidePanel.appendChild(inner);
 
-                // Toolbar row at the TOP of the panel: 5 atom buttons as
-                // 36×36 icon-only tiles above the search bar. The atom
-                // elements keep their .mp / .mp-hdr structure and existing
-                // click handlers (helpToggleBtn, suggestToggleBtn, undoBtn,
-                // redoBtn, saveJpgPanelBtn) — only the parent is moved.
-                var toolbar = document.createElement('div');
-                toolbar.id = 'side-panel-toolbar';
-                ['mp-help', 'mp-suggest', 'mp-objects', 'mp-undo', 'mp-redo', 'mp-save-jpg'].forEach(function(id) {
-                  var el = document.getElementById(id);
-                  if (el) toolbar.appendChild(el);
-                });
-                inner.appendChild(toolbar);
+                // ── Build LHS icon strip ────────────────────────────────
+                function _mkIconBtn(id, title, svgHtml, label, clickFn, extraStyle) {
+                  var btn = document.createElement('button');
+                  btn.type = 'button';
+                  btn.id = id;
+                  btn.title = title;
+                  btn.className = 'lhs-icon-btn';
+                  btn.innerHTML = svgHtml + '<span class="lhs-icon-label">' + label + '</span>';
+                  if (extraStyle) btn.style.cssText = extraStyle;
+                  if (clickFn) btn.addEventListener('click', clickFn);
+                  return btn;
+                }
 
-                // Then search + accordions from #mapPanelContainer → inner
-                var searchWrap = document.getElementById('mapSearchWrapper');
-                if (searchWrap) inner.appendChild(searchWrap);
-                ['mp-mapping', 'mp-tools', 'mp-modelling', 'mp-propmethod', 'mp-customsrc'].forEach(function(id) {
-                  var el = document.getElementById(id);
-                  if (el) inner.appendChild(el);
-                });
+                var strip = document.createElement('nav');
+                strip.id = 'lhsIconStrip';
+                strip.setAttribute('aria-label', 'Navigation');
 
-                // Footer with Expand/Panels drawer toggle at the bottom
+                // Group 1: Navigation utilities
+                var g1 = document.createElement('div');
+                g1.className = 'lhs-icon-group';
+                g1.appendChild(_mkIconBtn('lhsSearchBtn', 'Search address (/)',
+                  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+                  'Search',
+                  function() { if (typeof openSearchPopover === 'function') openSearchPopover(); }
+                ));
+                g1.appendChild(_mkIconBtn('lhsHelpBtn', 'Quick reference (?)',
+                  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" stroke-linecap="round" stroke-width="3"/></svg>',
+                  'Help',
+                  function() { var h = document.getElementById('helpToggleBtn'); if (h) h.click(); }
+                ));
+                strip.appendChild(g1);
+
+                // Group 2: Panel openers
+                var g2 = document.createElement('div');
+                g2.className = 'lhs-icon-group';
+                g2.appendChild(_mkIconBtn('lhsMappingBtn', 'Mapping',
+                  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
+                  'Mapping',
+                  function() { if (typeof toggleMappingPanel === 'function') toggleMappingPanel(); }
+                ));
+                g2.appendChild(_mkIconBtn('lhsModellingBtn', 'Modelling',
+                  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+                  'Modelling',
+                  function() { if (typeof toggleToolsPanel === 'function') toggleToolsPanel(); }
+                ));
+                g2.appendChild(_mkIconBtn('lhsCalculationBtn', 'Calculation',
+                  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>',
+                  'Calculation',
+                  function() { if (typeof toggleModellingPanel === 'function') toggleModellingPanel(); }
+                ));
+                g2.appendChild(_mkIconBtn('lhsLibraryBtn', 'Library',
+                  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+                  'Library',
+                  function() { if (typeof toggleLibraryPanel === 'function') toggleLibraryPanel(); }
+                ));
+                strip.appendChild(g2);
+
+                // Group 3: Actions
+                var g3 = document.createElement('div');
+                g3.className = 'lhs-icon-group';
+                g3.appendChild(_mkIconBtn('lhsUndoBtn', 'Nothing to undo',
+                  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 7v6h6"/><path d="M3 13C5 8 9 5 14 5a9 9 0 0 1 0 18c-4.5 0-8.5-2.5-10.5-6"/></svg>',
+                  'Undo',
+                  function() { if (typeof undo === 'function') undo(); },
+                  'opacity:0.4;'
+                ));
+                g3.appendChild(_mkIconBtn('lhsRedoBtn', 'Nothing to redo',
+                  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 7v6h-6"/><path d="M21 13c-2 5-6 8-11 8a9 9 0 0 1 0-18c4.5 0 8.5 2.5 10.5 6"/></svg>',
+                  'Redo',
+                  function() { if (typeof redo === 'function') redo(); },
+                  'opacity:0.4;'
+                ));
+                g3.appendChild(_mkIconBtn('lhsSaveJpgBtn', 'Save map as JPEG (3× resolution)',
+                  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
+                  'Save JPG',
+                  function() { var s = document.getElementById('saveJpgPanelBtn'); if (s) s.click(); }
+                ));
+                strip.appendChild(g3);
+                inner.appendChild(strip);
+
+                // Footer — methodology icon button
                 var footer = document.createElement('div');
                 footer.id = 'side-panel-footer';
-                var drawerToggleBtn = document.getElementById('mp-toggle-drawer');
-                if (drawerToggleBtn) footer.appendChild(drawerToggleBtn);
-
-                // Methodology button — opens centred modal overlay with
-                // cloned #methodologyCard content (see showMethodologyModal).
                 var methBtn = document.createElement('button');
                 methBtn.id = 'side-panel-methodology-btn';
                 methBtn.type = 'button';
-                methBtn.textContent = 'Methodology';
+                methBtn.title = 'View methodology';
+                methBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span class="lhs-icon-label" style="margin-top:2px;">Method</span>';
+                methBtn.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;width:60px;height:42px;background:none;border:none;border-radius:6px;color:#6b7280;cursor:pointer;gap:2px;padding:4px 2px;';
                 methBtn.addEventListener('click', function() {
-                  if (typeof showMethodologyModal === 'function')
-                    showMethodologyModal();
+                  if (typeof showMethodologyModal === 'function') showMethodologyModal();
                 });
                 footer.appendChild(methBtn);
-
                 inner.appendChild(footer);
 
-                // Insert side panel and backdrop as first children of #app-layout
+                // Search popover — injected into #app-layout (above slide-out panels)
+                var searchPopover = document.createElement('div');
+                searchPopover.id = 'searchPopover';
+                searchPopover.hidden = true;
+                var searchWrap = document.getElementById('mapSearchWrapper');
+                if (searchWrap) searchPopover.appendChild(searchWrap);
+
+                // Search open/close exposed globally (needed by / shortcut)
+                window.openSearchPopover = function() {
+                  searchPopover.hidden = false;
+                  var inp = document.getElementById('mapSearchInput');
+                  if (inp) { setTimeout(function() { inp.focus(); inp.select(); }, 30); }
+                  var btn = document.getElementById('lhsSearchBtn');
+                  if (btn) btn.setAttribute('aria-expanded', 'true');
+                };
+                window.closeSearchPopover = function() {
+                  searchPopover.hidden = true;
+                  var btn = document.getElementById('lhsSearchBtn');
+                  if (btn) btn.removeAttribute('aria-expanded');
+                };
+                document.addEventListener('click', function(e) {
+                  if (!searchPopover.hidden) {
+                    var sb = document.getElementById('lhsSearchBtn');
+                    if (!searchPopover.contains(e.target) && !(sb && sb.contains(e.target))) {
+                      window.closeSearchPopover();
+                    }
+                  }
+                }, true);
+
+                // Insert side panel as first child of #app-layout
                 appLayout.insertBefore(sidePanel, appLayout.firstChild);
-                appLayout.insertBefore(spNametag, sidePanel.nextSibling);
-                var backdrop = document.createElement('div');
-                backdrop.id = 'side-panel-backdrop';
-                appLayout.insertBefore(backdrop, sidePanel.nextSibling);
-                backdrop.addEventListener('click', function() { setCollapsed(true); });
+                // Inject slide-out panels + search popover before map column
+                var modellingPanelEl = document.getElementById('modellingPanel');
+                if (modellingPanelEl) appLayout.insertBefore(modellingPanelEl, mapCol);
+                var mappingPanelEl = document.getElementById('mappingPanel');
+                if (mappingPanelEl) appLayout.insertBefore(mappingPanelEl, mapCol);
+                var libraryPanelEl = document.getElementById('libraryPanel');
+                if (libraryPanelEl) appLayout.insertBefore(libraryPanelEl, mapCol);
+                var toolsPanelEl = document.getElementById('toolsPanel');
+                if (toolsPanelEl) appLayout.insertBefore(toolsPanelEl, mapCol);
+                appLayout.insertBefore(searchPopover, mapCol);
 
                 function nudgeMap() {
                   if (window._map && typeof window._map.invalidateSize === 'function') {
                     window._map.invalidateSize();
                   }
                 }
-                // Collapse state + toggle wiring. #app-layout gets
-                // .side-panel-collapsed so the child #map-column selector
-                // flips left: 300px → 0 and the map reflows in lockstep.
-                function setCollapsed(collapsed) {
-                  appLayout.classList.toggle('side-panel-collapsed', collapsed);
-                  var mc = document.getElementById('map-column');
-                  if (collapsed) {
-                    sidePanel.classList.add('collapsed');
-                    // Clear inline styles so CSS .collapsed { width:0 } takes effect
-                    sidePanel.style.width = '';
-                    if (mc) mc.style.left = '';
-                  } else {
-                    sidePanel.classList.remove('collapsed');
-                    toggle.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>';
-                    // Restore saved resize width if any
-                    try {
-                      var sw = localStorage.getItem('resonate_side_panel_width');
-                      if (sw) {
-                        sidePanel.style.width = sw;
-                        if (mc) mc.style.left = sw;
-                      }
-                    } catch(e2) {}
-                  }
-                  try { localStorage.setItem(KEY, String(collapsed)); } catch (e) {}
-                  nudgeMap();
-                }
-                function isCollapsedFromStorage() {
-                  try { return localStorage.getItem(KEY) === 'true'; } catch (e) { return false; }
-                }
-                toggle.addEventListener('click', function() {
-                  setCollapsed(!sidePanel.classList.contains('collapsed'));
-                });
-
-                // Initial state: auto-collapse on mobile; otherwise honour localStorage
-                var mq = window.matchMedia('(max-width: 767px)');
-                if (mq.matches) {
-                  setCollapsed(true);
-                } else {
-                  setCollapsed(isCollapsedFromStorage());
-                }
-                // Re-collapse when crossing into mobile
-                if (typeof mq.addEventListener === 'function') {
-                  mq.addEventListener('change', function(e) { if (e.matches) setCollapsed(true); });
-                } else if (typeof mq.addListener === 'function') {
-                  mq.addListener(function(e) { if (e.matches) setCollapsed(true); });
-                }
-
-                // Wire nametag tab click to expand panel
-                spNametag.addEventListener('click', function() { setCollapsed(false); });
-
-                // ── Side-panel resize handle ───────────────────────────
-                (function initSidePanelResize() {
-                  var isDragging = false;
-                  var didDrag = false;
-                  var startX = 0;
-                  var startWidth = 0;
-                  var CLICK_THRESHOLD_PX = 5;
-                  var SP_WIDTH_KEY = 'resonate_side_panel_width';
-                  function clampWidth(px) {
-                    return Math.max(160, Math.min(Math.round(window.innerWidth * 0.42), px));
-                  }
-                  spResizeHandle.addEventListener('pointerdown', function(e) {
-                    isDragging = true;
-                    didDrag = false;
-                    startX = e.clientX;
-                    startWidth = sidePanel.getBoundingClientRect().width;
-                    try { spResizeHandle.setPointerCapture(e.pointerId); } catch(err) {}
-                    document.body.style.userSelect = 'none';
-                    e.preventDefault();
-                  });
-                  document.addEventListener('pointermove', function(e) {
-                    if (!isDragging) return;
-                    var dx = e.clientX - startX;
-                    if (!didDrag && Math.abs(dx) > CLICK_THRESHOLD_PX) {
-                      didDrag = true;
-                      spResizeHandle.classList.add('dragging');
-                      document.body.style.cursor = 'col-resize';
-                    }
-                    if (didDrag) {
-                      var newW = clampWidth(startWidth + dx);
-                      sidePanel.style.width = newW + 'px';
-                      var mc = document.getElementById('map-column');
-                      if (mc && !sidePanel.classList.contains('collapsed')) mc.style.left = newW + 'px';
-                      nudgeMap();
-                    }
-                  });
-                  function endDrag() {
-                    if (!isDragging) return;
-                    isDragging = false;
-                    spResizeHandle.classList.remove('dragging');
-                    document.body.style.cursor = '';
-                    document.body.style.userSelect = '';
-                    if (didDrag) {
-                      try { localStorage.setItem(SP_WIDTH_KEY, sidePanel.style.width); } catch(err) {}
-                      nudgeMap();
-                    } else {
-                      setCollapsed(!sidePanel.classList.contains('collapsed'));
-                    }
-                  }
-                  document.addEventListener('pointerup', endDrag);
-                  document.addEventListener('pointercancel', endDrag);
-                  // Restore saved width
-                  try {
-                    var saved = localStorage.getItem(SP_WIDTH_KEY);
-                    if (saved) {
-                      var w = clampWidth(parseInt(saved, 10));
-                      sidePanel.style.width = w + 'px';
-                      var mc = document.getElementById('map-column');
-                      if (mc && !sidePanel.classList.contains('collapsed')) mc.style.left = w + 'px';
-                    }
-                  } catch(e) {}
-                })();
 
                 setTimeout(nudgeMap, 200);   // initial layout settle
               }
@@ -2868,180 +3396,121 @@ body.disclaimer-visible .container {
               </div>
             </div>
 
-            <!-- PANEL 1: MAPPING -->
+            <!-- PANEL 1: MAPPING (opens slide-out panel) -->
             <div class="mp" id="mp-mapping" style="pointer-events:all;">
-              <div class="mp-hdr" onclick="toggleMapPanel('mp-mapping')" role="button" aria-expanded="false" aria-controls="mp-mapping-body">
-                <span>Mapping</span><span class="mp-arrow">&#9660;</span>
+              <div class="mp-hdr" id="mappingHeaderBtn" onclick="toggleMappingPanel()" role="button" tabindex="0" aria-expanded="false" aria-controls="mappingPanel">
+                <span>Mapping</span><span class="mp-arrow" id="mappingPanelArrow">&#8594;</span>
               </div>
-              <div class="mp-body" id="mp-mapping-body">
-                <button class="mp-btn zone-toggle-btn" id="zoneToggleBtn" title="Toggle zoning overlay on map (Z)" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Show zones<span class="mp-kbd">Z</span></button>
-                <button class="mp-btn mbs010-toggle-btn" id="mbs010ToggleBtn" title="Toggle MBS 010 overlays: Noise &amp; Air Emissions, Aircraft Noise Exposure, Transport Routes" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> MBS 010 screening<span class="mp-kbd">X</span></button>
-                <button class="mp-btn aerial-toggle-btn" id="aerialToggleBtn" title="Switch between street map and aerial imagery"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8"/><ellipse cx="12" cy="12" rx="4" ry="9"/></svg> Aerial<span class="mp-kbd">I</span></button>
-                <button class="mp-btn cadastre-toggle-btn" id="cadastreToggleBtn" title="Toggle cadastral boundaries and building outlines"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><rect x="2" y="4" width="8" height="7"/><rect x="14" y="4" width="8" height="7"/><rect x="5" y="13" width="8" height="7"/><rect x="16" y="13" width="6" height="7"/></svg> Cadastral<span class="mp-kbd">D</span></button>
-                <button class="mp-btn urban-boundary-toggle-btn" id="urbanBoundaryToggleBtn" title="Show major urban area boundaries (EPA Pub 1826.5)" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 3h18v18H3z" stroke-dasharray="4 2"/><circle cx="12" cy="12" r="5" fill="currentColor" opacity="0.15"/></svg> Urban area<span class="mp-kbd">U</span></button>
-              </div>
+              <div class="mp-body" id="mp-mapping-body"></div>
             </div>
 
-            <!-- PANEL 2: TOOLS -->
+            <!-- PANEL 2: MODELLING (opens slide-out panel) -->
             <div class="mp" id="mp-tools" style="pointer-events:all;">
-              <div class="mp-hdr" onclick="toggleMapPanel('mp-tools')" role="button" aria-expanded="false" aria-controls="mp-tools-body">
-                <span>Tools</span><span class="mp-arrow">&#9660;</span>
+              <div class="mp-hdr" id="toolsHeaderBtn" onclick="toggleToolsPanel()" role="button" tabindex="0" aria-expanded="false" aria-controls="toolsPanel">
+                <span>Modelling</span><span class="mp-arrow" id="toolsPanelArrow">&#8594;</span>
               </div>
-              <div class="mp-body" id="mp-tools-body">
-                <!-- Group 1: Map layers & analysis tools -->
-                <button class="mp-btn" id="terrainToggleBtn" title="Apply terrain screening (slower — queries elevation API) (T)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M2 20l5-8 4 4 5-10 6 14"/></svg> Terrain<span class="mp-kbd">T</span></button>
-                <button class="mp-btn" id="terrainContourBtn" title="Show terrain elevation contour lines on map (requires Terrain ON) (C)" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 15 Q8 9 12 12 Q16 15 21 9"/><path d="M3 20 Q8 14 12 17 Q16 20 21 14"/></svg> Contours<span class="mp-kbd">C</span></button>
-                <button class="mp-btn" id="threeDViewBtn" title="Open 3D scene view of terrain, buildings, barriers, and sources (V)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 3L2 8l10 5 10-5-10-5z"/><path d="M2 12l10 5 10-5"/><path d="M12 22V13"/></svg> 3D View<span class="mp-kbd">V</span></button>
-                <button class="mp-btn buildings-toggle-btn" id="buildingsToggleBtn" title="Show or hide OSM building footprints (O)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 21V8l5-5 5 5v13"/><path d="M13 21V11l4-3 4 3v10"/><path d="M7 10v1M7 14v1M16 13v1M16 17v1"/></svg> Buildings<span class="mp-kbd">O</span></button>
+              <div class="mp-body" id="mp-tools-body" style="display:none;"></div>
+            </div>
+
+            <!-- PANEL 3: MODELLING (opens slide-out panel) -->
+            <div class="mp" id="mp-modelling" style="pointer-events:all;">
+              <div class="mp-hdr" id="modellingHeaderBtn" onclick="toggleModellingPanel()" role="button" tabindex="0" aria-expanded="false" aria-controls="modellingPanel">
+                <span>Calculation</span><span class="mp-arrow" id="modellingPanelArrow">&#8594;</span>
+              </div>
+              <div class="mp-body" id="mp-modelling-body"></div>
+            </div>
+
+          <!-- MODELLING SLIDE-OUT PANEL (injected into #app-layout by boot script) -->
+          <div id="modellingPanel" role="dialog" aria-labelledby="modellingPanelTitle" aria-modal="false" hidden>
+            <div class="slideout-header">
+              <h2 id="modellingPanelTitle">CALCULATION</h2>
+              <button class="slideout-close" id="modellingPanelClose" aria-label="Close Calculation panel">&times;</button>
+            </div>
+            <div class="slideout-body">
+
+              <!-- Card 1: Propagation method -->
+              <section class="modelling-card" id="mc-propagation">
+                <h3>Propagation method</h3>
+                <p class="card-hint">Choose the propagation model used for all predictions in this assessment.</p>
+                <div id="propMethodGroup" style="display:flex;gap:2px;padding:2px 4px;">
+                  <button class="mp-btn active" data-val="simple" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">Simple</button>
+                  <button class="mp-btn" data-val="iso9613" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">ISO 9613-2:1996</button>
+                  <button class="mp-btn" data-val="concawe" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">CONCAWE</button>
+                </div>
+                <div id="concaweMetPanel" style="display:none;">
+                  <div class="mp-sep"></div>
+                  <div class="mp-sub-row" style="gap:10px;">
+                    <label style="display:flex;align-items:center;gap:3px;cursor:pointer;color:#d1d5db;"><input type="radio" name="concaweMetMode" value="direct" checked> Direct</label>
+                    <label style="display:flex;align-items:center;gap:3px;cursor:pointer;color:#d1d5db;"><input type="radio" name="concaweMetMode" value="computed"> Compute</label>
+                  </div>
+                  <div id="concaweDirectGroup">
+                    <div class="mp-sub-row">
+                      <span>Category:</span>
+                      <select id="concaweMetCatSelect" style="flex:1;">
+                        <option value="1">1 &mdash; Strong upwind</option>
+                        <option value="2">2 &mdash; Moderate upwind</option>
+                        <option value="3">3 &mdash; Light/crosswind</option>
+                        <option value="4" selected>4 &mdash; Neutral</option>
+                        <option value="5">5 &mdash; Light downwind</option>
+                        <option value="6">6 &mdash; Strong downwind</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div id="concaweComputedGroup" style="display:none;">
+                    <div class="mp-sub-row"><span>Wind speed:</span><input type="number" id="concaweWindSpeed" value="3" min="0" max="20" step="0.5" style="width:46px;"><span>m/s</span></div>
+                    <div class="mp-sub-row"><span>Wind from:</span><input type="number" id="concaweWindDir" value="0" min="0" max="360" step="5" style="width:46px;"><span>&deg;</span></div>
+                    <div class="mp-sub-row">
+                      <span>Time of day:</span>
+                      <select id="concaweTimeOfDay" style="flex:1;">
+                        <option value="day">Day</option>
+                        <option value="transition">Transition</option>
+                        <option value="night" selected>Night</option>
+                      </select>
+                    </div>
+                    <div id="concaweSolarGroup" style="display:none;" class="mp-sub-row">
+                      <span>Solar:</span>
+                      <select id="concaweSolarRad" style="flex:1;">
+                        <option value=">60">&gt;60 mW/cm&sup2;</option>
+                        <option value="30-60">30&ndash;60 mW/cm&sup2;</option>
+                        <option value="<30">&lt;30 mW/cm&sup2;</option>
+                      </select>
+                    </div>
+                    <div id="concaweCloudGroup" class="mp-sub-row">
+                      <span>Cloud:</span>
+                      <select id="concaweCloudCover" style="flex:1;">
+                        <option value="0-3">0&ndash;3 octas</option>
+                        <option value="4-7">4&ndash;7 octas</option>
+                        <option value="8">8 octas</option>
+                      </select>
+                    </div>
+                    <div id="concaweComputedResult" style="font-size:10px;padding:3px 8px;color:#9ca3af;">
+                      Pasquill: <strong id="concawePasquillDisplay">&mdash;</strong> | Cat: <strong id="concaweMetCatDisplay">&mdash;</strong> | Wind: <strong id="concaweVectorWindDisplay">&mdash;</strong>
+                    </div>
+                  </div>
+                </div>
+                <div id="propMethodDesc" style="font-size:10px;color:#6b7280;line-height:1.5;padding:4px 4px 0;"><b>Simple</b>: geometric spreading only. <b>ISO 9613-2:1996</b>: atmospheric absorption + ground attenuation per octave band. <b>CONCAWE</b> (Report 4/81): empirical ground curves + meteorological corrections.</div>
+              </section>
+
+              <!-- Card 2: Reflections -->
+              <section class="modelling-card" id="mc-reflections">
+                <h3>Reflections</h3>
+                <p class="card-hint">Specular reflections from building façades and vertical surfaces. Per-surface reflection coefficient ρ is configured per building in the building edit panel.</p>
                 <button class="mp-btn" id="reflectionsBtn" title="Apply ISO 9613-2:1996 §7.5 image source facade reflections to receiver predictions and noise map (F)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><line x1="12" y1="3" x2="12" y2="21"/><path d="M5 7l7 5-7 5"/><path d="M19 7l-7 5 7 5"/></svg> Reflections<span class="mp-kbd">F</span></button>
                 <span id="reflectionsBuildingWarning" style="display:none;font-size:10px;color:#fbbf24;padding:2px 8px;white-space:normal;line-height:1.4;">&#9888; Enable Buildings layer to apply reflections to noise map</span>
-                <button class="mp-btn" id="rulerBtn" title="Measure distance: click two points on the map (R)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><rect x="2" y="8" width="20" height="8" rx="1"/><line x1="6" y1="8" x2="6" y2="13"/><line x1="10" y1="8" x2="10" y2="11"/><line x1="14" y1="8" x2="14" y2="11"/><line x1="18" y1="8" x2="18" y2="13"/></svg> Ruler<span class="mp-kbd">R</span></button>
-                <button class="mp-btn" id="moveGeomBtn" title="Move mode: click to activate, then drag any barrier, building, or source to reposition it. Click again to exit."><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg> Move</button>
-                <div class="mp-sep"></div>
-                <!-- Group 2: Site elements -->
-                <button class="mp-btn" id="gisImportBtn" title="Import shapefile (.zip), GeoJSON, or KML file" onclick="document.getElementById('gisFileInput').click()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Import GIS file&hellip;</button>
-                <input type="file" id="gisFileInput" accept=".zip,.shp,.dbf,.shx,.prj,.cpg,.geojson,.json,.kml" multiple style="display:none;">
-                <button class="mp-btn" id="sitePlanOverlayBtn" title="Upload a site plan image or PDF and position it as a map overlay (PDF: page 1 rendered as image; address auto-detected)" onclick="soOpenPicker()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Site plan overlay</button>
-                <input type="file" id="soFileInput" accept=".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf" style="display:none;">
-                <button class="mp-btn" id="drawBuildingBtn" title="Draw a custom building polygon on the map (N)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 5v14M5 12h14"/></svg> New building<span class="mp-kbd">N</span></button>
-                <button class="mp-btn" id="drawBarrierBtn" title="Draw a noise barrier polyline on the map (B)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 17h4l4-8 4 4h6"/></svg> Barrier<span class="mp-kbd">B</span></button>
-                <button class="mp-btn" id="drawGroundZoneBtn" title="Draw a ground absorption polygon (overrides default G value for propagation paths passing through it) (G)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 17 Q8 11 12 14 Q16 17 21 11"/><path d="M3 21h18" stroke-dasharray="2 2"/></svg> Ground absorption<span class="mp-kbd">G</span></button>
-                <div class="mp-sep"></div>
-                <!-- Group 3: Site location, sources & receivers -->
-                <button class="mp-btn map-mode-btn" id="mapMode-place-site" title="Click map to set the site location — determines the regulatory framework (SA/VIC/NSW) (S)" style="border-left:3px solid #0d9488;"><svg width="14" height="14" viewBox="0 0 24 32" fill="none" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 0 C5 0 0 5 0 12 C0 19 12 32 12 32 C12 32 24 19 24 12 C24 5 19 0 12 0 Z" fill="#0d9488" stroke="white" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="white"/></svg> Site location<span class="mp-kbd">S</span></button>
-                <button class="mp-btn map-mode-btn" id="mapMode-source" title="Click map to place noise source" style="display:none;border-left:3px solid #dc2626;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Noise source</button>
-                <button class="mp-btn map-mode-btn" id="mapMode-addSource" title="Click map to add a new point source (P)" style="border-left:3px solid #c0392b;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><circle cx="12" cy="12" r="5" fill="#c0392b" stroke="#c0392b"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg> Point source<span class="mp-kbd">P</span></button>
-                <button class="mp-btn" id="drawLineSourceBtn" title="Draw a line source on the map (road, conveyor, rail, etc.) (L)" style="border-left:3px solid #d32f2f;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2.5" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 19 L8 9 L14 14 L19 5"/><circle cx="3" cy="19" r="2" fill="#d32f2f"/><circle cx="19" cy="5" r="2" fill="#d32f2f"/></svg> Line source<span class="mp-kbd">L</span></button>
-                <button class="mp-btn" id="drawAreaSourceBtn" title="Draw an area source polygon (car park, outdoor dining, industrial activity, etc.) (A)" style="border-left:3px solid #d97706;"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(217,119,6,0.25)" stroke="#d97706" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="2" fill="#d97706" stroke="none"/></svg> Area source<span class="mp-kbd">A</span></button>
-                <button class="mp-btn" id="drawBuildingSourceBtn" title="Draw a building source polygon (noise radiating from building facade/roof) (K)" style="border-left:3px solid #7c3aed;"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(124,58,237,0.18)" stroke="#7c3aed" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9" stroke="#7c3aed" stroke-width="1.5"/><line x1="12" y1="3" x2="12" y2="9" stroke="#7c3aed" stroke-width="1.5"/></svg> Building source<span class="mp-kbd">K</span></button>
-                <button class="mp-btn map-mode-btn" id="mapMode-r1" title="Click map to place Receiver 1 (1)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 1<span class="mp-kbd">1</span></button>
-                <button class="mp-btn map-mode-btn" id="mapMode-r2" title="Click map to place Receiver 2 (2)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 2<span class="mp-kbd">2</span></button>
-                <button class="mp-btn map-mode-btn" id="mapMode-r3" title="Click map to place Receiver 3 (3)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 3<span class="mp-kbd">3</span></button>
-                <button class="mp-btn map-mode-btn" id="mapMode-r4" title="Click map to place Receiver 4 (4)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 4<span class="mp-kbd">4</span></button>
-                <div class="mp-sep"></div>
-                <!-- Group: CoRTN road traffic (map-only) -->
-                <button class="mp-btn" id="drawCortnRoadBtn" title="Draw a CoRTN road traffic source (UK CoRTN method with Australian adjustments) (W)" style="border-left:3px solid #1565C0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1565C0" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M5 22 L10 2 M19 22 L14 2" stroke-dasharray="3 2"/><path d="M12 4 L12 7 M12 10 L12 13 M12 16 L12 19" stroke="#1565C0" stroke-width="1.5"/></svg> Road (CoRTN)<span class="mp-kbd">W</span></button>
-                <div class="mp-sep"></div>
-                <!-- Group 4: Visibility -->
-                <button class="mp-btn pins-toggle-btn active" id="pinsToggleBtn" title="Show or hide all modelling objects on the map (sources, receivers, barriers, buildings, zones) (H)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Show / hide objects<span class="mp-kbd">H</span></button>
-                <button class="mp-btn parcel-toggle-btn active" id="parcelToggleBtn" title="Show or hide subject site cadastral boundary" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3" style="vertical-align:-2px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Show / hide boundary</button>
-                <button class="mp-btn" id="buildingsResetAllBtn" title="Reset all building height overrides" style="display:none;">Reset overrides</button>
-                <div class="mp-sep"></div>
-                <button class="mp-btn mp-danger" id="mapClearBtn" title="Remove all markers and clear distances"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 6h18M8 6V4h8v2M5 6v14a2 2 0 002 2h10a2 2 0 002-2V6"/></svg> Clear All</button>
-              </div>
-            </div>
+              </section>
 
-            <!-- PANEL 3: MODELLING -->
-            <div class="mp" id="mp-modelling" style="pointer-events:all;">
-              <div class="mp-hdr" onclick="toggleMapPanel('mp-modelling')" role="button" aria-expanded="false" aria-controls="mp-modelling-body">
-                <span>Modelling</span><span class="mp-arrow">&#9660;</span>
-              </div>
-              <div class="mp-body" id="mp-modelling-body">
-                <button class="mp-btn" id="noiseMapBtn" title="Compute and display noise contour map (M). Spatial overview only — for compliance, use the receiver panel. Heatmap colour can differ from receiver-panel values by ~3–6 dB at narrow terrain shadows due to grid smoothing."><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 17h2l3-6 4 8 3-4 2 2h4"/></svg> Noise map<span class="mp-kbd">M</span></button>
-                <div id="noiseMapControls" style="display:none;flex-direction:column;gap:3px;">
-                  <div style="display:flex;gap:2px;padding:2px 4px;">
-                    <button class="mp-btn active" data-nmperiod="day" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">Day</button>
-                    <button class="mp-btn" data-nmperiod="eve" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">Eve</button>
-                    <button class="mp-btn" data-nmperiod="night" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">Night</button>
-                    <button class="mp-btn" data-nmperiod="lmax" style="flex:1;padding:3px 2px;font-size:10px;justify-content:center;">L<sub>Amax</sub></button>
-                  </div>
-                  <div id="nmCaseRow" style="display:none;padding:2px 4px;">
-                    <select id="nmCaseSelect" style="width:100%;font-size:11px;padding:2px 3px;background:#374151;color:#f3f4f6;border:1px solid #4b5563;border-radius:3px;">
-                      <optgroup label="── Periods ──" style="color:#9ca3af;">
-                        <option value="__period_day">Day</option>
-                        <option value="__period_eve">Evening</option>
-                        <option value="__period_night">Night</option>
-                        <option value="__period_lmax">LAmax</option>
-                      </optgroup>
-                      <optgroup id="nmCaseOptGroup" label="── Assessment cases ──" style="color:#9ca3af;">
-                      </optgroup>
-                    </select>
-                  </div>
-                  <div id="nmCalcAllRow" style="display:none;padding:2px 4px;flex-direction:column;gap:2px;">
-                    <button id="nmCalcAllBtn" class="mp-btn" style="width:100%;font-size:11px;padding:3px 6px;justify-content:center;">Calculate all cases</button>
-                    <span id="nmCalcAllProgress" style="font-size:10px;color:#93c5fd;padding:0 2px;display:none;"></span>
-                  </div>
-                  <div class="mp-sub-row"><span>Height:</span><input type="number" id="noiseMapHeight" value="1.5" min="0.1" max="50" step="0.5" style="width:44px;" title="Contour map receiver height (m)"><span>m</span></div>
-                  <div class="mp-sub-row"><span>Grid:</span><select id="noiseMapGridSel" style="flex:1;" title="Grid spacing for noise map calculation"><option value="auto">Auto</option><option value="1">1 m</option><option value="2">2 m</option><option value="5">5 m</option><option value="10">10 m</option><option value="20">20 m</option><option value="50">50 m</option><option value="100">100 m</option></select><span id="noiseMapGridLabel" style="font-size:9px;"></span></div>
-                  <div class="mp-sub-row"><span>Range:</span><input type="number" id="legendMin" value="25" min="0" max="119" step="1" style="width:40px;" title="Legend minimum dB"><span>&#8211;</span><input type="number" id="legendMax" value="70" min="1" max="120" step="1" style="width:40px;" title="Legend maximum dB"><span>dB</span></div>
-                  <div class="mp-sub-row"><span>Interval:</span><input type="number" id="legendInterval" value="5" min="1" max="20" step="1" style="width:40px;" title="Contour interval dB"><span>dB</span></div>
-                  <div id="noiseMapMethodLabel" style="font-size:10px;color:#9ca3af;padding:2px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-                  <div id="noiseViewRow" style="display:none;flex-direction:column;gap:3px;padding-top:4px;margin-top:2px;border-top:1px solid rgba(255,255,255,0.12);">
-                    <span style="font-size:10px;color:#9ca3af;font-weight:600;padding:0 4px;">VIEW</span>
-                    <div style="display:flex;gap:2px;padding:0 4px;">
-                      <button class="mp-btn active" id="viewLevelsBtn" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;" title="Show predicted noise levels">Levels</button>
-                      <button class="mp-btn" id="viewComplianceBtn" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;" title="Show compliance map (\u0394 = Predicted \u2212 Criterion)">Compliance</button>
-                    </div>
-                    <div id="complianceCritRow" style="display:none;align-items:center;gap:4px;padding:0 4px;flex-wrap:wrap;">
-                      <span style="font-size:11px;white-space:nowrap;">Enter noise criterion:</span>
-                      <input type="number" id="complianceCriterion" min="20" max="100" step="1" style="width:75px;" title="Noise criterion dB(A) — compliance map shows Δ = Predicted − this value">
-                      <span style="font-size:11px;">dB(A)</span>
-                    </div>
-                  </div>
-                  <span id="legendError" style="color:#f87171;font-size:10px;display:none;padding:0 8px;"></span>
-                  <!-- Stale-extent indicator: shown when map viewport exceeds cached grid -->
-                  <div id="nmStaleIndicator" style="display:none;flex-direction:column;gap:4px;margin:2px 4px;padding:5px 7px;background:rgba(245,158,11,0.12);border-left:2px solid #f59e0b;border-radius:3px;">
-                    <span style="font-size:10px;color:#fbbf24;line-height:1.4;">&#9651; Map view extends beyond contour area</span>
-                    <button id="nmRegenBtn" class="mp-btn" style="font-size:10px;padding:3px 6px;justify-content:center;background:rgba(245,158,11,0.18);border-color:#f59e0b;color:#fbbf24;" onclick="if(typeof _regenerateNoiseMapForViewport==='function')_regenerateNoiseMapForViewport();">Regenerate for current view</button>
-                  </div>
-                </div>
-                <span id="noiseMapLmaxNote" style="display:none;font-size:10px;color:#93c5fd;padding:2px 8px;white-space:normal;line-height:1.4;">&#x2139; Simple propagation &mdash; no ground or atmospheric corrections applied; barrier and terrain screening applied</span>
-                <div id="noiseMapLmaxMethodRow" style="display:none;font-size:11px;padding:4px 8px;flex-direction:column;gap:5px;">
-                  <span style="color:#9ca3af;font-weight:600;">L<sub>Amax</sub> method:</span>
-                  <label style="cursor:pointer;display:flex;align-items:center;gap:5px;color:#d1d5db;"><input type="radio" name="lmaxMethod" value="simple" checked style="margin:0;"> Simple</label>
-                  <label style="cursor:pointer;display:flex;align-items:center;gap:5px;color:#d1d5db;"><input type="radio" name="lmaxMethod" value="iso9613_g0" style="margin:0;"> ISO 9613-2:1996 G=0</label>
-                  <label style="cursor:pointer;display:flex;align-items:center;gap:5px;color:#d1d5db;"><input type="radio" name="lmaxMethod" value="iso9613_g_sel" style="margin:0;"> ISO 9613-2:1996 G selected</label>
-                </div>
-                <span id="noiseMapGridWarning" style="display:none;font-size:10px;padding:2px 8px;white-space:normal;line-height:1.4;"></span>
+              <!-- Card 3: Atmospheric conditions (shown for ISO + CONCAWE) -->
+              <section class="modelling-card" id="mc-atmospheric">
+                <h3>Atmospheric conditions</h3>
+                <p class="card-hint">Temperature and humidity affect atmospheric attenuation per ISO 9613-1.</p>
+                <div class="mp-sub-row"><span>Temperature:</span><input type="number" id="isoTemp" value="10" min="-20" max="50" step="1" style="width:46px;"><span>&deg;C</span></div>
+                <div class="mp-sub-row"><span>Humidity:</span><input type="number" id="isoHumidity" value="70" min="10" max="100" step="5" style="width:46px;"><span>%RH</span></div>
+              </section>
 
-                <!-- CoRTN Road Noise Map (Phase 5) -->
-                <button class="mp-btn" id="cortnMapBtn" title="Compute CoRTN road traffic noise contour map"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M4 19h3l4-7 3 4 4-8h3"/></svg> CoRTN road noise map</button>
-                <div id="cortnMapControls" style="display:none;flex-direction:column;gap:3px;">
-                  <div style="display:flex;gap:2px;padding:2px 4px;">
-                    <button class="mp-btn active" data-cortn-period="day" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">Day</button>
-                    <button class="mp-btn" data-cortn-period="night" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">Night</button>
-                  </div>
-                  <div style="display:flex;gap:2px;padding:2px 4px;">
-                    <button class="mp-btn active" data-cortn-metric="laeq" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">L<sub>Aeq</sub></button>
-                    <button class="mp-btn" data-cortn-metric="la10" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">L<sub>A10</sub></button>
-                  </div>
-                  <div class="mp-sub-row"><span>Height:</span><input type="number" id="cortnMapHeight" value="1.5" min="0.1" max="50" step="0.5" style="width:44px;" title="Receiver height for CoRTN grid (m)"><span>m</span></div>
-                  <div class="mp-sub-row"><span>Grid:</span><select id="cortnMapGridSel" style="flex:1;" title="Grid spacing for CoRTN noise map"><option value="auto">Auto</option><option value="5">5 m</option><option value="10">10 m</option><option value="20">20 m</option><option value="50">50 m</option><option value="100">100 m</option></select><span id="cortnMapGridLabel" style="font-size:9px;"></span></div>
-                  <div class="mp-sub-row"><span>Range:</span><input type="number" id="cortnLegendMin" value="35" min="0" max="119" step="1" style="width:40px;" title="Legend minimum dB"><span>&#8211;</span><input type="number" id="cortnLegendMax" value="75" min="1" max="120" step="1" style="width:40px;" title="Legend maximum dB"><span>dB</span></div>
-                  <div class="mp-sub-row"><span>Interval:</span><input type="number" id="cortnLegendInterval" value="5" min="1" max="20" step="1" style="width:40px;" title="Contour interval dB"><span>dB</span></div>
-                  <div id="cortnViewRow" style="display:none;flex-direction:column;gap:3px;padding-top:4px;margin-top:2px;border-top:1px solid rgba(255,255,255,0.12);">
-                    <span style="font-size:10px;color:#9ca3af;font-weight:600;padding:0 4px;">VIEW</span>
-                    <div style="display:flex;gap:2px;padding:0 4px;">
-                      <button class="mp-btn active" id="cortnViewLevelsBtn" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;" title="Show predicted CoRTN road noise levels">Levels</button>
-                      <button class="mp-btn" id="cortnViewComplianceBtn" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;" title="Show CoRTN compliance map (\u0394 = Predicted \u2212 Criterion)">Compliance</button>
-                    </div>
-                    <div id="cortnComplianceCritRow" style="display:none;align-items:center;gap:4px;padding:0 4px;flex-wrap:wrap;">
-                      <span style="font-size:11px;white-space:nowrap;">Enter noise criterion:</span>
-                      <input type="number" id="cortnComplianceCriterion" min="20" max="100" step="1" style="width:75px;" title="Noise criterion dB(A)">
-                      <span style="font-size:11px;">dB(A)</span>
-                    </div>
-                  </div>
-                  <span id="cortnLegendError" style="color:#f87171;font-size:10px;display:none;padding:0 8px;"></span>
-                </div>
-                <span id="cortnMapGridWarning" style="display:none;font-size:10px;padding:2px 8px;white-space:normal;line-height:1.4;"></span>
-                <span id="cortnMapInfo" style="display:none;font-size:10px;padding:2px 8px;white-space:normal;line-height:1.4;color:#9ca3af;"></span>
-              </div>
-            </div>
-
-          <!-- PANEL: PROPAGATION METHOD -->
-          <div class="mp" id="mp-propmethod" style="pointer-events:all;">
-            <div class="mp-hdr" onclick="toggleMapPanel('mp-propmethod')" role="button" aria-expanded="false" aria-controls="mp-propmethod-body">
-              <span>Propagation</span><span class="mp-arrow">&#9660;</span>
-            </div>
-            <div class="mp-body" id="mp-propmethod-body">
-              <div id="propMethodGroup" style="display:flex;gap:2px;padding:2px 4px;">
-                <button class="mp-btn active" data-val="simple" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">Simple</button>
-                <button class="mp-btn" data-val="iso9613" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">ISO 9613-2:1996</button>
-                <button class="mp-btn" data-val="concawe" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">CONCAWE</button>
-              </div>
-              <div id="iso9613Params" style="display:none;">
-                <div class="mp-sep"></div>
-                <div class="mp-sub-row"><span>Recv height:</span><input type="number" id="isoRecvHeight" value="1.5" min="0" max="50" step="0.5" style="width:52px;"><span>m</span></div>
+              <!-- Card 3: Ground (shown for ISO + CONCAWE) -->
+              <section class="modelling-card" id="mc-ground">
+                <h3>Ground</h3>
+                <p class="card-hint">Ground factor G affects ground reflection attenuation. Advanced mode enables per-region G (source / middle / receiver).</p>
                 <div id="isoGroundTypeRow" class="mp-sub-row">
                   <span>Ground type:</span>
                   <select id="isoGroundType" style="flex:1;">
@@ -3083,157 +3552,437 @@ body.disclaimer-visible .container {
                     </select>
                   </div>
                 </div>
-                <div class="mp-sub-row"><span>Temperature:</span><input type="number" id="isoTemp" value="10" min="-20" max="50" step="1" style="width:46px;"><span>°C</span></div>
-                <div class="mp-sub-row"><span>Humidity:</span><input type="number" id="isoHumidity" value="70" min="10" max="100" step="5" style="width:46px;"><span>%RH</span></div>
-                <div class="mp-sep"></div>
-                <div class="mp-sub-row" style="align-items:center;">
-                  <span style="flex:1;color:#9ca3af;">ISO/TR 17534-3 validation</span>
-                  <button id="isoValidateBtn" class="mp-btn" onclick="runISOValidation()" style="padding:2px 7px;white-space:nowrap;flex-shrink:0;">Run</button>
-                </div>
-                <div id="isoValidationResults" style="display:none;font-size:10px;max-height:200px;overflow-y:auto;padding:2px 8px;"></div>
-                <!-- ISO 9613-2 §8 meteorological correction (Cmet) -->
-                <div id="isoCmetPanel" style="display:none;border-top:1px solid var(--border);margin-top:4px;padding-top:6px;">
+              </section>
+
+              <!-- Card 4: Cmet (shown for ISO only; mc-cmet.hidden managed by JS) -->
+              <section class="modelling-card" id="mc-cmet" hidden>
+                <h3>Meteorological correction (C<sub>met</sub>)</h3>
+                <p class="card-hint">Long-term average correction per ISO 9613-2 §8. Off (default) for compliance / worst-case downwind.</p>
+                <div id="isoCmetPanel">
                   <div class="mp-sub-row" style="align-items:center;gap:4px;">
                     <label style="display:flex;align-items:center;gap:3px;cursor:pointer;flex:1;">
                       <input type="checkbox" id="isoCmetEnabled"
                         title="ISO 9613-2:1996 §8 meteorological correction. Off (default) = worst-case downwind. On = long-term average per equations (21) and (22).">
                       <span style="font-size:10px;color:#9ca3af;">Long-term met correction (C<sub>met</sub>)</span>
                     </label>
-                    <span title="ISO 9613-2:1996 §8 — subtracts C₀·[1 − 10(hs+hr)/dp] from the downwind level to give the long-term average. Per NOTE 22, C₀ is typically 0–2 dB; values above 2 dB are exceptional." style="cursor:help;color:#6b7280;font-size:11px;user-select:none;">?</span>
+                    <span title="ISO 9613-2:1996 §8 — subtracts C0·[1 − 10(hs+hr)/dp] from the downwind level to give the long-term average. Per NOTE 22, C0 is typically 0–2 dB; values above 2 dB are exceptional." style="cursor:help;color:#6b7280;font-size:11px;user-select:none;">?</span>
                   </div>
                   <div id="isoCmetC0Row" style="display:none;">
                     <div class="mp-sub-row">
                       <span style="font-size:10px;min-width:32px;">C<sub>0</sub></span>
                       <input type="number" id="isoCmetC0" value="2" min="0" max="5" step="0.5" style="width:46px;font-size:11px;">
-                      <span style="font-size:10px;color:#9ca3af;">dB (0–5)</span>
+                      <span style="font-size:10px;color:#9ca3af;">dB (0&ndash;5)</span>
                     </div>
                   </div>
                 </div>
-                <div id="propMethodDesc" style="font-size:10px;color:#6b7280;line-height:1.5;padding:2px 8px 4px;"><b>Simple</b>: geometric spreading only. <b>ISO 9613-2:1996</b>: atmospheric absorption + ground attenuation per octave band. <b>CONCAWE</b> (Report 4/81): empirical ground curves + meteorological corrections.</div>
-              </div>
-              <div id="concaweMetPanel" style="display:none;">
-                <div class="mp-sep"></div>
-                <div class="mp-sub-row" style="gap:10px;">
-                  <label style="display:flex;align-items:center;gap:3px;cursor:pointer;color:#d1d5db;"><input type="radio" name="concaweMetMode" value="direct" checked> Direct</label>
-                  <label style="display:flex;align-items:center;gap:3px;cursor:pointer;color:#d1d5db;"><input type="radio" name="concaweMetMode" value="computed"> Compute</label>
+              </section>
+
+              <!-- Card 5: Default heights -->
+              <section class="modelling-card" id="mc-heights">
+                <h3>Default heights</h3>
+                <p class="card-hint">Default receiver height for newly placed receivers. Per-object height overrides remain available.</p>
+                <div class="mp-sub-row"><span>Recv height:</span><input type="number" id="isoRecvHeight" value="1.5" min="0" max="50" step="0.5" style="width:52px;"><span>m</span></div>
+              </section>
+
+              <!-- Card 6: Noise map -->
+              <section class="modelling-card" id="mc-noisemap">
+                <h3>Noise map</h3>
+                <p class="card-hint">Computes a heatmap of predicted L<sub>p</sub> across the site. Use the receiver panel for compliance &mdash; heatmap colour can differ from receiver-panel values by ~3&ndash;6 dB at narrow terrain shadows due to grid smoothing.</p>
+                <div style="display:flex;gap:4px;align-items:stretch;">
+                  <button class="mp-btn" id="noiseMapBtn" style="flex:1;" title="Compute and display noise contour map (M). Spatial overview only — for compliance, use the receiver panel. Heatmap colour can differ from receiver-panel values by ~3–6 dB at narrow terrain shadows due to grid smoothing."><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 17h2l3-6 4 8 3-4 2 2h4"/></svg> Noise map<span class="mp-kbd">M</span></button>
+                  <button class="mp-btn map-toggle-btn" id="noiseMapToggleBtn" hidden aria-pressed="true" title="Hide noise map">Hide</button>
                 </div>
-                <div id="concaweDirectGroup">
-                  <div class="mp-sub-row">
-                    <span>Category:</span>
-                    <select id="concaweMetCatSelect" style="flex:1;">
-                      <option value="1">1 — Strong upwind</option>
-                      <option value="2">2 — Moderate upwind</option>
-                      <option value="3">3 — Light/crosswind</option>
-                      <option value="4" selected>4 — Neutral</option>
-                      <option value="5">5 — Light downwind</option>
-                      <option value="6">6 — Strong downwind</option>
+                <div id="noiseMapControls" style="display:none;flex-direction:column;gap:3px;">
+                  <div style="display:flex;gap:2px;padding:2px 4px;">
+                    <button class="mp-btn active" data-nmperiod="day" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">Day</button>
+                    <button class="mp-btn" data-nmperiod="eve" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">Eve</button>
+                    <button class="mp-btn" data-nmperiod="night" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">Night</button>
+                    <button class="mp-btn" data-nmperiod="lmax" style="flex:1;padding:3px 2px;font-size:10px;justify-content:center;">L<sub>Amax</sub></button>
+                  </div>
+                  <div id="nmCaseRow" style="display:none;padding:2px 4px;">
+                    <select id="nmCaseSelect" style="width:100%;font-size:11px;padding:2px 3px;background:#374151;color:#f3f4f6;border:1px solid #4b5563;border-radius:3px;">
+                      <optgroup label="&mdash;&mdash; Periods &mdash;&mdash;" style="color:#9ca3af;">
+                        <option value="__period_day">Day</option>
+                        <option value="__period_eve">Evening</option>
+                        <option value="__period_night">Night</option>
+                        <option value="__period_lmax">LAmax</option>
+                      </optgroup>
+                      <optgroup id="nmCaseOptGroup" label="&mdash;&mdash; Assessment cases &mdash;&mdash;" style="color:#9ca3af;">
+                      </optgroup>
                     </select>
+                  </div>
+                  <div id="nmCalcAllRow" style="display:none;padding:2px 4px;flex-direction:column;gap:2px;">
+                    <button id="nmCalcAllBtn" class="mp-btn" style="width:100%;font-size:11px;padding:3px 6px;justify-content:center;">Calculate all cases</button>
+                    <span id="nmCalcAllProgress" style="font-size:10px;color:#93c5fd;padding:0 2px;display:none;"></span>
+                  </div>
+                  <div class="mp-sub-row"><span>Height:</span><input type="number" id="noiseMapHeight" value="1.5" min="0.1" max="50" step="0.5" style="width:44px;" title="Contour map receiver height (m)"><span>m</span></div>
+                  <div class="mp-sub-row"><span>Grid:</span><select id="noiseMapGridSel" style="flex:1;" title="Grid spacing for noise map calculation"><option value="auto">Auto</option><option value="1">1 m</option><option value="2">2 m</option><option value="5">5 m</option><option value="10">10 m</option><option value="20">20 m</option><option value="50">50 m</option><option value="100">100 m</option></select><span id="noiseMapGridLabel" style="font-size:9px;"></span></div>
+                  <div class="mp-sub-row"><span>Range:</span><input type="number" id="legendMin" value="25" min="0" max="119" step="1" style="width:40px;" title="Legend minimum dB"><span>&ndash;</span><input type="number" id="legendMax" value="70" min="1" max="120" step="1" style="width:40px;" title="Legend maximum dB"><span>dB</span></div>
+                  <div class="mp-sub-row"><span>Interval:</span><input type="number" id="legendInterval" value="5" min="1" max="20" step="1" style="width:40px;" title="Contour interval dB"><span>dB</span></div>
+                  <div id="noiseMapMethodLabel" style="font-size:10px;color:#9ca3af;padding:2px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+                  <div id="noiseViewRow" style="display:none;flex-direction:column;gap:3px;padding-top:4px;margin-top:2px;border-top:1px solid rgba(255,255,255,0.12);">
+                    <span style="font-size:10px;color:#9ca3af;font-weight:600;padding:0 4px;">VIEW</span>
+                    <div style="display:flex;gap:2px;padding:0 4px;">
+                      <button class="mp-btn active" id="viewLevelsBtn" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;" title="Show predicted noise levels">Levels</button>
+                      <button class="mp-btn" id="viewComplianceBtn" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;" title="Show compliance map (&#916; = Predicted &#8722; Criterion)">Compliance</button>
+                    </div>
+                    <div id="complianceCritRow" style="display:none;align-items:center;gap:4px;padding:0 4px;flex-wrap:wrap;">
+                      <span style="font-size:11px;white-space:nowrap;">Enter noise criterion:</span>
+                      <input type="number" id="complianceCriterion" min="20" max="100" step="1" style="width:75px;" title="Noise criterion dB(A) — compliance map shows &#916; = Predicted &#8722; this value">
+                      <span style="font-size:11px;">dB(A)</span>
+                    </div>
+                  </div>
+                  <span id="legendError" style="color:#f87171;font-size:10px;display:none;padding:0 8px;"></span>
+                  <!-- Stale-extent indicator: shown when map viewport exceeds cached grid -->
+                  <div id="nmStaleIndicator" style="display:none;flex-direction:column;gap:4px;margin:2px 4px;padding:5px 7px;background:rgba(245,158,11,0.12);border-left:2px solid #f59e0b;border-radius:3px;">
+                    <span style="font-size:10px;color:#fbbf24;line-height:1.4;">&#9651; Map view extends beyond contour area</span>
+                    <button id="nmRegenBtn" class="mp-btn" style="font-size:10px;padding:3px 6px;justify-content:center;background:rgba(245,158,11,0.18);border-color:#f59e0b;color:#fbbf24;" onclick="if(typeof _regenerateNoiseMapForViewport==='function')_regenerateNoiseMapForViewport();">Regenerate for current view</button>
                   </div>
                 </div>
-                <div id="concaweComputedGroup" style="display:none;">
-                  <div class="mp-sub-row"><span>Wind speed:</span><input type="number" id="concaweWindSpeed" value="3" min="0" max="20" step="0.5" style="width:46px;"><span>m/s</span></div>
-                  <div class="mp-sub-row"><span>Wind from:</span><input type="number" id="concaweWindDir" value="0" min="0" max="360" step="5" style="width:46px;"><span>°</span></div>
-                  <div class="mp-sub-row">
-                    <span>Time of day:</span>
-                    <select id="concaweTimeOfDay" style="flex:1;">
-                      <option value="day">Day</option>
-                      <option value="transition">Transition</option>
-                      <option value="night" selected>Night</option>
-                    </select>
-                  </div>
-                  <div id="concaweSolarGroup" style="display:none;" class="mp-sub-row">
-                    <span>Solar:</span>
-                    <select id="concaweSolarRad" style="flex:1;">
-                      <option value=">60">&gt;60 mW/cm²</option>
-                      <option value="30-60">30–60 mW/cm²</option>
-                      <option value="<30">&lt;30 mW/cm²</option>
-                    </select>
-                  </div>
-                  <div id="concaweCloudGroup" class="mp-sub-row">
-                    <span>Cloud:</span>
-                    <select id="concaweCloudCover" style="flex:1;">
-                      <option value="0-3">0–3 octas</option>
-                      <option value="4-7">4–7 octas</option>
-                      <option value="8">8 octas</option>
-                    </select>
-                  </div>
-                  <div id="concaweComputedResult" style="font-size:10px;padding:3px 8px;color:#9ca3af;">
-                    Pasquill: <strong id="concawePasquillDisplay">—</strong> | Cat: <strong id="concaweMetCatDisplay">—</strong> | Wind: <strong id="concaweVectorWindDisplay">—</strong>
-                  </div>
+                <span id="noiseMapLmaxNote" style="display:none;font-size:10px;color:#93c5fd;padding:2px 8px;white-space:normal;line-height:1.4;">&#x2139; Simple propagation &mdash; no ground or atmospheric corrections applied; barrier and terrain screening applied</span>
+                <div id="noiseMapLmaxMethodRow" style="display:none;font-size:11px;padding:4px 8px;flex-direction:column;gap:5px;">
+                  <span style="color:#9ca3af;font-weight:600;">L<sub>Amax</sub> method:</span>
+                  <label style="cursor:pointer;display:flex;align-items:center;gap:5px;color:#d1d5db;"><input type="radio" name="lmaxMethod" value="simple" checked style="margin:0;"> Simple</label>
+                  <label style="cursor:pointer;display:flex;align-items:center;gap:5px;color:#d1d5db;"><input type="radio" name="lmaxMethod" value="iso9613_g0" style="margin:0;"> ISO 9613-2:1996 G=0</label>
+                  <label style="cursor:pointer;display:flex;align-items:center;gap:5px;color:#d1d5db;"><input type="radio" name="lmaxMethod" value="iso9613_g_sel" style="margin:0;"> ISO 9613-2:1996 G selected</label>
                 </div>
-              </div>
+                <span id="noiseMapGridWarning" style="display:none;font-size:10px;padding:2px 8px;white-space:normal;line-height:1.4;"></span>
+                <p class="card-hint card-hint-tertiary">Adjust opacity, palette, and range via the legend (click the legend on the map).</p>
+                <!-- CoRTN Road Noise Map -->
+                <div class="mp-sep" style="margin-top:6px;margin-bottom:4px;"></div>
+                <button class="mp-btn" id="cortnMapBtn" title="Compute CoRTN road traffic noise contour map"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M4 19h3l4-7 3 4 4-8h3"/></svg> CoRTN road noise map</button>
+                <div id="cortnMapControls" style="display:none;flex-direction:column;gap:3px;">
+                  <div style="display:flex;gap:2px;padding:2px 4px;">
+                    <button class="mp-btn active" data-cortn-period="day" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">Day</button>
+                    <button class="mp-btn" data-cortn-period="night" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">Night</button>
+                  </div>
+                  <div style="display:flex;gap:2px;padding:2px 4px;">
+                    <button class="mp-btn active" data-cortn-metric="laeq" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">L<sub>Aeq</sub></button>
+                    <button class="mp-btn" data-cortn-metric="la10" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;">L<sub>A10</sub></button>
+                  </div>
+                  <div class="mp-sub-row"><span>Height:</span><input type="number" id="cortnMapHeight" value="1.5" min="0.1" max="50" step="0.5" style="width:44px;" title="Receiver height for CoRTN grid (m)"><span>m</span></div>
+                  <div class="mp-sub-row"><span>Grid:</span><select id="cortnMapGridSel" style="flex:1;" title="Grid spacing for CoRTN noise map"><option value="auto">Auto</option><option value="5">5 m</option><option value="10">10 m</option><option value="20">20 m</option><option value="50">50 m</option><option value="100">100 m</option></select><span id="cortnMapGridLabel" style="font-size:9px;"></span></div>
+                  <div class="mp-sub-row"><span>Range:</span><input type="number" id="cortnLegendMin" value="35" min="0" max="119" step="1" style="width:40px;" title="Legend minimum dB"><span>&ndash;</span><input type="number" id="cortnLegendMax" value="75" min="1" max="120" step="1" style="width:40px;" title="Legend maximum dB"><span>dB</span></div>
+                  <div class="mp-sub-row"><span>Interval:</span><input type="number" id="cortnLegendInterval" value="5" min="1" max="20" step="1" style="width:40px;" title="Contour interval dB"><span>dB</span></div>
+                  <div id="cortnViewRow" style="display:none;flex-direction:column;gap:3px;padding-top:4px;margin-top:2px;border-top:1px solid rgba(255,255,255,0.12);">
+                    <span style="font-size:10px;color:#9ca3af;font-weight:600;padding:0 4px;">VIEW</span>
+                    <div style="display:flex;gap:2px;padding:0 4px;">
+                      <button class="mp-btn active" id="cortnViewLevelsBtn" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;" title="Show predicted CoRTN road noise levels">Levels</button>
+                      <button class="mp-btn" id="cortnViewComplianceBtn" style="flex:1;padding:3px 2px;font-size:11px;justify-content:center;" title="Show CoRTN compliance map (&#916; = Predicted &#8722; Criterion)">Compliance</button>
+                    </div>
+                    <div id="cortnComplianceCritRow" style="display:none;align-items:center;gap:4px;padding:0 4px;flex-wrap:wrap;">
+                      <span style="font-size:11px;white-space:nowrap;">Enter noise criterion:</span>
+                      <input type="number" id="cortnComplianceCriterion" min="20" max="100" step="1" style="width:75px;" title="Noise criterion dB(A)">
+                      <span style="font-size:11px;">dB(A)</span>
+                    </div>
+                  </div>
+                  <span id="cortnLegendError" style="color:#f87171;font-size:10px;display:none;padding:0 8px;"></span>
+                </div>
+                <span id="cortnMapGridWarning" style="display:none;font-size:10px;padding:2px 8px;white-space:normal;line-height:1.4;"></span>
+                <span id="cortnMapInfo" style="display:none;font-size:10px;padding:2px 8px;white-space:normal;line-height:1.4;color:#9ca3af;"></span>
+              </section>
+
+              <!-- Card 7: Validation (shown for ISO + CONCAWE) -->
+              <section class="modelling-card" id="mc-validation">
+                <h3>Validation</h3>
+                <p class="card-hint">Runs the ISO/TR 17534-3 conformity test suite against the propagation engine. 25 test cases covering point sources, barriers, and ground effect.</p>
+                <div class="mp-sub-row" style="align-items:center;">
+                  <span style="flex:1;color:#9ca3af;">ISO/TR 17534-3 validation</span>
+                  <button id="isoValidateBtn" class="mp-btn" onclick="runISOValidation()" style="padding:2px 7px;white-space:nowrap;flex-shrink:0;">Run</button>
+                </div>
+                <div id="isoValidationResults" style="display:none;font-size:10px;max-height:200px;overflow-y:auto;padding:2px 8px;"></div>
+              </section>
+
             </div>
           </div>
 
-          <!-- PANEL: CUSTOM SOURCES -->
-          <div class="mp" id="mp-customsrc" style="pointer-events:all;">
-            <div class="mp-hdr" onclick="toggleMapPanel('mp-customsrc')" role="button" aria-expanded="false" aria-controls="mp-customsrc-body">
-              <span>Custom sources</span><span class="mp-arrow">&#9660;</span>
+          <!-- MAPPING SLIDE-OUT PANEL (injected into #app-layout by boot script) -->
+          <div id="mappingPanel" role="dialog" aria-labelledby="mappingPanelTitle" aria-modal="false" hidden>
+            <div class="slideout-header">
+              <h2 id="mappingPanelTitle">MAPPING</h2>
+              <button class="slideout-close" id="mappingPanelClose" aria-label="Close Mapping panel">&times;</button>
             </div>
-            <div class="mp-body" id="mp-customsrc-body">
-              <div id="customSrcBody">
-                <div class="mp-sub-row">
-                  <button type="button" class="mp-btn" style="margin-left:auto;padding:3px 10px;justify-content:center;" onclick="openCustomSourceWizard()">+ Add custom source&hellip;</button>
-                </div>
-                <div class="mp-sep"></div>
-                <div id="customSrcList"></div>
-                <button type="button" class="mp-btn" onclick="exportCustomSources()">Export library</button>
-                <button type="button" class="mp-btn" onclick="document.getElementById('customSrcImportFile').click()">Import library</button>
-                <input type="file" id="customSrcImportFile" accept=".json,.csv" style="display:none;" onchange="importCustomSources(this)">
-                <div style="font-size:10px;color:#6b7280;padding:2px 8px 4px;">Import: JSON array or CSV (name, lw, 63–8k, height)</div>
-              </div>
+            <div class="slideout-body">
+
+              <!-- Card 1: Basemap -->
+              <section class="modelling-card" id="map-basemap">
+                <h3>Basemap</h3>
+                <p class="card-hint">Switch between street map and aerial imagery as the underlying map layer.</p>
+                <button class="mp-btn aerial-toggle-btn" id="aerialToggleBtn" title="Switch between street map and aerial imagery"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8"/><ellipse cx="12" cy="12" rx="4" ry="9"/></svg> Aerial<span class="mp-kbd">I</span></button>
+              </section>
+
+              <!-- Card 2: Map layers -->
+              <section class="modelling-card" id="map-layers">
+                <h3>Map layers</h3>
+                <p class="card-hint">Toggle overlay layers shown on the map. Each layer can be enabled independently.</p>
+                <button class="mp-btn zone-toggle-btn" id="zoneToggleBtn" title="Toggle zoning overlay on map (Z)" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Show zones<span class="mp-kbd">Z</span></button>
+                <button class="mp-btn mbs010-toggle-btn" id="mbs010ToggleBtn" title="Toggle MBS 010 overlays: Noise &amp; Air Emissions, Aircraft Noise Exposure, Transport Routes" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> MBS 010 screening<span class="mp-kbd">X</span></button>
+                <button class="mp-btn cadastre-toggle-btn" id="cadastreToggleBtn" title="Toggle cadastral boundaries and building outlines"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><rect x="2" y="4" width="8" height="7"/><rect x="14" y="4" width="8" height="7"/><rect x="5" y="13" width="8" height="7"/><rect x="16" y="13" width="6" height="7"/></svg> Cadastral<span class="mp-kbd">D</span></button>
+                <button class="mp-btn urban-boundary-toggle-btn" id="urbanBoundaryToggleBtn" title="Show major urban area boundaries (EPA Pub 1826.5)" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 3h18v18H3z" stroke-dasharray="4 2"/><circle cx="12" cy="12" r="5" fill="currentColor" opacity="0.15"/></svg> Urban area<span class="mp-kbd">U</span></button>
+              </section>
+
             </div>
           </div>
+
+          <!-- LIBRARY SLIDE-OUT PANEL (injected into #app-layout by boot script) -->
+          <div id="libraryPanel" role="dialog" aria-labelledby="libraryPanelTitle" aria-modal="false" hidden>
+            <div class="slideout-header">
+              <h2 id="libraryPanelTitle">LIBRARY</h2>
+              <button class="slideout-close" id="libraryPanelClose" aria-label="Close Library panel">&times;</button>
+            </div>
+            <div class="slideout-body">
+
+              <!-- Card 1: Filters -->
+              <section class="modelling-card" id="lib-filters">
+                <h3>Filters</h3>
+                <div class="lib-filter-row">
+                  <label class="lib-filter-label" for="libFilterDataType">Type</label>
+                  <select id="libFilterDataType" class="lib-filter-sel" onchange="_libFilterDataType=this.value;renderLibraryTable();">
+                    <option value="">All types</option>
+                    <option value="Lw, dB(Z)">Lw, dB(Z)</option>
+                    <option value="Lp, dB(Z)">Lp, dB(Z)</option>
+                    <option value="Lw/m, dB(Z)/m">Lw/m, dB(Z)/m</option>
+                    <option value="Insertion Loss">Insertion Loss</option>
+                    <option value="Transmission Loss">Transmission Loss</option>
+                  </select>
+                </div>
+                <div class="lib-filter-row">
+                  <label class="lib-filter-label" for="libFilterCategory">Category</label>
+                  <select id="libFilterCategory" class="lib-filter-sel" onchange="_libFilterCategory=this.value;renderLibraryTable();">
+                    <option value="">All categories</option>
+                  </select>
+                </div>
+                <div class="lib-filter-row">
+                  <label class="lib-filter-label" for="libFilterReview">Review</label>
+                  <select id="libFilterReview" class="lib-filter-sel" onchange="_libFilterReview=this.value;renderLibraryTable();">
+                    <option value="">All</option>
+                    <option value="Reviewed">Reviewed</option>
+                    <option value="Not reviewed">Not reviewed</option>
+                    <option value="Custom">Custom</option>
+                  </select>
+                </div>
+                <div class="lib-filter-row">
+                  <label class="lib-filter-label" for="libFilterSearch">Search</label>
+                  <input id="libFilterSearch" type="text" class="lib-filter-inp" placeholder="Name, description, category…" oninput="_libFilterSearch=this.value;renderLibraryTable();">
+                </div>
+              </section>
+
+              <!-- Card 2: Table viewer -->
+              <section class="modelling-card lib-table-card" id="lib-table">
+                <h3>Entries <span id="libTableCount" style="font-size:10px;font-weight:400;color:#94a3b8;margin-left:6px;"></span></h3>
+                <div class="lib-table-wrap">
+                  <table class="lib-table">
+                    <thead>
+                      <tr>
+                        <th class="lib-col-name">Name</th>
+                        <th class="lib-col-type">Type</th>
+                        <th class="lib-col-cat">Category</th>
+                        <th class="lib-col-hz">63</th>
+                        <th class="lib-col-hz">125</th>
+                        <th class="lib-col-hz">250</th>
+                        <th class="lib-col-hz">500</th>
+                        <th class="lib-col-hz">1k</th>
+                        <th class="lib-col-hz">2k</th>
+                        <th class="lib-col-hz">4k</th>
+                        <th class="lib-col-hz">8k</th>
+                        <th class="lib-col-dba">dB(A)</th>
+                        <th class="lib-col-rev">Review</th>
+                        <th class="lib-col-act"></th>
+                      </tr>
+                    </thead>
+                    <tbody id="libTableBody">
+                      <tr><td colspan="6" style="color:#94a3b8;padding:12px 8px;text-align:center;font-size:11px;">Open Library to load entries…</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <!-- Card 3: Add custom entry -->
+              <section class="modelling-card" id="lib-add" style="margin-top:12px;">
+                <h3>Add custom entry</h3>
+                <p class="card-hint">Add a source not in the canonical library. Custom entries are saved in your browser and appear in source pickers.</p>
+                <button class="mp-btn" onclick="openCustomSourceWizard()">+ Add custom entry&hellip;</button>
+              </section>
+
+              <!-- Card 4: Export / Import -->
+              <section class="modelling-card" id="lib-share">
+                <h3>Export / Import</h3>
+                <p class="card-hint">Export your custom entries as JSON for backup or sharing; import to merge entries from a file.</p>
+                <button class="mp-btn" onclick="exportCustomSources()">Export custom entries</button>
+                <button class="mp-btn" onclick="document.getElementById('libImportFile').click()">Import custom entries</button>
+                <input type="file" id="libImportFile" accept=".json,.csv" style="display:none;" onchange="importCustomSources(this);setTimeout(function(){renderLibraryTable();renderCustomSourceList();},350);">
+                <div style="font-size:10px;color:#6b7280;padding:4px 0 0;">Import: JSON array or CSV (name, lw, 63–8k Hz, height)</div>
+              </section>
+
+            </div>
+          </div>
+
+          <!-- PANEL: LIBRARY (slide-out) -->
+          <div class="mp" id="mp-customsrc" style="pointer-events:all;">
+            <div class="mp-hdr" id="libraryHeaderBtn" onclick="toggleLibraryPanel()" role="button" tabindex="0" aria-expanded="false" aria-controls="libraryPanel">
+              <span>Library</span><span class="mp-arrow" id="libraryPanelArrow">&#8594;</span>
+            </div>
+            <div class="mp-body" id="mp-customsrc-body"></div>
+          </div>
+
+          <!-- MODELLING SLIDE-OUT PANEL -->
+          <div id="toolsPanel" role="dialog" aria-labelledby="toolsPanelTitle" aria-modal="false" hidden>
+            <div class="slideout-header">
+              <h2 id="toolsPanelTitle">MODELLING</h2>
+              <button class="slideout-close" id="toolsPanelClose" aria-label="Close Modelling panel">&times;</button>
+            </div>
+            <div class="panel-mode-banner" id="toolsModeBanner" hidden role="status" aria-live="polite">
+              <span id="toolsModeText"></span>
+              <button class="panel-mode-cancel" id="toolsModeCancel">Cancel</button>
+            </div>
+            <div class="slideout-body">
+
+              <!-- Card 1: Topography & existing conditions -->
+              <section class="modelling-card" id="tc-topography">
+                <h3>Topography &amp; existing conditions</h3>
+                <p class="card-hint">Set up the terrain and existing built environment for the model.</p>
+                <div class="tc-button-group">
+                  <button class="mp-btn" id="terrainToggleBtn" title="Apply terrain screening (slower — queries elevation API) (T)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M2 20l5-8 4 4 5-10 6 14"/></svg> Terrain<span class="mp-kbd">T</span></button>
+                  <button class="mp-btn" id="terrainContourBtn" title="Show terrain elevation contour lines on map (requires Terrain ON) (C)" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 15 Q8 9 12 12 Q16 15 21 9"/><path d="M3 20 Q8 14 12 17 Q16 20 21 14"/></svg> Contours<span class="mp-kbd">C</span></button>
+                  <button class="mp-btn" id="threeDViewBtn" title="Open 3D scene view of terrain, buildings, barriers, and sources (V)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 3L2 8l10 5 10-5-10-5z"/><path d="M2 12l10 5 10-5"/><path d="M12 22V13"/></svg> 3D View<span class="mp-kbd">V</span></button>
+                  <button class="mp-btn buildings-toggle-btn" id="buildingsToggleBtn" title="Show or hide OSM building footprints (O)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 21V8l5-5 5 5v13"/><path d="M13 21V11l4-3 4 3v10"/><path d="M7 10v1M7 14v1M16 13v1M16 17v1"/></svg> Buildings<span class="mp-kbd">O</span></button>
+                </div>
+              </section>
+
+              <!-- Card 2: References -->
+              <section class="modelling-card" id="tc-references">
+                <h3>References</h3>
+                <p class="card-hint">Import reference data and overlay site plans for visual context.</p>
+                <div class="tc-button-group">
+                  <button class="mp-btn" id="gisImportBtn" title="Import shapefile (.zip), GeoJSON, or KML file" onclick="document.getElementById('gisFileInput').click()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Import GIS file&hellip;</button>
+                  <input type="file" id="gisFileInput" accept=".zip,.shp,.dbf,.shx,.prj,.cpg,.geojson,.json,.kml" multiple style="display:none;">
+                  <button class="mp-btn" id="sitePlanOverlayBtn" title="Upload a site plan image or PDF and position it as a map overlay" onclick="soOpenPicker()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Site plan overlay</button>
+                  <input type="file" id="soFileInput" accept=".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf" style="display:none;">
+                </div>
+              </section>
+
+              <!-- Card 3: Objects -->
+              <section class="modelling-card" id="tc-objects">
+                <h3>Objects</h3>
+                <p class="card-hint">Add objects to the model: buildings, barriers, ground regions, sources, and receivers.</p>
+
+                <div class="tc-button-group">
+                  <h4>Site &amp; geometry</h4>
+                  <button class="mp-btn map-mode-btn" id="mapMode-place-site" title="Click map to set the site location — determines the regulatory framework (SA/VIC/NSW) (S)" style="border-left:3px solid #0d9488;"><svg width="14" height="14" viewBox="0 0 24 32" fill="none" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 0 C5 0 0 5 0 12 C0 19 12 32 12 32 C12 32 24 19 24 12 C24 5 19 0 12 0 Z" fill="#0d9488" stroke="white" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="white"/></svg> Site location<span class="mp-kbd">S</span></button>
+                  <button class="mp-btn" id="drawBuildingBtn" title="Draw a custom building polygon on the map (N)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 5v14M5 12h14"/></svg> New building<span class="mp-kbd">N</span></button>
+                  <button class="mp-btn" id="drawBarrierBtn" title="Draw a noise barrier polyline on the map (B)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 17h4l4-8 4 4h6"/></svg> Barrier<span class="mp-kbd">B</span></button>
+                  <button class="mp-btn" id="drawGroundZoneBtn" title="Draw a ground absorption polygon (G)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 17 Q8 11 12 14 Q16 17 21 11"/><path d="M3 21h18" stroke-dasharray="2 2"/></svg> Ground absorption<span class="mp-kbd">G</span></button>
+                </div>
+
+                <div class="tc-button-group">
+                  <h4>Sources</h4>
+                  <button class="mp-btn map-mode-btn" id="mapMode-addSource" title="Click map to add a new point source (P)" style="border-left:3px solid #c0392b;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><circle cx="12" cy="12" r="5" fill="#c0392b" stroke="#c0392b"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg> Point source<span class="mp-kbd">P</span></button>
+                  <button class="mp-btn" id="drawLineSourceBtn" title="Draw a line source on the map (L)" style="border-left:3px solid #d32f2f;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2.5" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 19 L8 9 L14 14 L19 5"/><circle cx="3" cy="19" r="2" fill="#d32f2f"/><circle cx="19" cy="5" r="2" fill="#d32f2f"/></svg> Line source<span class="mp-kbd">L</span></button>
+                  <button class="mp-btn" id="drawAreaSourceBtn" title="Draw an area source polygon (A)" style="border-left:3px solid #d97706;"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(217,119,6,0.25)" stroke="#d97706" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="2" fill="#d97706" stroke="none"/></svg> Area source<span class="mp-kbd">A</span></button>
+                  <button class="mp-btn" id="drawBuildingSourceBtn" title="Draw a building source polygon (K)" style="border-left:3px solid #7c3aed;"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(124,58,237,0.18)" stroke="#7c3aed" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9" stroke="#7c3aed" stroke-width="1.5"/><line x1="12" y1="3" x2="12" y2="9" stroke="#7c3aed" stroke-width="1.5"/></svg> Building source<span class="mp-kbd">K</span></button>
+                  <button class="mp-btn" onclick="document.getElementById('suggestToggleBtn').click()" title="Suggested noise sources from PDF site plan"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 7 7c0 2.5-1.3 4.7-3.3 6H8.3A7 7 0 0 1 5 9a7 7 0 0 1 7-7z"/></svg> Suggested sources</button>
+                </div>
+
+                <div class="tc-button-group">
+                  <h4>CoRTN</h4>
+                  <button class="mp-btn" id="drawCortnRoadBtn" title="Draw a CoRTN road traffic source (W)" style="border-left:3px solid #1565C0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1565C0" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M5 22 L10 2 M19 22 L14 2" stroke-dasharray="3 2"/><path d="M12 4 L12 7 M12 10 L12 13 M12 16 L12 19" stroke="#1565C0" stroke-width="1.5"/></svg> Road (CoRTN)<span class="mp-kbd">W</span></button>
+                </div>
+
+                <div class="tc-button-group">
+                  <h4>Receivers</h4>
+                  <button class="mp-btn map-mode-btn" id="mapMode-r1" title="Click map to place Receiver 1 (1)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 1<span class="mp-kbd">1</span></button>
+                  <button class="mp-btn map-mode-btn" id="mapMode-r2" title="Click map to place Receiver 2 (2)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 2<span class="mp-kbd">2</span></button>
+                  <button class="mp-btn map-mode-btn" id="mapMode-r3" title="Click map to place Receiver 3 (3)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 3<span class="mp-kbd">3</span></button>
+                  <button class="mp-btn map-mode-btn" id="mapMode-r4" title="Click map to place Receiver 4 (4)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 4<span class="mp-kbd">4</span></button>
+                </div>
+
+                <div class="tc-button-group">
+                  <h4>Inspect</h4>
+                  <button class="mp-btn" onclick="document.getElementById('objectsToggleBtn').click()" title="Open the object viewer — lists all sources, receivers, barriers, and buildings placed on the map"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 12l9-5"/><path d="M12 12v10"/><path d="M12 12L3 7"/></svg> Objects panel</button>
+                </div>
+              </section>
+
+              <!-- Card 4: Tools -->
+              <section class="modelling-card" id="tc-tools">
+                <h3>Tools</h3>
+                <p class="card-hint">Workspace utilities for measuring, moving, and managing the model.</p>
+
+                <div class="tc-button-group">
+                  <h4>Measure &amp; move</h4>
+                  <button class="mp-btn" id="rulerBtn" title="Measure distance: click two points on the map (R)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><rect x="2" y="8" width="20" height="8" rx="1"/><line x1="6" y1="8" x2="6" y2="13"/><line x1="10" y1="8" x2="10" y2="11"/><line x1="14" y1="8" x2="14" y2="11"/><line x1="18" y1="8" x2="18" y2="13"/></svg> Ruler<span class="mp-kbd">R</span></button>
+                  <button class="mp-btn" id="moveGeomBtn" title="Move mode: click to activate, then drag any barrier, building, or source to reposition it. Click again to exit."><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg> Move</button>
+                </div>
+
+                <div class="tc-button-group">
+                  <h4>Visibility</h4>
+                  <button class="mp-btn pins-toggle-btn active" id="pinsToggleBtn" title="Show or hide all modelling objects on the map (H)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Show / hide objects<span class="mp-kbd">H</span></button>
+                  <button class="mp-btn parcel-toggle-btn active" id="parcelToggleBtn" title="Show or hide subject site cadastral boundary" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3" style="vertical-align:-2px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Show / hide boundary</button>
+                  <button class="mp-btn" id="buildingsResetAllBtn" title="Reset all building height overrides" style="display:none;">Reset overrides</button>
+                </div>
+
+                <div class="tc-button-group">
+                  <h4>Workspace</h4>
+                  <button class="mp-btn mp-danger" id="mapClearBtn" title="Remove all markers and clear distances"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M3 6h18M8 6V4h8v2M5 6v14a2 2 0 002 2h10a2 2 0 002-2V6"/></svg> Clear All</button>
+                </div>
+              </section>
+
+            </div>
+          </div>
+          <!-- END MODELLING SLIDE-OUT PANEL -->
 
           </div>
           <!-- ── End floating panels ── -->
 
           <!-- ── Custom Source Wizard Modal ── -->
-          <div id="customSrcWizardOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;align-items:center;justify-content:center;">
-            <div id="customSrcWizardModal" style="background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.28);width:420px;max-width:96vw;max-height:90vh;overflow-y:auto;font-size:13px;line-height:1.4;">
+          <div id="customSrcWizardOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.38);z-index:9000;align-items:center;justify-content:center;">
+            <div id="customSrcWizardModal" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.18);width:420px;max-width:96vw;max-height:90vh;overflow-y:auto;font-size:13px;line-height:1.4;">
               <!-- Wizard Step 1: metric selector -->
               <div id="cswStep1">
-                <div style="background:#1a1a2e;border-radius:10px 10px 0 0;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
-                  <span style="font-weight:700;font-size:14px;color:#fff;">Add custom source — select type</span>
-                  <button onclick="closeCustomSourceWizard()" style="background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;padding:0 2px;line-height:1;" title="Cancel">&times;</button>
+                <div style="background:rgba(26,32,44,.92);border-radius:10px 10px 0 0;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+                  <span style="font-size:13px;font-weight:600;letter-spacing:.02em;color:#f3f4f6;">Add custom source — select type</span>
+                  <button onclick="closeCustomSourceWizard()" style="background:none;border:none;color:#9ca3af;font-size:16px;cursor:pointer;padding:0 2px;line-height:1;" title="Cancel" onmouseenter="this.style.color='#fff'" onmouseleave="this.style.color='#9ca3af'">&times;</button>
                 </div>
-                <div style="padding:18px 18px 10px;">
-                  <div style="font-size:11px;color:#6b7280;margin-bottom:14px;">Choose the noise metric that describes this source. The wizard will collect the appropriate data.</div>
-                  <div style="display:flex;flex-direction:column;gap:10px;">
-                    <button onclick="cswSelectMetric('Lw')" style="display:flex;align-items:flex-start;gap:14px;text-align:left;padding:14px 16px;border:2px solid #e5e7eb;border-radius:8px;background:#fff;cursor:pointer;transition:border-color 0.15s;" onmouseenter="this.style.borderColor='#3b82f6'" onmouseleave="this.style.borderColor='#e5e7eb'">
-                      <div style="font-size:18px;font-weight:700;color:#1a1a2e;min-width:52px;">Lw</div>
-                      <div><div style="font-weight:600;color:#111827;">Point source</div><div style="font-size:11px;color:#6b7280;margin-top:2px;">Fan, pump, compressor, condenser, plant item</div></div>
+                <div style="padding:14px 14px 8px;">
+                  <div style="font-size:11px;color:#64748b;margin-bottom:12px;">Choose the noise metric that describes this source.</div>
+                  <div style="display:flex;flex-direction:column;gap:6px;">
+                    <button onclick="cswSelectMetric('Lw')" style="display:flex;align-items:center;gap:12px;text-align:left;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;transition:background 0.12s;" onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background='#fff'">
+                      <div style="font-size:15px;font-weight:700;color:#1a202c;min-width:44px;">Lw</div>
+                      <div><div style="font-size:12px;font-weight:600;color:#111827;">Point source</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Fan, pump, compressor, condenser, plant item</div></div>
                     </button>
-                    <button onclick="cswSelectMetric('Lw/m')" style="display:flex;align-items:flex-start;gap:14px;text-align:left;padding:14px 16px;border:2px solid #e5e7eb;border-radius:8px;background:#fff;cursor:pointer;transition:border-color 0.15s;" onmouseenter="this.style.borderColor='#d32f2f'" onmouseleave="this.style.borderColor='#e5e7eb'">
-                      <div style="font-size:18px;font-weight:700;color:#d32f2f;min-width:52px;">Lw/m</div>
-                      <div><div style="font-weight:600;color:#111827;">Line source</div><div style="font-size:11px;color:#6b7280;margin-top:2px;">Conveyor, pipeline, road (custom Lw/m)</div></div>
+                    <button onclick="cswSelectMetric('Lw/m')" style="display:flex;align-items:center;gap:12px;text-align:left;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;transition:background 0.12s;" onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background='#fff'">
+                      <div style="font-size:15px;font-weight:700;color:#d32f2f;min-width:44px;">Lw/m</div>
+                      <div><div style="font-size:12px;font-weight:600;color:#111827;">Line source</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Conveyor, pipeline, road (custom Lw/m)</div></div>
                     </button>
-                    <button onclick="cswSelectMetric('Lp')" style="display:flex;align-items:flex-start;gap:14px;text-align:left;padding:14px 16px;border:2px solid #e5e7eb;border-radius:8px;background:#fff;cursor:pointer;transition:border-color 0.15s;" onmouseenter="this.style.borderColor='#059669'" onmouseleave="this.style.borderColor='#e5e7eb'">
-                      <div style="font-size:18px;font-weight:700;color:#059669;min-width:52px;">Lp</div>
-                      <div><div style="font-weight:600;color:#111827;">Building interior</div><div style="font-size:11px;color:#6b7280;margin-top:2px;">Plant room, substation — interior sound pressure level</div></div>
+                    <button onclick="cswSelectMetric('Lp')" style="display:flex;align-items:center;gap:12px;text-align:left;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;transition:background 0.12s;" onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background='#fff'">
+                      <div style="font-size:15px;font-weight:700;color:#059669;min-width:44px;">Lp</div>
+                      <div><div style="font-size:12px;font-weight:600;color:#111827;">Building interior</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Plant room, substation — interior sound pressure level</div></div>
+                    </button>
+                    <button onclick="cswSelectMetric('TL')" style="display:flex;align-items:center;gap:12px;text-align:left;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;transition:background 0.12s;" onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background='#fff'">
+                      <div style="font-size:15px;font-weight:700;color:#7c3aed;min-width:44px;">TL</div>
+                      <div><div style="font-size:12px;font-weight:600;color:#111827;">Transmission / Insertion Loss</div><div style="font-size:11px;color:#64748b;margin-top:1px;">Wall, window, barrier — octave band attenuation (dB)</div></div>
                     </button>
                   </div>
                 </div>
-                <div style="padding:10px 18px 16px;display:flex;justify-content:flex-end;">
-                  <button onclick="closeCustomSourceWizard()" class="mp-btn" style="padding:5px 16px;">Cancel</button>
+                <div style="padding:8px 14px 12px;display:flex;justify-content:flex-end;border-top:1px solid #e2e8f0;margin-top:8px;">
+                  <button onclick="closeCustomSourceWizard()" class="mp-btn" style="padding:4px 14px;color:rgba(26,32,44,.92);">Cancel</button>
                 </div>
               </div>
 
               <!-- Wizard Step 2: data entry form (populated by cswSelectMetric) -->
               <div id="cswStep2" style="display:none;">
-                <div style="background:#1a1a2e;border-radius:10px 10px 0 0;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
-                  <span id="cswStep2Title" style="font-weight:700;font-size:14px;color:#fff;">Add source</span>
-                  <button onclick="closeCustomSourceWizard()" style="background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;padding:0 2px;line-height:1;" title="Cancel">&times;</button>
+                <div style="background:rgba(26,32,44,.92);border-radius:10px 10px 0 0;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+                  <span id="cswStep2Title" style="font-size:13px;font-weight:600;letter-spacing:.02em;color:#f3f4f6;">Add source</span>
+                  <button onclick="closeCustomSourceWizard()" style="background:none;border:none;color:#9ca3af;font-size:16px;cursor:pointer;padding:0 2px;line-height:1;" title="Cancel" onmouseenter="this.style.color='#fff'" onmouseleave="this.style.color='#9ca3af'">&times;</button>
                 </div>
-                <div id="cswStep2Body" style="padding:16px 18px 10px;">
+                <div id="cswStep2Body" style="padding:14px 14px 8px;">
                   <!-- populated by JS -->
                 </div>
-                <div style="padding:8px 18px 16px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f0f0f0;">
-                  <button onclick="cswGoBack()" class="mp-btn" style="padding:5px 14px;">&#8592; Back</button>
+                <div style="padding:8px 14px 12px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e2e8f0;">
+                  <button onclick="cswGoBack()" class="mp-btn" style="padding:4px 12px;color:rgba(26,32,44,.92);">&#8592; Back</button>
                   <div style="display:flex;gap:8px;align-items:center;">
                     <span id="cswError" style="font-size:11px;color:#dc2626;display:none;"></span>
-                    <button onclick="closeCustomSourceWizard()" class="mp-btn" style="padding:5px 14px;">Cancel</button>
-                    <button onclick="cswSave()" class="mp-btn" style="padding:5px 16px;background:#1a1a2e;color:#fff;border-color:#1a1a2e;">Save source</button>
+                    <button onclick="closeCustomSourceWizard()" class="mp-btn" style="padding:4px 12px;color:rgba(26,32,44,.92);">Cancel</button>
+                    <button onclick="cswSave()" class="mp-btn" style="padding:4px 14px;background:rgba(26,32,44,.92);color:#fff;border-color:rgba(26,32,44,.92);">Save source</button>
                   </div>
                 </div>
               </div>
@@ -7574,47 +8323,52 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   var statusRow = mapCard.querySelector('.map-status-row');
   if (statusRow) mapColumn.appendChild(statusRow);
 
-  // Create drawer
+  // Create RHS icon strip (mirrors LHS #lhsIconStrip pattern)
+  var rhsIconStrip = document.createElement('nav');
+  rhsIconStrip.id = 'rhsIconStrip';
+  rhsIconStrip.setAttribute('aria-label', 'Assessment panels');
+
+  function _mkRhsBtn(id, title, svg, label) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.id = id; btn.title = title;
+    btn.className = 'rhs-icon-btn';
+    btn.setAttribute('aria-expanded', 'false');
+    btn.innerHTML = svg + '<span class="rhs-icon-label">' + label + '</span>';
+    return btn;
+  }
+
+  var SVG_SETUP = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+  var SVG_CRITERIA = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
+  var SVG_RESULTS = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>';
+  var SVG_TREATMENTS = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
+
+  rhsIconStrip.appendChild(_mkRhsBtn('rhsSetupBtn',      'Setup',      SVG_SETUP,      'Setup'));
+  rhsIconStrip.appendChild(_mkRhsBtn('rhsCriteriaBtn',   'Criteria',   SVG_CRITERIA,   'Criteria'));
+  rhsIconStrip.appendChild(_mkRhsBtn('rhsResultsBtn',    'Results',    SVG_RESULTS,    'Results'));
+  rhsIconStrip.appendChild(_mkRhsBtn('rhsTreatmentsBtn', 'Treatments', SVG_TREATMENTS, 'Trmts'));
+
+  // Create slide-out drawer panel
   var drawerPanel = document.createElement('div');
   drawerPanel.id = 'drawer-panel';
   drawerPanel.className = 'drawer-closed';
 
-  // Phase 3: resize handle (must be first child of drawerPanel)
-  var drawerResize = document.createElement('div');
-  drawerResize.id = 'drawer-resize-handle';
-  drawerResize.setAttribute('role', 'separator');
-  drawerResize.setAttribute('aria-orientation', 'vertical');
-  drawerResize.setAttribute('aria-label', 'Resize panel width');
-
-  var drawerToggle = document.createElement('button');
-  drawerToggle.id = 'drawer-toggle';
-  drawerToggle.setAttribute('aria-label', 'Toggle Criteria & compliance panel');
-  drawerToggle.setAttribute('aria-expanded', 'true');
-  drawerToggle.innerHTML =
-    '<span id="drawer-toggle-icon">' +
-      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">' +
-        '<polyline points="15 18 9 12 15 6"/>' +
-      '</svg>' +
-    '</span>';
-
   var drawerContent = document.createElement('div');
   drawerContent.id = 'drawer-content';
 
-  // Phase 2: sticky drawer header containing compliance strip + jump nav
+  // Drawer header: dark chrome title bar matching LHS panels
   var drawerHeader = document.createElement('div');
   drawerHeader.id = 'drawer-header';
   drawerHeader.innerHTML =
-    '<div id="compliance-strip"><div class="cs-empty">Place source and receivers to see compliance</div></div>' +
-    '<div id="jump-nav"></div>';
+    '<h2 id="drawerPanelTitle">Setup</h2>' +
+    '<button class="slideout-close" id="drawerCloseBtn" title="Close panel">&times;</button>';
 
-  var drawerPanelLabel = document.createElement('div');
-  drawerPanelLabel.id = 'drawer-panel-label';
-  drawerPanelLabel.textContent = 'Criteria & compliance';
+  // Compliance strip: sits below dark header, above scrollable content
+  var csDiv = document.createElement('div');
+  csDiv.id = 'compliance-strip';
+  csDiv.innerHTML = '<div class="cs-empty">Place source and receivers to see compliance</div>';
 
-  drawerPanel.appendChild(drawerResize);
-  drawerPanel.appendChild(drawerToggle);
-  drawerPanel.appendChild(drawerPanelLabel);
   drawerPanel.appendChild(drawerHeader);
+  drawerPanel.appendChild(csDiv);
   drawerPanel.appendChild(drawerContent);
 
   // ── 3. Move panels into drawer ─────────────────────────────────────
@@ -7725,7 +8479,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   mapGuide.innerHTML =
     '<div class="map-guide-text">' +
       '<button type="button" class="map-guide-close" aria-label="Dismiss hint" title="Dismiss">\u00d7</button>' +
-      'Search for an address or press <b>S</b> to set the site location' +
+      'Search for an address or press S to set the site location' +
     '</div>';
   var mapInnerWrapperForGuide = mapColumn.querySelector('#mapInnerWrapper');
   if (mapInnerWrapperForGuide) mapInnerWrapperForGuide.appendChild(mapGuide);
@@ -7829,15 +8583,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   // ── 4. Assemble the layout ─────────────────────────────────────────
   appLayout.appendChild(mapColumn);
   appLayout.appendChild(drawerPanel);
-
-  // Collapsed nametag tab: visible on right edge when drawer is closed
-  var drawerCollapsedNametag = document.createElement('div');
-  drawerCollapsedNametag.id = 'drawer-collapsed-nametag';
-  drawerCollapsedNametag.textContent = 'Criteria & compliance';
-  drawerCollapsedNametag.addEventListener('click', function() {
-    if (typeof window._setDrawerOpen === 'function') window._setDrawerOpen(true);
-  });
-  appLayout.appendChild(drawerCollapsedNametag);
+  appLayout.appendChild(rhsIconStrip);
 
   // Insert into the DOM: place header and layout before #pdfArea
   var body = document.body;
@@ -7886,57 +8632,37 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   // Hide the now-empty mapCard shell (map description, attribution text)
   if (mapCard) mapCard.style.display = 'none';
 
-  // ── 5. Drawer toggle ───────────────────────────────────────────────
-  var DRAWER_KEY = 'resonate_drawer_open';
+  // ── 5. RHS panel open/close ────────────────────────────────────────
+  var DRAWER_KEY = 'resonate_active_rhs_section';
+  var _rhsSectionBtnIds = {
+    setup: 'rhsSetupBtn', criteria: 'rhsCriteriaBtn',
+    results: 'rhsResultsBtn', treatments: 'rhsTreatmentsBtn'
+  };
 
-  function setDrawerOpen(open) {
+  function setDrawerOpen(open, sectionId) {
     drawerPanel.classList.toggle('drawer-open', open);
     drawerPanel.classList.toggle('drawer-closed', !open);
-    var icon = document.getElementById('drawer-toggle-icon');
-    if (icon) icon.innerHTML = open
-      ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>'
-      : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>';
-    drawerToggle.setAttribute('aria-expanded', String(open));
-    // Show/hide collapsed nametag tab
-    var cnt = document.getElementById('drawer-collapsed-nametag');
-    if (cnt) cnt.style.display = open ? 'none' : 'block';
-    // Shrink/expand map column so drawer is a layout sibling, not an overlay.
-    // `right` has no effect on this element (over-constrained layout), so we
-    // set an explicit `width` = parent_width - left_offset - drawer_width.
-    if (open) { _syncMapWidth(); } else { mapColumn.style.width = ''; }
-    // Invalidate immediately (mirrors LHS nudgeMap pattern).
+    // Reflect active state on RHS icon buttons via aria-expanded
+    Object.keys(_rhsSectionBtnIds).forEach(function(k) {
+      var btn = document.getElementById(_rhsSectionBtnIds[k]);
+      if (btn) btn.setAttribute('aria-expanded', String(open && k === sectionId));
+    });
     if (window._map && typeof window._map.invalidateSize === 'function') window._map.invalidateSize();
-    try { localStorage.setItem(DRAWER_KEY, open ? 'true' : 'false'); } catch(e) {}
+    try { localStorage.setItem(DRAWER_KEY, open ? (sectionId || '') : ''); } catch(e) {}
   }
 
-  // Recalculate #map-column explicit width when drawer is open.
-  // Using width (not right) because right is over-constrained on this element.
-  function _syncMapWidth() {
-    if (!drawerPanel.classList.contains('drawer-open')) return;
-    var parentW = mapColumn.parentElement ? mapColumn.parentElement.offsetWidth : window.innerWidth;
-    var mcLeft  = parseFloat(getComputedStyle(mapColumn).left) || 0;
-    var newW = Math.max(0, parentW - mcLeft - drawerPanel.offsetWidth) + 'px';
-    if (mapColumn.style.width !== newW) {
-      mapColumn.style.width = newW;
-      if (window._map && typeof window._map.invalidateSize === 'function') window._map.invalidateSize();
-    }
-  }
-
-  // R7: Auto-open drawer on first compliance results (once per session).
-  // Fires when the compliance-strip gains child elements (results rendered).
-  // Won't re-open if user has manually interacted with the drawer toggle.
+  // Auto-open to Results on first compliance data (once per session)
   var _drawerAutoOpenedThisSession = false;
   function _maybeAutoOpenDrawer() {
     if (_drawerAutoOpenedThisSession) return;
     if (!drawerPanel.classList.contains('drawer-closed')) return;
-    // Check for rendered result rows in either the compliance strip or results table
     if (document.querySelector('#predNoiseSection table tbody tr, #compliance-strip .cs-row')) {
-      setDrawerOpen(true);
+      activateSection('results');
+      setDrawerOpen(true, 'results');
       _drawerAutoOpenedThisSession = true;
     }
   }
   window._maybeAutoOpenDrawer = _maybeAutoOpenDrawer;
-  // Observe compliance-strip mutations to trigger the check without touching render()
   (function() {
     var cs = document.getElementById('compliance-strip');
     if (cs && window.MutationObserver) {
@@ -7945,57 +8671,75 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
     }
   })();
 
-  window._setDrawerOpen = setDrawerOpen;  // Phase 2: expose for auto-scroll
-  // Re-sync width when the LHS panel collapses/expands (class on #app-layout changes)
-  // or when the LHS resize handle changes mc.style.left (style attribute changes).
-  (function() {
-    var al = mapColumn.parentElement;
-    if (al && window.MutationObserver) {
-      // Watch #app-layout class (side-panel-collapsed toggle)
-      new MutationObserver(function() { _syncMapWidth(); })
-        .observe(al, { attributes: true, attributeFilter: ['class'] });
-      // Watch #map-column style attribute (LHS resize handle changes left inline).
-      // Guard: _syncMapWidth only sets width if value differs, preventing loops.
-      new MutationObserver(function() { _syncMapWidth(); })
-        .observe(mapColumn, { attributes: true, attributeFilter: ['style'] });
-    }
-  })();
+  window._setDrawerOpen = function(open, sectionId) {
+    setDrawerOpen(open, sectionId || window._activeNavSection || 'setup');
+  };
 
-  drawerToggle.addEventListener('click', function() {
-    _drawerAutoOpenedThisSession = true; // R7: user took control — stop auto-re-opening
-    setDrawerOpen(drawerPanel.classList.contains('drawer-closed'));
+  // Toggle a RHS section: open/switch if closed or different; close if same
+  function _toggleRhsSection(sectionId) {
+    var isOpen = drawerPanel.classList.contains('drawer-open');
+    var isSame = window._activeNavSection === sectionId;
+    if (isOpen && isSame) {
+      setDrawerOpen(false, sectionId);
+    } else {
+      activateSection(sectionId);
+      setDrawerOpen(true, sectionId);
+    }
+  }
+  window._toggleRhsSection = _toggleRhsSection;
+
+  // Wire RHS icon buttons
+  ['rhsSetupBtn', 'rhsCriteriaBtn', 'rhsResultsBtn', 'rhsTreatmentsBtn'].forEach(function(btnId) {
+    var sId = btnId.replace('rhs', '').replace('Btn', '').toLowerCase();
+    var btn = document.getElementById(btnId);
+    if (btn) btn.addEventListener('click', function() { _toggleRhsSection(sId); });
   });
 
-  // Restore saved state (default: collapsed — panels hidden on fresh load)
+  // Wire drawer close button
+  var drawerCloseBtn = document.getElementById('drawerCloseBtn');
+  if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', function() {
+    setDrawerOpen(false, window._activeNavSection);
+  });
+
+  // Restore saved state (default: closed on fresh load)
   try {
-    var saved = localStorage.getItem(DRAWER_KEY);
-    setDrawerOpen(saved === 'true');
+    var savedSection = localStorage.getItem(DRAWER_KEY);
+    if (savedSection && _rhsSectionBtnIds[savedSection]) {
+      activateSection(savedSection);
+      setDrawerOpen(true, savedSection);
+    } else {
+      activateSection('setup');
+      setDrawerOpen(false, 'setup');
+    }
   } catch(e) {
-    setDrawerOpen(false);
+    activateSection('setup');
+    setDrawerOpen(false, 'setup');
   }
 
-  // Keyboard shortcut: ] to toggle drawer
+  // Keyboard shortcut: ] to toggle RHS drawer
   document.addEventListener('keydown', function(e) {
     if (e.target && e.target.matches && e.target.matches('input, select, textarea')) return;
     if (e.key === ']') {
       e.preventDefault();
-      _drawerAutoOpenedThisSession = true; // R7: user took control
-      setDrawerOpen(drawerPanel.classList.contains('drawer-closed'));
+      var sec = window._activeNavSection || 'setup';
+      if (drawerPanel.classList.contains('drawer-open')) {
+        setDrawerOpen(false, sec);
+      } else {
+        activateSection(sec);
+        setDrawerOpen(true, sec);
+      }
     }
   });
 
-  // Phase 4: Esc closes drawer first (capture phase so it runs before
-  // other Esc handlers like exit-draw-mode, close-modal, etc.).
-  // Only acts when the drawer is open — otherwise lets other handlers fire.
+  // Esc closes RHS panel (capture phase: runs before other Esc handlers)
   window.addEventListener('keydown', function(e) {
     if (e.key !== 'Escape') return;
-    // Don't interfere when user is typing
     if (e.target && e.target.matches && e.target.matches('input, select, textarea')) return;
     if (!drawerPanel.classList.contains('drawer-open')) return;
-    setDrawerOpen(false);
+    setDrawerOpen(false, window._activeNavSection || 'setup');
     e.stopPropagation();
     if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
-  }, true);  // capture = true: fire before bubble-phase listeners
+  }, true);
 
   // ── 6. Invalidate Leaflet map size after layout settles ────────────
   // initMap runs on DOMContentLoaded; we schedule a resize after it
@@ -8061,18 +8805,13 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
       el.classList.toggle('section-hidden', sections.indexOf(sectionId) === -1);
     });
     window._activeNavSection = sectionId;
+    var titleEl = document.getElementById('drawerPanelTitle');
+    if (titleEl) titleEl.textContent = sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
     if (typeof window._expandSectionCards === 'function') window._expandSectionCards();
   }
 
-  (function initJumpNav() {
-    var nav = document.getElementById('jump-nav');
-    if (!nav) return;
-    var groups = [
-      { id: 'group-setup',       label: 'Setup' },
-      { id: 'group-criteria',    label: 'Criteria' },
-      { id: 'group-results',     label: 'Results' },
-      { id: 'group-treatments',  label: 'Recommended treatments' }
-    ];
+  // Expose _scrollDrawerTo for external callers (e.g. receiver placement scrolls to criteria)
+  (function() {
     var dc = document.getElementById('drawer-content');
 
     function scrollToAnchor(anchorId) {
@@ -8081,139 +8820,22 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
       if (anchorId.indexOf('group-') === 0) {
         var sId = anchorId.replace('group-', '');
         var known = ['setup', 'criteria', 'results', 'treatments'];
-        if (known.indexOf(sId) !== -1) activateSection(sId);
+        if (known.indexOf(sId) !== -1) {
+          _toggleRhsSection(sId);
+        }
       }
-      var headerEl = document.getElementById('drawer-header');
-      var hH = headerEl ? headerEl.getBoundingClientRect().height : 0;
-      dc.scrollTo({ top: Math.max(0, el.offsetTop - hH - 4), behavior: 'smooth' });
+      setTimeout(function() {
+        var headerEl = document.getElementById('drawer-header');
+        var hH = headerEl ? headerEl.getBoundingClientRect().height : 0;
+        dc.scrollTo({ top: Math.max(0, el.offsetTop - hH - 4), behavior: 'smooth' });
+      }, 50);
     }
 
-    groups.forEach(function(g) {
-      var btn = document.createElement('button');
-      btn.className = 'jump-btn';
-      btn.type = 'button';
-      btn.textContent = g.label;
-      btn.setAttribute('data-target', g.id);
-      btn.addEventListener('click', function() {
-        var sectionId = g.id.replace('group-', '');
-        activateSection(sectionId);
-        scrollToAnchor(g.id);
-        nav.querySelectorAll('.jump-btn').forEach(function(b) {
-          b.classList.toggle('jump-active', b === btn);
-        });
-      });
-      nav.appendChild(btn);
-    });
-
-    // Mark Setup button active on initial load
-    var firstBtn = nav.querySelector('.jump-btn');
-    if (firstBtn) firstBtn.classList.add('jump-active');
-
-    // Expose for auto-scroll on receiver placement
     window._scrollDrawerTo = scrollToAnchor;
     window._activateSection = activateSection;
   })();
 
-  // ── 9. Phase 3: Drawer resize handle ───────────────────────────────
-  function initDrawerResize() {
-    var drawer = document.getElementById('drawer-panel');
-    var handle = document.getElementById('drawer-resize-handle');
-    if (!drawer || !handle) return;
-
-    var isDragging = false;
-    var didDrag = false;           // true only once pointer moves >5px
-    var startX = 0;
-    var startWidth = 0;
-    var CLICK_THRESHOLD_PX = 5;
-    var DRAWER_WIDTH_KEY = 'resonate_drawer_width';
-
-    function clampWidth(px) {
-      var vw = window.innerWidth;
-      return Math.max(360, Math.min(Math.round(vw * 0.85), px));
-    }
-
-    handle.addEventListener('pointerdown', function(e) {
-      isDragging = true;
-      didDrag = false;             // reset — this may still turn out to be a click
-      startX = e.clientX;
-      startWidth = drawer.getBoundingClientRect().width;
-      try { handle.setPointerCapture(e.pointerId); } catch(err) {}
-      document.body.style.userSelect = 'none';
-      e.preventDefault();
-    });
-
-    document.addEventListener('pointermove', function(e) {
-      if (!isDragging) return;
-      var dx = startX - e.clientX;
-      if (!didDrag && Math.abs(dx) > CLICK_THRESHOLD_PX) {
-        // Pointer has moved far enough to qualify as a drag
-        didDrag = true;
-        handle.classList.add('dragging');
-        document.body.style.cursor = 'col-resize';
-      }
-      if (didDrag) {
-        var newWidth = startWidth + dx;
-        drawer.style.width = clampWidth(newWidth) + 'px';
-        if (drawer.classList.contains('drawer-open')) {
-          _syncMapWidth();
-        }
-      }
-    });
-
-    function endDrag() {
-      if (!isDragging) return;
-      isDragging = false;
-      handle.classList.remove('dragging');
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      if (didDrag) {
-        // Real drag — save new width and resize map
-        try { localStorage.setItem(DRAWER_WIDTH_KEY, drawer.style.width); } catch(err) {}
-        if (window._map && typeof window._map.invalidateSize === 'function') {
-          window._map.invalidateSize();
-        }
-      } else {
-        // No drag occurred — treat as a click on the left edge and toggle
-        if (typeof window._setDrawerOpen === 'function') {
-          var isOpen = drawer.classList.contains('drawer-open');
-          window._setDrawerOpen(!isOpen);
-        }
-      }
-    }
-    document.addEventListener('pointerup', endDrag);
-    document.addEventListener('pointercancel', endDrag);
-
-    // Restore saved width with clamp; also sync mapColumn width if drawer is open
-    try {
-      var saved = localStorage.getItem(DRAWER_WIDTH_KEY);
-      if (saved) {
-        var px = parseInt(saved, 10);
-        if (px && !isNaN(px)) {
-          drawer.style.width = clampWidth(px) + 'px';
-          _syncMapWidth();
-        }
-      }
-    } catch(err) {}
-
-    // Re-clamp on window resize
-    window.addEventListener('resize', function() {
-      if (!drawer.style.width) return;
-      var px = parseInt(drawer.style.width, 10);
-      if (!px || isNaN(px)) return;
-      var clamped = clampWidth(px);
-      if (clamped !== px) {
-        drawer.style.width = clamped + 'px';
-        _syncMapWidth();
-        if (window._map && typeof window._map.invalidateSize === 'function') {
-          window._map.invalidateSize();
-        }
-      }
-    });
-  }
-  initDrawerResize();
-
-  // Note: header Methodology button removed — methodology is accessible
-  // via the drawer jump nav's "Methodology" tab.
+  // Note: methodology is accessible via the LHS icon strip methodology button.
 })();
 </script>
 
@@ -9885,6 +10507,168 @@ function rebuildSourceLibraries() {
 }
 rebuildSourceLibraries();
 
+/* ── Library panel — canonical library viewer ── */
+
+var _canonicalLibrary = null;
+var _libFilterDataType = '';
+var _libFilterCategory = '';
+var _libFilterReview   = '';
+var _libFilterSearch   = '';
+
+function loadCanonicalLibrary(cb) {
+  if (_canonicalLibrary) { if (cb) cb(_canonicalLibrary); return; }
+  fetch('data/source-library.json')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _canonicalLibrary = data;
+      _updateLibBadge(data);
+      if (cb) cb(data);
+    })
+    .catch(function(err) {
+      console.warn('[Library] Failed to load source-library.json:', err);
+      if (cb) cb(null);
+    });
+}
+
+function _updateLibBadge(data) {
+  var badge = document.getElementById('resonateLibBadge');
+  if (!badge) return;
+  if (!data) { badge.textContent = 'Library: load error'; return; }
+  var count = data.entryCount || (data.entries && data.entries.length) || 0;
+  var ver   = data.version || 'unknown';
+  badge.textContent = 'Library: ' + count + ' entries';
+  badge.title = 'Noise source library v' + ver + ' — last updated ' + (data.lastUpdated || '');
+}
+
+function _escHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function computeLibDbA(spectrum) {
+  var A = [-26.2, -16.1, -8.6, -3.2, 0.0, 1.2, 1.0, -1.1];
+  var sum = 0;
+  for (var i = 0; i < 8; i++) {
+    var v = Array.isArray(spectrum) ? spectrum[i] : null;
+    if (v != null && !isNaN(v)) sum += Math.pow(10, (v + A[i]) / 10);
+  }
+  return sum > 0 ? Math.round(10 * Math.log10(sum) * 10) / 10 : null;
+}
+
+function getAllLibraryEntries() {
+  var entries = [];
+  // Custom entries first — ensures they're always visible regardless of row cap
+  if (typeof _customSources !== 'undefined' && _customSources.length > 0) {
+    _customSources.forEach(function(s, i) {
+      var dt = s.dataType || 'Lw, dB(Z)';
+      var isTL = (dt === 'Transmission Loss' || dt === 'Insertion Loss');
+      var dbA = isTL ? null : (s.spectrum ? computeLibDbA(s.spectrum) : (s.lw != null ? s.lw : null));
+      entries.push({
+        id: 'custom-' + i,
+        name: s.name || '',
+        description: s.description || '',
+        review: 'Custom',
+        dataType: dt,
+        category: 'Custom',
+        sourceCitation: '',
+        dbA: dbA,
+        octaveBands: s.spectrum ? {
+          '63': s.spectrum[0], '125': s.spectrum[1], '250': s.spectrum[2], '500': s.spectrum[3],
+          '1000': s.spectrum[4], '2000': s.spectrum[5], '4000': s.spectrum[6], '8000': s.spectrum[7]
+        } : null,
+        isCustom: true
+      });
+    });
+  }
+  // Canonical entries after custom
+  if (_canonicalLibrary && Array.isArray(_canonicalLibrary.entries)) {
+    _canonicalLibrary.entries.forEach(function(e) {
+      entries.push({
+        id: e.id,
+        name: e.name,
+        description: e.description || '',
+        review: e.review || '',
+        dataType: e.dataType || '',
+        category: e.category || '',
+        sourceCitation: e.sourceCitation || '',
+        dbA: e.dbA,
+        octaveBands: e.octaveBands,
+        isCustom: false
+      });
+    });
+  }
+  return entries;
+}
+
+function populateCategoryFilter() {
+  var sel = document.getElementById('libFilterCategory');
+  if (!sel) return;
+  if (sel.options.length > 1) return; // already populated
+  var cats = {};
+  if (_canonicalLibrary && Array.isArray(_canonicalLibrary.entries)) {
+    _canonicalLibrary.entries.forEach(function(e) { if (e.category) cats[e.category] = true; });
+  }
+  cats['Custom'] = true;
+  Object.keys(cats).sort().forEach(function(c) {
+    var opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    sel.appendChild(opt);
+  });
+}
+
+function renderLibraryTable() {
+  var tbody = document.getElementById('libTableBody');
+  if (!tbody) return;
+  var entries = getAllLibraryEntries();
+  if (_libFilterDataType) entries = entries.filter(function(e) { return e.dataType === _libFilterDataType; });
+  if (_libFilterCategory) entries = entries.filter(function(e) { return e.category === _libFilterCategory; });
+  if (_libFilterReview)   entries = entries.filter(function(e) { return e.review === _libFilterReview; });
+  if (_libFilterSearch) {
+    var q = _libFilterSearch.toLowerCase();
+    entries = entries.filter(function(e) {
+      return (e.name        || '').toLowerCase().indexOf(q) >= 0 ||
+             (e.description || '').toLowerCase().indexOf(q) >= 0 ||
+             (e.category    || '').toLowerCase().indexOf(q) >= 0;
+    });
+  }
+  var total = entries.length;
+  var shown = entries.slice(0, 250);
+  var HZ_KEYS = ['63','125','250','500','1000','2000','4000','8000'];
+  var rows = shown.map(function(e) {
+    var dbAStr = (e.dbA != null && !isNaN(e.dbA)) ? Number(e.dbA).toFixed(1) : '—';
+    var bandCells = HZ_KEYS.map(function(k) {
+      var v = e.octaveBands ? e.octaveBands[k] : null;
+      var s = (v != null && !isNaN(v)) ? (Number.isInteger(v) ? String(v) : Number(v).toFixed(1)) : '—';
+      return '<td class="lib-col-hz">' + s + '</td>';
+    }).join('');
+    var delBtn = e.isCustom
+      ? '<button class="lib-del-btn" title="Delete custom entry" onclick="deleteCustomLibEntry(\'' + _escHtml(e.id) + '\')">✕</button>'
+      : '';
+    return '<tr>' +
+      '<td class="lib-col-name"><span title="' + _escHtml(e.name) + '">' + _escHtml(e.name) + '</span></td>' +
+      '<td class="lib-col-type">' + _escHtml(e.dataType) + '</td>' +
+      '<td class="lib-col-cat">'  + _escHtml(e.category) + '</td>' +
+      bandCells +
+      '<td class="lib-col-dba">'  + dbAStr + '</td>' +
+      '<td class="lib-col-rev">'  + _escHtml(e.review)   + '</td>' +
+      '<td class="lib-col-act">'  + delBtn + '</td>' +
+      '</tr>';
+  });
+  tbody.innerHTML = rows.join('') || '<tr><td colspan="6" style="color:#94a3b8;padding:12px 8px;text-align:center;font-size:11px;">No entries match the current filters.</td></tr>';
+  var countEl = document.getElementById('libTableCount');
+  if (countEl) countEl.textContent = 'Showing ' + shown.length + ' of ' + total;
+}
+
+function deleteCustomLibEntry(id) {
+  var idx = parseInt(id.replace('custom-', ''), 10);
+  if (isNaN(idx) || idx < 0 || idx >= _customSources.length) return;
+  _customSources.splice(idx, 1);
+  _saveCustomSources();
+  rebuildSourceLibraries();
+  renderLibraryTable();
+  if (typeof renderCustomSourceList === 'function') renderCustomSourceList();
+}
+
 /* ── Custom source management functions ── */
 
 /*
@@ -9904,6 +10688,8 @@ rebuildSourceLibraries();
 function openCustomSourceWizard() {
   var overlay = document.getElementById('customSrcWizardOverlay');
   if (!overlay) return;
+  // Move to body so it stacks above all slide-out panels
+  if (overlay.parentNode !== document.body) document.body.appendChild(overlay);
   _cswResetToStep1();
   overlay.style.display = 'flex';
 }
@@ -9941,8 +10727,7 @@ function cswSelectMetric(metric) {
   if (s1) s1.style.display = 'none';
   s2.style.display = '';
 
-  var bandHelp = '<div style="font-size:10px;color:#6b7280;margin-top:4px;">' +
-    'Per-band values are unweighted (dB(Z)). A-weighting is applied during propagation per ISO\u00a09613-2.</div>';
+  var bandHelp = '';
   var freqLabels = ['63 Hz','125 Hz','250 Hz','500 Hz','1 kHz','2 kHz','4 kHz','8 kHz'];
   var freqHeader = freqLabels.map(function(f) {
     return '<div style="text-align:center;font-size:10px;font-weight:600;">' + f + '</div>';
@@ -9976,10 +10761,20 @@ function cswSelectMetric(metric) {
         '<label style="font-size:11px;font-weight:600;">Overall Lw/m, dB(A)/m</label>' +
         '<input type="number" id="csw_lw" step="0.1" placeholder="60" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;margin-top:3px;"></div>' +
       '<div style="margin-bottom:4px;"><label style="font-size:11px;font-weight:600;">Octave band spectrum, dB(Z) <span style="font-weight:400;color:var(--muted);">(leave blank for flat spectrum)</span></label>' +
-      bandGrid + '</div>' +
-      '<div style="background:#fef9c3;border:1px solid #fcd34d;border-radius:6px;padding:8px 10px;font-size:11px;color:#78350f;margin-top:8px;">' +
-        'After saving, draw the line source on the map to place it. Length is determined by the drawn line.' +
-      '</div>';
+      bandGrid + '</div>';
+
+  } else if (metric === 'TL') {
+    if (titleEl) titleEl.textContent = 'Add TL / IL entry';
+    var tlBandHelp = '<div style="font-size:10px;color:#6b7280;margin-top:4px;">' +
+      'Enter attenuation values in dB per octave band. At least one band value is required.</div>';
+    var tlBandGrid = '<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin-top:4px;">' +
+      freqHeader + bandInputs + '</div>' + tlBandHelp;
+    var descRow = '<div style="margin-bottom:8px;">' +
+      '<label style="font-size:11px;font-weight:600;">Description <span style="font-weight:400;color:var(--muted);">(optional)</span></label>' +
+      '<input type="text" id="csw_desc" placeholder="e.g. 200mm concrete wall" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;margin-top:3px;"></div>';
+    bodyEl.innerHTML = nameRow + descRow +
+      '<div style="margin-bottom:4px;"><label style="font-size:11px;font-weight:600;">Octave band attenuation, dB</label>' +
+      tlBandGrid + '</div>';
 
   } else if (metric === 'Lp') {
     if (titleEl) titleEl.textContent = 'Add building interior source (Lp)';
@@ -9988,15 +10783,7 @@ function cswSelectMetric(metric) {
         '<label style="font-size:11px;font-weight:600;">Overall Lp, dB(A)</label>' +
         '<input type="number" id="csw_lw" step="0.1" placeholder="75" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;margin-top:3px;"></div>' +
       '<div style="margin-bottom:4px;"><label style="font-size:11px;font-weight:600;">Octave band spectrum, dB(Z) <span style="font-weight:400;color:var(--muted);">(leave blank for flat spectrum)</span></label>' +
-      bandGrid + '</div>' +
-      '<div style="margin-bottom:8px;">' +
-        '<label style="font-size:11px;font-weight:600;">Facade construction (R<sub>w</sub>)</label>' +
-        '<select id="csw_construction" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;margin-top:3px;">' +
-          _cswBuildConstructionOptions() +
-        '</select></div>' +
-      '<div style="background:#fef9c3;border:1px solid #fcd34d;border-radius:6px;padding:8px 10px;font-size:11px;color:#78350f;margin-top:4px;">' +
-        'After saving, draw the building polygon on the map to place it. Facade area is determined by the drawn polygon and building height.' +
-      '</div>';
+      bandGrid + '</div>';
   }
 }
 
@@ -10071,7 +10858,29 @@ function cswSave() {
 
   // Validate name
   if (!name) { _cswShowError('Enter a source name.'); return; }
-  // Validate broadband level
+
+  // TL/IL entries \u2014 spectral only, no broadband level
+  if (metric === 'TL') {
+    var tlBands = _cswReadBands();
+    var tlAnyBand = tlBands.some(function(v) { return v !== null; });
+    if (!tlAnyBand) { _cswShowError('Enter at least one octave band value.'); return; }
+    var descEl = document.getElementById('csw_desc');
+    var tlDesc = descEl ? descEl.value.trim() : '';
+    _customSources.push({
+      name: name,
+      description: tlDesc,
+      dataType: 'Transmission Loss',
+      spectrum: tlBands,
+      lw: null,
+      height: null
+    });
+    _saveCustomSources();
+    if (typeof renderLibraryTable === 'function') renderLibraryTable();
+    closeCustomSourceWizard();
+    return;
+  }
+
+  // Validate broadband level (Lw, Lw/m, Lp)
   if (!Number.isFinite(lw) || lw < 0) { _cswShowError('Enter a valid broadband level (\u2265 0).'); return; }
 
   // Read per-band dB(Z) spectrum — blank = null, parseFloat only, no conversion
@@ -10092,7 +10901,7 @@ function cswSave() {
       _cswShowError('A custom source with this name already exists.'); return;
     }
 
-    _customSources.push({ name: displayName, lw: lw, spectrum: spectrum, height: height });
+    _customSources.push({ name: displayName, dataType: 'Lw, dB(Z)', lw: lw, spectrum: spectrum, height: height });
     _saveCustomSources();
     rebuildSourceLibraries();
     renderCustomSourceList();
@@ -10145,61 +10954,19 @@ function cswSave() {
     if (typeof showToast === 'function') showToast('Line source \u201c' + name + '\u201d added \u2014 draw it on the map to place it.', 3500);
 
   } else if (metric === 'Lp') {
-    // --- Building source: create an unplaced building source ---
-    if (typeof buildingSources === 'undefined') {
-      _cswShowError('Building source feature not available.'); return;
-    }
-    var consEl = document.getElementById('csw_construction');
-    var consName = consEl ? consEl.value : '';
-    if (!consName || consName === '__none__') {
-      _cswShowError('Select a facade construction.'); return;
-    }
-    // Look up construction object
-    var consObj = null;
-    if (window.CONSTRUCTION_LIBRARY_GROUPED) {
-      Object.keys(CONSTRUCTION_LIBRARY_GROUPED).forEach(function(cat) {
-        (CONSTRUCTION_LIBRARY_GROUPED[cat] || []).forEach(function(e) {
-          if (e.name === consName) consObj = e;
-        });
-      });
-    }
-    if (!consObj) { _cswShowError('Construction not found in library.'); return; }
-
-    // Build octave object for interiorLp
-    var hzKeys2 = [63, 125, 250, 500, 1000, 2000, 4000, 8000];
-    var octObj = {};
-    hzKeys2.forEach(function(hz, i) { octObj[hz] = spectrum[i] !== null ? spectrum[i] : null; });
-
-    var bsIdCtr = (typeof _bsIdCtr !== 'undefined') ? ++_bsIdCtr : Date.now();
-    var defCons = JSON.parse(JSON.stringify(consObj));
-    var newBs = {
-      id: 'bs_' + bsIdCtr,
+    // --- Lp library entry — save to custom source library ---
+    _customSources.push({
       name: name,
-      vertices: [],              // unplaced — user draws building polygon after saving
-      baseHeightM: 0,
-      height_m: 6,
-      lpSource: 'octave',
-      interiorLp: {
-        day:   { broadband: lw, octave: JSON.parse(JSON.stringify(octObj)) },
-        eve:   { broadband: lw, octave: JSON.parse(JSON.stringify(octObj)) },
-        night: { broadband: lw, octave: JSON.parse(JSON.stringify(octObj)) }
-      },
-      activeInPeriod: { day: true, eve: true, night: true },
-      operatingPct: { day: 100, eve: 100, night: 100 },
-      defaultConstruction: defCons,
-      facadeOverrides: {},
-      roofConstruction: Object.assign(JSON.parse(JSON.stringify(consObj)), { enabled: true }),
-      roofElements: [],
-      manualOverride: { day: false, eve: false, night: false }
-    };
-    buildingSources.push(newBs);
-    // Trigger UI refresh via window API (render functions are IIFE-scoped)
-    if (window._recomputeNoiseMap) window._recomputeNoiseMap();
-    if (typeof window._renderObjectList === 'function') window._renderObjectList();
-    if (typeof window._undoPushState === 'function') window._undoPushState('Add building source (wizard)');
-    if (typeof window.updateAll === 'function') window.updateAll();
+      dataType: 'Lp, dB(Z)',
+      lw: lw,
+      spectrum: spectrum,
+      height: null
+    });
+    _saveCustomSources();
+    rebuildSourceLibraries();
+    renderCustomSourceList();
+    if (typeof renderLibraryTable === 'function') renderLibraryTable();
     closeCustomSourceWizard();
-    if (typeof showToast === 'function') showToast('Building source \u201c' + name + '\u201d added \u2014 draw it on the map to place it.', 3500);
   }
 }
 
@@ -21376,7 +22143,6 @@ function initReceiverNames(){
 
 function initPropagationMethod() {
   const group = document.getElementById('propMethodGroup');
-  const paramsDiv = document.getElementById('iso9613Params');
   if (!group) return;
 
   // Restore saved method
@@ -21408,8 +22174,8 @@ function initPropagationMethod() {
   if (tempEl) tempEl.value = iso_temperature;
   if (humidEl) humidEl.value = iso_humidity;
 
-  // Show/hide params panel
-  if (paramsDiv) paramsDiv.style.display = propagationMethod === 'iso9613' ? '' : 'none';
+  // Show/hide modelling cards based on method
+  if (typeof _updateModellingCards === 'function') _updateModellingCards(propagationMethod);
 
   // Set active button
   group.querySelectorAll('[data-val]').forEach(function(btn) {
@@ -21421,11 +22187,7 @@ function initPropagationMethod() {
       btn.classList.add('active');
       propagationMethod = btn.dataset.val;
       localStorage.setItem('prop_method', propagationMethod);
-      if (paramsDiv) paramsDiv.style.display = (propagationMethod === 'iso9613' || propagationMethod === 'concawe') ? '' : 'none';
-      var cmp = document.getElementById('concaweMetPanel');
-      if (cmp) cmp.style.display = (propagationMethod === 'concawe') ? '' : 'none';
-      var cmetPnl = document.getElementById('isoCmetPanel');
-      if (cmetPnl) cmetPnl.style.display = (propagationMethod === 'iso9613') ? '' : 'none';
+      if (typeof _updateModellingCards === 'function') _updateModellingCards(propagationMethod);
       // Show/hide source height column in source tables
       toggleSourceHeightColumns();
       render();
@@ -21446,22 +22208,12 @@ function initPropagationMethod() {
     el.classList.add('visible');
   }
   _updatePropIndicator(); // set initial label on page load
-  // Click to open the Propagation panel in the sidebar
+  // Click to open the Modelling slide-out panel
   (function() {
     var ind = document.getElementById('prop-method-indicator');
     if (!ind) return;
     ind.addEventListener('click', function() {
-      if (typeof toggleMapPanel !== 'function') return;
-      var pp = document.getElementById('mp-propmethod');
-      // Ensure sidebar is not collapsed
-      var sp = document.getElementById('side-panel');
-      if (sp && sp.classList.contains('side-panel-collapsed')) {
-        var colBtn = sp.querySelector('.side-panel-collapse-btn, #side-panel-collapse-btn');
-        if (colBtn) colBtn.click();
-      }
-      // Open the propagation accordion if not already open
-      if (pp && !pp.classList.contains('mp-open')) toggleMapPanel('mp-propmethod');
-      else if (pp && pp.classList.contains('mp-open')) pp.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (typeof openModellingPanel === 'function') openModellingPanel();
     });
   })();
 
@@ -21717,8 +22469,8 @@ function initPropagationMethod() {
       if (cmetCkEl)  cmetCkEl.checked  = _cmetEnabled;
       if (cmetC0El)  cmetC0El.value    = _cmetC0.toFixed(1);
       if (cmetC0Row) cmetC0Row.style.display = _cmetEnabled ? '' : 'none';
-      if (cmetPanel) cmetPanel.style.display  =
-        (propagationMethod === 'iso9613') ? '' : 'none';
+      var mcCmet = document.getElementById('mc-cmet');
+      if (mcCmet) mcCmet.hidden = (propagationMethod !== 'iso9613');
     }
     window._cmetApplyUI = _cmetApplyUI;
     _cmetApplyUI();
@@ -25224,8 +25976,7 @@ setInitialCollapseState();
             b.classList.toggle('active', b.dataset.val === propagationMethod);
           });
         }
-        var paramsDiv = document.getElementById('iso9613Params');
-        if (paramsDiv) paramsDiv.style.display = (propagationMethod === 'iso9613' || propagationMethod === 'concawe') ? '' : 'none';
+        if (typeof _updateModellingCards === 'function') _updateModellingCards(propagationMethod);
         var rhEl = document.getElementById('isoRecvHeight');
         if (rhEl) rhEl.value = iso_receiverHeight;
         var gfEl = document.getElementById('isoGroundType');
@@ -26828,8 +27579,8 @@ setInitialCollapseState();
 
   // ── Button helpers ─────────────────────────────────────────────────────────
   function updateButtons() {
-    var u = document.getElementById('undoBtn');
-    var r = document.getElementById('redoBtn');
+    var u = document.getElementById('lhsUndoBtn') || document.getElementById('undoBtn');
+    var r = document.getElementById('lhsRedoBtn') || document.getElementById('redoBtn');
     var canUndo = _pointer > 0;
     var canRedo = _pointer < _history.length - 1;
     if (u) {
@@ -26861,8 +27612,8 @@ setInitialCollapseState();
   function restoreState(json) {
     if (!json || !window._loadAssessment) return;
     // Disable both buttons immediately while restore is in flight
-    var uBtn = document.getElementById('undoBtn');
-    var rBtn = document.getElementById('redoBtn');
+    var uBtn = document.getElementById('lhsUndoBtn') || document.getElementById('undoBtn');
+    var rBtn = document.getElementById('lhsRedoBtn') || document.getElementById('redoBtn');
     if (uBtn) { uBtn.style.opacity = '0.4'; uBtn.style.cursor = 'default'; }
     if (rBtn) { rBtn.style.opacity = '0.4'; rBtn.style.cursor = 'default'; }
     window._undoRestoring = true;
@@ -27452,11 +28203,13 @@ if (window.pdfjsLib) {
       maxNativeZoom: 20,
       crossOrigin: 'anonymous'  // required for html2canvas map export
     });
-    streetLayer.addTo(map);
-    var isAerial = false;
+    aerialLayer.addTo(map);
+    var isAerial = true;
 
     var aerialBtn = document.getElementById('aerialToggleBtn');
     if (aerialBtn) {
+      aerialBtn.classList.add('active');
+      aerialBtn.innerHTML = (typeof ICON_GLOBE !== 'undefined' ? ICON_GLOBE : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8"/><ellipse cx="12" cy="12" rx="4" ry="9"/></svg>') + ' Street<span class="mp-kbd">I</span>';
       aerialBtn.addEventListener('click', function() {
         if (isAerial) {
           map.removeLayer(aerialLayer);
@@ -30694,6 +31447,17 @@ if (window.pdfjsLib) {
         }
         bannerEl.textContent = label;
         bannerEl.classList.add('visible');
+      })(mode);
+      /* In-panel mode banner for toolsPanel */
+      (function updatePanelBanner(m) {
+        if (typeof setPanelModeBanner !== 'function') return;
+        if (!m) { clearPanelModeBanner(); return; }
+        var label;
+        if (m === 'place-site')   label = 'Setting site location';
+        else if (m === 'addSource') label = 'Adding point source';
+        else if (/^r\d+$/.test(m)) label = 'Placing Receiver ' + m.toUpperCase();
+        else label = m;
+        setPanelModeBanner(label, function() { setMode(null); });
       })(mode);
     }
     window._isPlacementActive    = function() { return !!currentMode; };
@@ -38696,6 +39460,7 @@ if (window.pdfjsLib) {
     var _noiseCanvasLayer = null;
     var _noiseContourLayer = null;
     var _noiseLegend = null;
+    var _noiseMapVisible = true; // per-session only; resets to true on each generation
     var _terrainWarningBanner = null;
     var _noiseMapPeriod = 'day';
     var _lmaxMethod = 'simple'; // 'simple' | 'iso9613_g0' | 'iso9613_g_sel'
@@ -39523,6 +40288,39 @@ if (window.pdfjsLib) {
       if (_noiseLegend) { map.removeControl(_noiseLegend); _noiseLegend = null; }
     }
 
+    function applyNoiseMapVisibility() {
+      var btn = document.getElementById('noiseMapToggleBtn');
+      if (!btn) return;
+      if (_noiseMapVisible) {
+        if (_noiseCanvasLayer && !map.hasLayer(_noiseCanvasLayer)) _noiseCanvasLayer.addTo(map);
+        if (_noiseContourLayer && !map.hasLayer(_noiseContourLayer)) _noiseContourLayer.addTo(map);
+        if (!_noiseLegend) showNoiseLegend();
+        btn.textContent = 'Hide';
+        btn.title = 'Hide noise map';
+        btn.setAttribute('aria-pressed', 'true');
+      } else {
+        if (_noiseCanvasLayer && map.hasLayer(_noiseCanvasLayer)) map.removeLayer(_noiseCanvasLayer);
+        if (_noiseContourLayer && map.hasLayer(_noiseContourLayer)) map.removeLayer(_noiseContourLayer);
+        hideNoiseLegend();
+        btn.textContent = 'Show';
+        btn.title = 'Show noise map';
+        btn.setAttribute('aria-pressed', 'false');
+      }
+    }
+
+    function _onNoiseMapReady() {
+      _noiseMapVisible = true;
+      var btn = document.getElementById('noiseMapToggleBtn');
+      if (btn) btn.hidden = false;
+      applyNoiseMapVisibility();
+    }
+
+    function _onNoiseMapCleared() {
+      var btn = document.getElementById('noiseMapToggleBtn');
+      if (btn) { btn.hidden = true; btn.textContent = 'Hide'; btn.setAttribute('aria-pressed', 'true'); }
+      _noiseMapVisible = true;
+    }
+
     // ── Appearance: opacity and palette ──────────────────────────────────────
 
     function setNoiseMapOpacity(value) {
@@ -39854,7 +40652,7 @@ if (window.pdfjsLib) {
           if (_noiseCanvasLayer) { map.removeLayer(_noiseCanvasLayer); }
           if (_noiseContourLayer) { map.removeLayer(_noiseContourLayer); }
           hideNoiseLegend(); renderComplianceMap();
-        } else { renderNoiseCanvas(cached); showNoiseLegend(); }
+        } else { renderNoiseCanvas(cached); showNoiseLegend(); _onNoiseMapReady(); }
         var cb0 = _nmOnCaseComplete; _nmOnCaseComplete = null; if (cb0) cb0();
         return;
       }
@@ -39942,7 +40740,7 @@ if (window.pdfjsLib) {
                 if (_noiseCanvasLayer) { map.removeLayer(_noiseCanvasLayer); }
                 if (_noiseContourLayer) { map.removeLayer(_noiseContourLayer); }
                 hideNoiseLegend(); renderComplianceMap();
-              } else { renderNoiseCanvas(msg); showNoiseLegend(); }
+              } else { renderNoiseCanvas(msg); showNoiseLegend(); _onNoiseMapReady(); }
               if (window._updateNoiseMapMethodLabel) window._updateNoiseMapMethodLabel(_nmGenMethod, _nmGenMetCat);
               _noiseWorker = null;
               var cb2 = _nmOnCaseComplete; _nmOnCaseComplete = null; if (cb2) cb2();
@@ -40117,6 +40915,7 @@ if (window.pdfjsLib) {
             } else {
               renderNoiseCanvas(msg);
               showNoiseLegend();
+              _onNoiseMapReady();
             }
             if (window._updateNoiseMapMethodLabel) window._updateNoiseMapMethodLabel(_nmGenMethod, _nmGenMetCat);
             _noiseWorker = null;
@@ -40377,7 +41176,17 @@ if (window.pdfjsLib) {
           var _vcBtn = document.getElementById('viewComplianceBtn');
           if (_vlBtn) _vlBtn.classList.add('active');
           if (_vcBtn) _vcBtn.classList.remove('active');
+          _onNoiseMapCleared();
         }
+      });
+    }
+
+    // Noise map show/hide toggle
+    var noiseMapToggleBtn = document.getElementById('noiseMapToggleBtn');
+    if (noiseMapToggleBtn) {
+      noiseMapToggleBtn.addEventListener('click', function() {
+        _noiseMapVisible = !_noiseMapVisible;
+        applyNoiseMapVisibility();
       });
     }
 
@@ -40542,7 +41351,8 @@ if (window.pdfjsLib) {
         generateContourLines(_lastNoiseData);
       }
       if (_noiseLegend) { map.removeControl(_noiseLegend); _noiseLegend = null; }
-      showNoiseLegend();
+      if (_noiseMapVisible) showNoiseLegend();
+      applyNoiseMapVisibility();
     }
 
     if (legendMinEl && legendMaxEl && legendIntervalEl) {
@@ -45555,9 +46365,9 @@ if (window.pdfjsLib) {
         e.preventDefault(); break;
 
       case '/':
-        /* Focus search bar — was S in previous versions */
-        var _si = document.getElementById('mapSearchInput');
-        if (_si) { _si.focus(); _si.select(); }
+        /* Open search popover */
+        if (typeof openSearchPopover === 'function') openSearchPopover();
+        else { var _si = document.getElementById('mapSearchInput'); if (_si) { _si.focus(); _si.select(); } }
         e.preventDefault(); break;
 
       case 'e': case 'E':
