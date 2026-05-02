@@ -109,24 +109,21 @@ input[type="number"]{width:100%;border:1px solid var(--border);border-radius:10p
 /* ── R15: Propagation method indicator ──────────────────────────── */
 #prop-method-indicator {
   display: none;
-  position: fixed;
-  top: 56px;
-  right: 8px;
-  z-index: 1000;
-  background: rgba(30,36,48,0.96);
-  color: #cbd5e1;
-  border: 1px solid rgba(203,213,225,0.2);
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-  cursor: pointer;
-  user-select: none;
+  font-size: 8px;
+  font-weight: 500;
+  color: #64748b;
+  text-align: center;
+  padding: 0 4px 6px;
+  line-height: 1.3;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 68px;
+  align-self: center;
+  user-select: none;
+  letter-spacing: 0.01em;
 }
 #prop-method-indicator.visible { display: block; }
-#prop-method-indicator:hover { background: rgba(30,36,48,1); color: #f1f5f9; }
 /* ── R2: Active drawing mode banner ──────────────────────────────── */
 #mode-banner {
   display: none;
@@ -1007,8 +1004,8 @@ body.map-fs-active { overflow: hidden; }
 #objectsFloatPanel {
   display: none;
   position: fixed;
-  top: 60px;
-  left: 56px;
+  top: 88px;
+  left: 84px;
   width: 360px;
   height: 480px;
   z-index: 9999;
@@ -1060,8 +1057,9 @@ body.map-fs-active { overflow: hidden; }
 #helpFloatPanel {
   display: none;                    /* shown by JS as flex */
   position: fixed;
-  top: 60px;
-  right: 20px;
+  top: 88px;
+  left: 84px;
+  right: auto;
   width: 350px;
   height: 450px;
   z-index: 9999;                    /* above fullscreen map overlay at 9998 */
@@ -1186,8 +1184,9 @@ body.map-fs-active { overflow: hidden; }
 #suggestFloatPanel {
   display: none;
   position: fixed;
-  top: 60px;
-  right: 90px;
+  top: 88px;
+  left: 84px;
+  right: auto;
   z-index: 9999;
   width: 320px;
   max-height: 72vh;
@@ -3247,6 +3246,9 @@ body.disclaimer-visible .container {
                   'Calculation',
                   function() { if (typeof toggleModellingPanel === 'function') toggleModellingPanel(); }
                 ));
+                // Prop method indicator sits below the Calculation button
+                var propInd = document.getElementById('prop-method-indicator');
+                if (propInd) g2.appendChild(propInd);
                 g2.appendChild(_mkIconBtn('lhsLibraryBtn', 'Library',
                   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
                   'Library',
@@ -22208,14 +22210,6 @@ function initPropagationMethod() {
     el.classList.add('visible');
   }
   _updatePropIndicator(); // set initial label on page load
-  // Click to open the Modelling slide-out panel
-  (function() {
-    var ind = document.getElementById('prop-method-indicator');
-    if (!ind) return;
-    ind.addEventListener('click', function() {
-      if (typeof openModellingPanel === 'function') openModellingPanel();
-    });
-  })();
 
   // ── CONCAWE meteorological panel wiring ──────────────────────────────────────
 
