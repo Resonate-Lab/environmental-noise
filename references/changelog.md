@@ -2,6 +2,13 @@
 
 ## May 2026
 
+- **Security: XSS fix in SA and NSW derivation tables.** Receiver names injected into `innerHTML` in `renderSADerivTable()` (line 23339) and `renderNSWDerivTable()` (line 23397) are now wrapped with `escapeHTML()`. Previously a receiver name containing `<script>` or other HTML would be executed when the derivation table was rendered.
+
+- **Fix: version guard in `loadAssessment` updated to v6.** The stale-file warning previously checked `data._version > 5` and printed "supports v5", but the export handler writes `_version: 6`. Guard is now `> 6` with "supports v6" message — prevents false warnings when loading current saves.
+
+- **Fix: `serialiseState()` now includes `cmetEnabled` and `cmetC0`.** The undo manager and scenario snapshots use `serialiseState()` to capture state, but the C_met fields were missing from the `data.propagation` block. Undoing or restoring a scenario after changing C_met settings would silently revert C_met to defaults. Both fields added with safe fallback defaults (`false` / `2.0`).
+
+
 - **Disclaimer replaces construction banner.** The amber "under construction" strip between the header and app layout is replaced with a dark disclaimer bar (`background: #0f172a; color: #94a3b8`). Text updated to: "Disclaimer: Results are indicative only. This tool is a preliminary screening aid — outputs should not be used as definitive compliance predictions or relied upon without independent professional verification." The `⚠` `::before` pseudo-element is removed. The `.mobile-not-supported` banner is unchanged.
 
 - **Top toolbar dark theme.** `#app-header` background changed to `#1e2430` (matching LHS/RHS icon strips) with `border-bottom: 1px solid rgba(255,255,255,0.08)`. `.header-title` → `#f1f5f9`; `.header-version` → `#94a3b8`. `#app-header-actions .pdf-btn` restyled: transparent background, `#cbd5e1` text, `rgba(203,213,225,0.25)` border, `border-radius: 6px`; hover lightens subtly. State badges (`.state-badge-sa/vic/other`) have scoped `#app-header` overrides for dark background (blue/pink/amber tints with matching borders). `#prop-method-indicator` changed from white-on-dark to dark navy with `#cbd5e1` text — consistent on both the header and map background. Construction banner, dropdown menu contents, and all button handlers unchanged.

@@ -23336,7 +23336,7 @@ function renderSADerivTable() {
       ? 'font-weight:700;color:#0369a1;'
       : (r.clauseLabel === 'Clause 5(4)' ? 'color:#6b7280;' : '');
     html += '<tr>';
-    html += '<td style="font-weight:600;">' + r.name + '</td>';
+    html += '<td style="font-weight:600;">' + escapeHTML(r.name) + '</td>';
     html += '<td>' + (r.srcInlDay !== '\u2014'
       ? 'Day: ' + r.srcInlDay + '\u202fdB, Night: ' + r.srcInlNight + '\u202fdB'
       : '\u2014') + '</td>';
@@ -23394,7 +23394,7 @@ function renderNSWDerivTable() {
     var isResidential = (recType === 'residential');
 
     if (idx > 0) html += '<tr><td colspan="4" style="border-top:2px solid var(--border);"></td></tr>';
-    html += '<tr style="font-weight:600;background:#f9fafb;"><td colspan="4">' + name + ' — ' + typeLabel + (isResidential ? ' (' + areaLabel + ')' : '') + '</td></tr>';
+    html += '<tr style="font-weight:600;background:#f9fafb;"><td colspan="4">' + escapeHTML(name) + ' — ' + typeLabel + (isResidential ? ' (' + areaLabel + ')' : '') + '</td></tr>';
 
     if (isResidential) {
       html += '<tr><td>Rating background level (RBL)</td><td class="num">' + val(c._rblDay) + '</td><td class="num">' + val(c._rblEve) + '</td><td class="num">' + val(c._rblNight) + '</td></tr>';
@@ -25592,9 +25592,9 @@ setInitialCollapseState();
 
     function loadAssessment(data, opts) {
       // Guard: warn if the file was saved by a future version of this app.
-      if (data._version && data._version > 5) {
+      if (data._version && data._version > 6) {
         console.warn('[loadAssessment] File is format v' + data._version +
-          ' (this app supports v5) — some fields may not load correctly.');
+          ' (this app supports v6) — some fields may not load correctly.');
       }
 
       // Version ladder: migrate older saves before any other processing.
@@ -27334,7 +27334,9 @@ setInitialCollapseState();
         concaweTimeOfDay:      _concaweTimeOfDay,
         concaweSolarRadiation: _concaweSolarRadiation,
         concaweCloudCover:     _concaweCloudCover,
-        reflectionsOn:         typeof _reflectionsOn !== 'undefined' ? !!_reflectionsOn : false
+        reflectionsOn:         typeof _reflectionsOn !== 'undefined' ? !!_reflectionsOn : false,
+        cmetEnabled:           typeof _cmetEnabled   !== 'undefined' ? !!_cmetEnabled   : false,
+        cmetC0:                typeof _cmetC0        !== 'undefined' ? _cmetC0          : 2.0
       };
 
       // VIC-specific
