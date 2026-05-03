@@ -652,7 +652,7 @@ window.HELP_ASSISTANT_KB = {
         'zone display', 'toggle zones', 'mbs 010', 'overlay zones'
       ],
       title: 'Show planning zone overlay',
-      answer: 'Open the Mapping menu and click "Show zones" (or press Z) to display planning zones on the map. For SA, the MBS 010 screening overlay is also available. VIC Major Urban Area boundaries can be toggled via the Mapping menu.',
+      answer: 'Open the Mapping menu and click "Show zones" (or press Z) to display planning zones on the map. VIC Major Urban Area boundaries can be toggled via the Mapping menu.',
       actions: [
         { type: 'open-panel', selector: '#mp-mapping .mp-hdr', label: 'Open Mapping menu' },
         { type: 'highlight', selector: '#zoneToggleBtn', label: '1. Click "Show zones" (Z) to display planning zones', scrollIntoView: true },

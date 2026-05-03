@@ -2883,14 +2883,14 @@ body.disclaimer-visible .container {
       <div class="card span2" id="devInfoCard" data-section="setup">
         <h2>Development information</h2>
         <div style="display:flex;flex-wrap:wrap;gap:0 28px;align-items:flex-start;">
-          <div style="margin-bottom:6px;">
+          <div style="display:none;">
             <div style="font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;">Residential development?</div>
             <div style="display:flex;gap:14px;font-size:13px;">
               <label style="cursor:pointer;display:flex;align-items:center;gap:5px;"><input type="radio" name="isResidential" id="residentialYes" value="yes" checked onchange="_onResidentialChange()"> Yes</label>
               <label style="cursor:pointer;display:flex;align-items:center;gap:5px;"><input type="radio" name="isResidential" id="residentialNo" value="no" onchange="_onResidentialChange()"> No</label>
             </div>
           </div>
-          <div style="width:1px;background:var(--border);align-self:stretch;margin:2px 0;flex-shrink:0;"></div>
+          <div style="display:none;width:1px;background:var(--border);align-self:stretch;margin:2px 0;flex-shrink:0;"></div>
           <div>
             <div style="font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;">Source categories</div>
             <div style="display:flex;flex-wrap:wrap;gap:7px 18px;font-size:13px;align-items:center;">
@@ -4430,26 +4430,6 @@ body.disclaimer-visible .container {
             <tbody id="saDerivBody">
               <tr><td colspan="6" style="text-align:center;color:var(--muted);font-style:italic;">Place source and receivers to see derivation</td></tr>
             </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- NSW: Derivation of noise emission criteria -->
-    <div class="grid2 nsw-only" style="padding-top:0;" data-section="criteria">
-      <div class="card span2">
-        <h2>Derivation of noise emission criteria</h2>
-        <div class="table-scroll" id="nswDerivTableWrap">
-          <table id="nswDerivTable">
-            <thead>
-              <tr>
-                <th style="width:30%;">Description</th>
-                <th class="num" style="width:11.6%;">Day</th>
-                <th class="num" style="width:11.6%;">Evening</th>
-                <th class="num" style="width:11.6%;">Night</th>
-              </tr>
-            </thead>
-            <tbody id="nswDerivBody"></tbody>
           </table>
         </div>
       </div>
@@ -7964,9 +7944,11 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
     <li>VIC: Land Use Victoria (Landata)</li>
     <li>NSW: NSW Land Registry Services (NSW LRS)</li>
   </ul>
+  <div style="display:none;">
   <div class="h2" style="font-size:12px;margin-top:10px;">MBS 010 screening</div>
   <div class="p">MBS 010 (Ministerial Building Standard 010 &mdash; Construction requirements for the control of external sound) is a South Australian building standard published under the Planning, Development and Infrastructure Act 2016, available on the PlanSA website. It sets deemed-to-satisfy construction requirements for reducing the intrusion of road, rail, and aircraft noise into habitable rooms of residential buildings (Class 1, 2, 3, Class 4 and Class 9c aged care buildings).</div>
   <div class="p">Application of MBS 010 is triggered by the Noise and Emissions Overlay in the SA Planning and Design Code. The current version is Version 3 (1 May 2023). The tool determines overlay applicability using offline point-in-polygon lookup against a locally cached PlanSA GeoJSON layer (updated periodically from data.sa.gov.au); the aircraft noise (ANEF) contours are also sourced from the same dataset. Users should confirm overlay applicability and the current version of MBS 010 with the relevant consent authority.</div>
+  </div>
   <div class="h2" style="font-size:12px;margin-top:10px;">User-imported site plans</div>
   <div class="p">The Site plan overlay tool lets the user import a PDF, PNG, or JPEG site plan and position it on the map as a semi-transparent Leaflet overlay with adjustable opacity, position, scale, and rotation. Aspect ratio is preserved from the image&rsquo;s native dimensions on initial placement (with a <em>cos(lat)</em> compensation for 1&deg;&nbsp;lng &ne; 1&deg;&nbsp;lat in metres) and on corner-drag resizing by default; hold Shift to free-resize. PDF imports attempt to extract text from the title block to pre-fill the project name and, where present, a street address. Site plan overlays are purely visual &mdash; they do not participate in any calculation &mdash; and are serialised in saved assessments.</div>
   <div class="h2" style="font-size:13px;margin-top:18px;">Modelling methodology</div>
@@ -13707,8 +13689,7 @@ function switchToState(state) {
     badge.className = 'state-badge state-badge-sa';
     badge.style.display = '';
     var mbs010Sec = document.getElementById('mbs010Section');
-    if (mbs010Sec) { var _resNo = document.getElementById('residentialNo'); mbs010Sec.style.display = (_resNo && _resNo.checked) ? 'none' : ''; }
-    expandCardByTitle('MBS 010');
+    if (mbs010Sec) { mbs010Sec.style.display = 'none'; }
   } else if (state === 'NSW') {
     body.classList.add('state-nsw');
     badge.textContent = 'NSW';
@@ -14169,16 +14150,8 @@ function updatePDCProvisions() {
 
 /* ── Development information panel — event handlers ────────────────────── */
 
-/** Residential toggle: show/hide MBS 010 (SA only) */
-function _onResidentialChange() {
-  var resNo = document.getElementById('residentialNo');
-  var isNo = resNo && resNo.checked;
-  var isSA = document.body && document.body.classList.contains('state-sa');
-  var sec = document.getElementById('mbs010Section');
-  if (sec && isSA) {
-    sec.style.display = isNo ? 'none' : '';
-  }
-}
+/** Residential toggle: MBS 010 hidden, no-op */
+function _onResidentialChange() {}
 
 /** Source category checkbox change: show/hide related panels and sync emergency */
 function _onSourceCatChange() {
@@ -23975,9 +23948,6 @@ function renderContributions() {
     }
   }
 
-  // NSW derivation table
-  if (currentState === 'NSW') renderNSWDerivTable();
-
   // SA emergency equipment criteria
   if (currentState === 'SA') renderEmergencyEquipCriteria();
 }
@@ -29086,11 +29056,10 @@ if (window.pdfjsLib) {
       /* MBS 010 layers are static — no refresh on pan/zoom */
     }
 
-    /* Show/hide MBS 010 button based on state */
+    /* MBS 010 button permanently hidden */
     window._updateMBS010Btn = function(state) {
       var btn = document.getElementById('mbs010ToggleBtn');
-      // null treated as SA — app starts with null until geocoding resolves
-      if (btn) btn.style.display = (state === 'SA' || state === null) ? '' : 'none';
+      if (btn) btn.style.display = 'none';
       if (state !== 'SA' && state !== null && _mbs010On) {
         clearMBS010Layers();
         _mbs010On = false;
@@ -44058,7 +44027,7 @@ if (window.pdfjsLib) {
         <div class="help-sub">SA</div>
         <ul>
           <li>Indicative Noise Levels (INL) per Noise Policy 2023; clauses 5(4), 5(5), 5(6) handle special cases</li>
-          <li>MBS 010 screening shown where the Noise &amp; Emissions Overlay applies</li>
+          <li style="display:none;">MBS 010 screening shown where the Noise &amp; Emissions Overlay applies</li>
         </ul>
         <div class="help-sub">VIC</div>
         <ul>
@@ -44086,7 +44055,7 @@ if (window.pdfjsLib) {
           <li><strong>Buildings (OSM)</strong> &mdash; OSM footprints; individual buildings can be excluded from screening</li>
           <li><strong>Reflections</strong> &mdash; image-source method per ISO 9613-2:1996 &sect;7.5</li>
           <li><strong>Ruler</strong> &mdash; measure straight-line distance between two points</li>
-          <li><strong>Zones</strong> &mdash; planning zones, MBS 010 overlay, VIC Major Urban Area <span class="help-tag">Mapping</span></li>
+          <li><strong>Zones</strong> &mdash; planning zones, VIC Major Urban Area <span class="help-tag">Mapping</span></li>
           <li><strong>Import GIS file</strong> &mdash; load GeoJSON, KML, or CSV objects onto the map</li>
         </ul>
         <div class="help-sub">New / proposed</div>
@@ -44230,7 +44199,7 @@ if (window.pdfjsLib) {
           <li><kbd>O</kbd> &nbsp;Buildings (OSM)</li>
           <li><kbd>F</kbd> &nbsp;Reflections</li>
           <li><kbd>Z</kbd> &nbsp;Zones</li>
-          <li><kbd>X</kbd> &nbsp;MBS 010 screening</li>
+          <li style="display:none;"><kbd>X</kbd> &nbsp;MBS 010 screening</li>
           <li><kbd>U</kbd> &nbsp;Urban area boundaries (VIC)</li>
           <li><kbd>D</kbd> &nbsp;Cadastral boundaries</li>
           <li><kbd>I</kbd> &nbsp;Aerial imagery</li>
@@ -46312,8 +46281,6 @@ if (window.pdfjsLib) {
         e.preventDefault(); break;
 
       case 'x': case 'X':
-        _btn('mbs010ToggleBtn');
-        _kbToast('MBS 010 ' + (_isActive('mbs010ToggleBtn') ? 'ON' : 'OFF') + ' (X)');
         e.preventDefault(); break;
 
       case 'u': case 'U':
