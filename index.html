@@ -1873,33 +1873,6 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 }
 
 /* Side panel footer — compact icon-strip variant */
-#side-panel-footer {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 4px 0;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  gap: 2px;
-}
-#side-panel-methodology-btn {
-  width: 60px;
-  height: 38px;
-  background: none;
-  border: none;
-  border-radius: 6px;
-  color: #6b7280;
-  cursor: pointer;
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  line-height: 1.2;
-  text-align: center;
-  padding: 4px 2px;
-  white-space: nowrap;
-  transition: background 0.12s, color 0.12s;
-}
-#side-panel-methodology-btn:hover { background: rgba(255,255,255,0.08); color: #f3f4f6; }
 
 #side-panel {
   position: absolute;
@@ -2047,32 +2020,6 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 }
 #drawer-collapsed-nametag:hover { background: #f3f4f6; }
 /* Bottom-pinned slot for the Expand/Panels drawer toggle */
-#side-panel-footer {
-  margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-/* Methodology button below the drawer toggle — opens centred modal */
-#side-panel-methodology-btn {
-  display: block;
-  width: 100%;
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: rgba(255,255,255,0.06);
-  color: #e2e8f0;
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: left;
-}
-#side-panel-methodology-btn:hover {
-  background: rgba(255,255,255,0.12);
-}
-#side-panel.collapsed #side-panel-methodology-btn {
-  display: none;
-}
 
 /* Toolbar row at the TOP of the side panel: Help, Suggest, Undo, Redo,
    Save JPG. Five 36×36 icon buttons in a horizontal row above the search
@@ -2796,11 +2743,11 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
     </div>
     <button class="pdf-btn" id="scenariosBtn" type="button" title="Save and compare named scenario snapshots">Scenarios</button>
     <button class="pdf-btn" id="generateReportBtn" type="button" style="display:none">Generate Report</button>
-    <button class="pdf-btn toolbar-secondary" id="methodologyTopBtn" type="button" title="Open Methodology document — propagation methods, standards, and assumptions">Methodology</button>
     <button class="pdf-btn toolbar-secondary" id="savePdfBtn" type="button" title="Export A4 criteria appendix PDF (SA only)" onclick="generatePDFAppendix(this)">PDF criteria</button>
     <button class="pdf-btn toolbar-secondary" id="shareAssessmentBtn" type="button" title="Generate a read-only link to share this assessment with a client">Share Assessment</button>
     <button class="pdf-btn" id="toolbarOverflowBtn" type="button" aria-haspopup="true" aria-expanded="false" title="More tools">More ▾</button>
     <div id="toolbarOverflowMenu" class="toolbar-overflow-menu" role="menu" hidden></div>
+    <button class="pdf-btn toolbar-secondary" id="methodologyTopBtn" type="button" style="margin-left:4px;" title="Open Methodology document — propagation methods, standards, and assumptions">Methodology</button>
   </div>
 
   <div class="sheet">
@@ -3224,20 +3171,7 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
                 strip.appendChild(g3);
                 inner.appendChild(strip);
 
-                // Footer — methodology icon button
-                var footer = document.createElement('div');
-                footer.id = 'side-panel-footer';
-                var methBtn = document.createElement('button');
-                methBtn.id = 'side-panel-methodology-btn';
-                methBtn.type = 'button';
-                methBtn.title = 'View methodology';
-                methBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span class="lhs-icon-label" style="margin-top:2px;">Method</span>';
-                methBtn.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;width:60px;height:42px;background:none;border:none;border-radius:6px;color:#6b7280;cursor:pointer;gap:2px;padding:4px 2px;';
-                methBtn.addEventListener('click', function() {
-                  if (typeof showMethodologyModal === 'function') showMethodologyModal();
-                });
-                footer.appendChild(methBtn);
-                inner.appendChild(footer);
+                // Note: Methodology is accessible via the toolbar button (#methodologyTopBtn).
 
                 // Search popover — injected into #app-layout (above slide-out panels)
                 var searchPopover = document.createElement('div');
@@ -5119,17 +5053,14 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
       _methFocusHandler = null;
     }
     /* Restore focus to whatever was focused before the modal opened.
-       If that element has since been removed from the DOM (side panel
-       rebuild, drawer re-render, opener hot-swap), fall back to the
-       known opener by id lookup so focus doesn't silently drop to
-       document.body. The side-panel-methodology-btn is currently the
-       only opener for this modal. */
+       If that element has since been removed from the DOM, fall back to
+       the known opener (#methodologyTopBtn in the toolbar). */
     var restoreTarget = null;
     if (_methPrevFocus && typeof _methPrevFocus.focus === 'function'
         && document.contains(_methPrevFocus)) {
       restoreTarget = _methPrevFocus;
     } else {
-      restoreTarget = document.getElementById('side-panel-methodology-btn');
+      restoreTarget = document.getElementById('methodologyTopBtn');
     }
     if (restoreTarget && typeof restoreTarget.focus === 'function') {
       try { restoreTarget.focus(); } catch (e) {}
@@ -8744,7 +8675,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
     window._activateSection = activateSection;
   })();
 
-  // Note: methodology is accessible via the LHS icon strip methodology button.
+  // Note: methodology is accessible via the toolbar button (#methodologyTopBtn).
 })();
 </script>
 
