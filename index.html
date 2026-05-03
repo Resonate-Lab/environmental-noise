@@ -2415,7 +2415,7 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   position: relative;
   display: inline-block;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 400;
   color: #f3f4f6;
   background: rgba(26, 32, 44, 0.92);
   padding: 10px 30px 10px 14px;
@@ -44769,7 +44769,16 @@ if (window.pdfjsLib) {
   var hdr       = document.getElementById('suggestPanelHdr');
   if (!panel || !toggleBtn || !closeBtn || !hdr) return;
 
+  function _lhsFloatLeft() {
+    var ids = ['toolsPanel','mappingPanel','modellingPanel','libraryPanel'];
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]);
+      if (el) { var r = el.getBoundingClientRect(); if (r.left > 50 && r.width > 50) return r.right + 8; }
+    }
+    return 84;
+  }
   function showPanel() {
+    panel.style.left = _lhsFloatLeft() + 'px';
     panel.style.display = 'flex';
     toggleBtn.classList.add('suggest-active');
     panel._returnFocusTo = document.activeElement;
@@ -44830,7 +44839,15 @@ if (window.pdfjsLib) {
   var hdr       = document.getElementById('helpPanelHdr');
   if (!panel || !toggleBtn || !closeBtn || !hdr) return;
 
+  function _lhsFloatLeft() {
+    var ids = ['toolsPanel','mappingPanel','modellingPanel','libraryPanel'];
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]); if (el) { var r = el.getBoundingClientRect(); if (r.left > 50 && r.width > 50) return r.right + 8; }
+    }
+    return 84;
+  }
   function showPanel() {
+    panel.style.left = _lhsFloatLeft() + 'px';
     panel.style.display = 'flex';
     toggleBtn.classList.add('help-active');
     panel._returnFocusTo = document.activeElement;
@@ -44888,7 +44905,15 @@ if (window.pdfjsLib) {
   var hdr       = document.getElementById('objectsPanelHdr');
   if (!panel || !toggleBtn || !closeBtn || !hdr) return;
 
+  function _lhsFloatLeft() {
+    var ids = ['toolsPanel','mappingPanel','modellingPanel','libraryPanel'];
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]); if (el) { var r = el.getBoundingClientRect(); if (r.left > 50 && r.width > 50) return r.right + 8; }
+    }
+    return 84;
+  }
   function showPanel() {
+    panel.style.left = _lhsFloatLeft() + 'px';
     panel.style.display = 'flex';
     panel._returnFocusTo = document.activeElement;
     var first = panel.querySelector('button, [tabindex="0"]');
