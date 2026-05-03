@@ -1422,12 +1422,13 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   min-width: 0;
 }
 #app-header .header-title {
+  font-family: 'Street Corner Thin', system-ui, sans-serif;
   font-size: 19px;
-  font-weight: 600;
+  font-weight: normal;
   color: #f1f5f9;
   line-height: 1.15;
   white-space: nowrap;
-  letter-spacing: -0.2px;
+  letter-spacing: 0.5px;
 }
 #app-header .header-title .state-badge { margin-left: 8px; font-size: 12px; vertical-align: middle; }
 #app-header .header-version {
@@ -2724,7 +2725,7 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 
 <div class="container">
   <a href="https://resonate-consultants.com/" target="_blank" rel="noopener"><img src="resonate-logo.png" alt="Resonate" class="logo"></a>
-  <div class="h1">Environmental noise screening tool <span class="state-badge" id="stateBadge" style="display:none;"></span> <span id="resonateLibBadge" title="Noise source library status" style="display:inline-block;font-size:10px;font-weight:500;padding:2px 8px;margin-left:6px;border:1px solid #d1d5db;border-radius:999px;background:#f3f4f6;color:#4b5563;vertical-align:middle;cursor:pointer;">Library: offline snapshot</span> <span style="font-size:10px;font-weight:400;color:#888;vertical-align:middle;">v2.0 — March 2026</span></div>
+  <div class="h1">Environmental noise screening tool <span class="state-badge" id="stateBadge" style="display:none;"></span> <span id="resonateLibBadge" title="Noise source library status" style="display:inline-block;font-size:10px;font-weight:500;padding:2px 8px;margin-left:6px;border:1px solid #d1d5db;border-radius:999px;background:#f3f4f6;color:#4b5563;vertical-align:middle;cursor:pointer;">Library: offline snapshot</span></div>
   <div class="sheet1">
   <div style="background:#0f172a;border-bottom:1px solid rgba(255,255,255,0.06);padding:5px 16px;font-size:11px;font-weight:400;color:#94a3b8;text-align:center;">Disclaimer: Results are indicative only. This tool is a preliminary screening aid — outputs should not be used as definitive compliance predictions or relied upon without independent professional verification.</div>
 
@@ -7783,6 +7784,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
 <!-- Methodology panel -->
 <div class="card" id="methodologyCard" style="margin-top:14px;">
   <h2>Methodology</h2>
+  <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">v2.0 — March 2026</div>
   <div class="h2" style="font-size:13px;">Sound pressure level prediction</div>
   <div class="p">This calculator provides an indication of the sound pressure level at a specified distance due to various noise sources. Three propagation methods are available: a simple inverse square law screening method (no ground or atmospheric corrections), ISO 9613-2:1996 (which includes geometric divergence, ground effect, and atmospheric absorption based on temperature and humidity), and CONCAWE (Report 4/81, Manning 1981) which adds meteorological corrections for six atmospheric stability categories. It is intended as a screening tool to determine whether more accurate noise modelling and advice should be provided by an acoustic consultant.</div>
   <div class="h2" style="font-size:13px;margin-top:18px;">Data sources</div>
@@ -8022,11 +8024,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
     titleSpan.appendChild(document.createTextNode(' '));
     titleSpan.appendChild(stateBadge);
   }
-  var versionSpan = document.createElement('span');
-  versionSpan.className = 'header-version';
-  versionSpan.textContent = 'v2.0 — March 2026';
   brandText.appendChild(titleSpan);
-  brandText.appendChild(versionSpan);
   brandBlock.appendChild(brandText);
   appHeader.appendChild(brandBlock);
 
