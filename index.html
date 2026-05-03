@@ -1617,7 +1617,7 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 /* Library table */
 .lib-table-card { padding-bottom: 0 !important; }
 .lib-table-wrap { overflow-x: auto; max-height: 320px; overflow-y: auto; margin: 8px -12px -12px; }
-.lib-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.lib-table { width: 100%; border-collapse: collapse; font-size: 8px; }
 .lib-table thead th {
   position: sticky; top: 0;
   background: rgba(10, 15, 26, 0.97);
@@ -1633,8 +1633,10 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 .lib-col-name span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
 .lib-col-type { min-width: 68px; white-space: nowrap; }
 .lib-col-cat  { min-width: 74px; white-space: nowrap; }
-.lib-col-hz   { width: 36px; text-align: right; font-variant-numeric: tabular-nums; color: #9ca3af; }
-.lib-col-dba  { width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+.lib-col-hz   { width: 36px; text-align: center; font-variant-numeric: tabular-nums; color: #9ca3af; }
+.lib-col-dba  { width: 40px; text-align: center; font-variant-numeric: tabular-nums; }
+.lib-table thead .lib-col-hz,
+.lib-table thead .lib-col-dba { text-align: center; }
 .lib-col-rev  { min-width: 60px; white-space: nowrap; }
 .lib-col-act  { width: 24px; text-align: center; }
 .lib-del-btn  { background: none; border: none; color: #6b7280; cursor: pointer; padding: 1px 4px; font-size: 10px; line-height: 1; }
