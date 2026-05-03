@@ -2,6 +2,10 @@
 
 ## May 2026
 
+- **Fix: VicPlan fetch calls now have a 10-second AbortController timeout.** `queryVicZoningAtPoint()` and `queryVicZonesInCircle()` previously had no timeout — a stalled VicPlan API response would hang indefinitely. Both functions now create an `AbortController`, set a 10 s timer to abort the signal, and call `clearTimeout` in `.then` and `.catch` to avoid leaking the timer.
+
+- **Fix: `localStorage.setItem` calls wrapped in try/catch throughout.** `saveLS()`, `savePred()`, `_saveCustomSources()`, the propagation-method click handler, ISO parameter change handler, `_prSave()`, terrain toggle handler, and the `loadAssessment` restore block now all catch `QuotaExceededError` and private-browsing `SecurityError` without crashing. Previously any of these would throw an uncaught exception in a storage-constrained environment (iOS private mode, full quota, strict privacy settings).
+
 - **Security: XSS fix in SA and NSW derivation tables.** Receiver names injected into `innerHTML` in `renderSADerivTable()` (line 23339) and `renderNSWDerivTable()` (line 23397) are now wrapped with `escapeHTML()`. Previously a receiver name containing `<script>` or other HTML would be executed when the derivation table was rendered.
 
 - **Fix: version guard in `loadAssessment` updated to v6.** The stale-file warning previously checked `data._version > 5` and printed "supports v5", but the export handler writes `_version: 6`. Guard is now `> 6` with "supports v6" message — prevents false warnings when loading current saves.

@@ -10376,7 +10376,7 @@ try {
 } catch(e) { _customSources = []; }
 
 function _saveCustomSources() {
-  localStorage.setItem('customSources', JSON.stringify(_customSources));
+  try { localStorage.setItem('customSources', JSON.stringify(_customSources)); } catch(e) {}
 }
 
 /** Rebuild all library derivatives (call after custom sources change or SourceLibrary load) */
@@ -16828,7 +16828,7 @@ function makeSourceSelect(value, library) { return document.createElement('selec
 
 
 function loadLS(key){ const v = localStorage.getItem(key); return v === null ? "" : v; }
-function saveLS(key, val){ localStorage.setItem(key, String(val)); }
+function saveLS(key, val){ try { localStorage.setItem(key, String(val)); } catch(e) {} }
 
 /* Clear all saved selections on every page load so the tool starts fresh */
 (function clearSavedState(){
@@ -19299,7 +19299,7 @@ function loadPred(id) {
   return v === null ? "" : v;
 }
 function savePred(id, val) {
-  localStorage.setItem("pred_"+id, val);
+  try { localStorage.setItem("pred_"+id, val); } catch(e) {}
 }
 
 function clearPredRow(rowNum) {
@@ -22165,7 +22165,7 @@ function initPropagationMethod() {
       group.querySelectorAll('[data-val]').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
       propagationMethod = btn.dataset.val;
-      localStorage.setItem('prop_method', propagationMethod);
+      try { localStorage.setItem('prop_method', propagationMethod); } catch(e) {}
       if (typeof _updateModellingCards === 'function') _updateModellingCards(propagationMethod);
       // Show/hide source height column in source tables
       toggleSourceHeightColumns();
@@ -22365,10 +22365,12 @@ function initPropagationMethod() {
       iso_groundFactor = Number(groundEl.value);
       iso_temperature = Number(tempEl.value) || 10;
       iso_humidity = Number(humidEl.value) || 70;
-      localStorage.setItem('iso_recvHeight', String(iso_receiverHeight));
-      localStorage.setItem('iso_ground', String(iso_groundFactor));
-      localStorage.setItem('iso_temp', String(iso_temperature));
-      localStorage.setItem('iso_humidity', String(iso_humidity));
+      try {
+        localStorage.setItem('iso_recvHeight', String(iso_receiverHeight));
+        localStorage.setItem('iso_ground', String(iso_groundFactor));
+        localStorage.setItem('iso_temp', String(iso_temperature));
+        localStorage.setItem('iso_humidity', String(iso_humidity));
+      } catch(e) {}
       render();
       if (window._recomputeNoiseMap) window._recomputeNoiseMap();
     });
@@ -22388,7 +22390,7 @@ function initPropagationMethod() {
     if (prInputsEl) prInputsEl.style.display = on ? '' : 'none';
   }
   function _prSave() {
-    localStorage.setItem('iso_perRegion', JSON.stringify(_groundFactorPerRegion));
+    try { localStorage.setItem('iso_perRegion', JSON.stringify(_groundFactorPerRegion)); } catch(e) {}
   }
 
   // Restore UI from state
@@ -22861,7 +22863,7 @@ function initPropagationMethod() {
     terrBtn.addEventListener('click', function() {
       _terrainEnabled = !_terrainEnabled;
       terrBtn.classList.toggle('active', _terrainEnabled);
-      localStorage.setItem('terrain_screening', String(_terrainEnabled));
+      try { localStorage.setItem('terrain_screening', String(_terrainEnabled)); } catch(e) {}
       if (_terrainEnabled) {
         // Fetch ground elevations for all placed pins
         var _lls = window._getAllLatLngs ? window._getAllLatLngs() : {};
@@ -25929,14 +25931,16 @@ setInitialCollapseState();
         } else {
           _groundFactorPerRegion = { enabled: false, Gs: iso_groundFactor, Gm: iso_groundFactor, Gr: iso_groundFactor };
         }
-        localStorage.setItem('iso_perRegion', JSON.stringify(_groundFactorPerRegion));
+        try { localStorage.setItem('iso_perRegion', JSON.stringify(_groundFactorPerRegion)); } catch(e) {}
         iso_temperature = data.propagation.temperature || 10;
         iso_humidity = data.propagation.humidity || 70;
-        localStorage.setItem('prop_method', propagationMethod);
-        localStorage.setItem('iso_recvHeight', String(iso_receiverHeight));
-        localStorage.setItem('iso_ground', String(iso_groundFactor));
-        localStorage.setItem('iso_temp', String(iso_temperature));
-        localStorage.setItem('iso_humidity', String(iso_humidity));
+        try {
+          localStorage.setItem('prop_method', propagationMethod);
+          localStorage.setItem('iso_recvHeight', String(iso_receiverHeight));
+          localStorage.setItem('iso_ground', String(iso_groundFactor));
+          localStorage.setItem('iso_temp', String(iso_temperature));
+          localStorage.setItem('iso_humidity', String(iso_humidity));
+        } catch(e) {}
         // Update propagation UI buttons
         var propGroup = document.getElementById('propMethodGroup');
         if (propGroup) {
@@ -29999,13 +30003,16 @@ if (window.pdfjsLib) {
         returnGeometry: 'false',
         f: 'json'
       });
+      var _ctrl1 = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      var _timer1 = setTimeout(function() { if (_ctrl1) _ctrl1.abort(); }, 10000);
       if (window.startBgFetch) window.startBgFetch('zones');
       return fetch(VICPLAN_BASE + '/0/query', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: params.toString()
+        body: params.toString(),
+        signal: _ctrl1 ? _ctrl1.signal : undefined
       })
-        .then(function(r) { return r.json(); })
+        .then(function(r) { clearTimeout(_timer1); return r.json(); })
         .then(function(data) {
           if (!data.features || data.features.length === 0) {
             return { zoneCode: null, zoneDesc: null, lga: null };
@@ -30024,6 +30031,7 @@ if (window.pdfjsLib) {
           return { zoneCode: zoneCode, zoneDesc: zoneDesc, lga: lga };
         })
         .catch(function(err) {
+          clearTimeout(_timer1);
           console.warn('VicPlan zone query failed:', err);
           if (window.showErrorToast) window.showErrorToast('Zone classification failed (VicPlan). Receivers may default to \'unspecified\' zone — set the zone manually.');
           return { zoneCode: null, zoneDesc: null, lga: null };
@@ -30048,12 +30056,15 @@ if (window.pdfjsLib) {
         outSR: '4326',
         f: 'json'
       });
+      var _ctrl2 = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      var _timer2 = setTimeout(function() { if (_ctrl2) _ctrl2.abort(); }, 10000);
       return fetch(VICPLAN_BASE + '/0/query', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: params.toString()
+        body: params.toString(),
+        signal: _ctrl2 ? _ctrl2.signal : undefined
       })
-      .then(function(r) { return r.json(); })
+      .then(function(r) { clearTimeout(_timer2); return r.json(); })
       .then(function(data) {
         if (!data.features || data.features.length === 0) return [];
         return data.features.map(function(f) {
@@ -30066,6 +30077,7 @@ if (window.pdfjsLib) {
         });
       })
       .catch(function(err) {
+        clearTimeout(_timer2);
         console.warn('VicPlan circle query failed (' + radiusM + 'm):', err);
         return [];
       });
