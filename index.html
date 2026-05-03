@@ -1506,21 +1506,21 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   background: #f3f4f6;
 }
 
-/* Construction banner — separate slim bar below the header */
+/* Disclaimer banner — slim bar below the header */
 #construction-banner {
   flex-shrink: 0;
-  padding: 4px 16px;
+  padding: 5px 16px;
   font-size: 11px;
-  font-weight: 600;
-  color: #92400e;
-  background: #fef3c7;
-  border-bottom: 1px solid #fcd34d;
+  font-weight: 400;
+  color: #94a3b8;
+  background: #0f172a;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   text-align: center;
   letter-spacing: 0.01em;
 }
 #construction-banner::before {
-  content: "⚠";
-  margin-right: 6px;
+  content: '';
+  margin-right: 0;
 }
 
 #app-layout {
@@ -2833,7 +2833,7 @@ body.disclaimer-visible .container {
   <a href="https://resonate-consultants.com/" target="_blank" rel="noopener"><img src="resonate-logo.png" alt="Resonate" class="logo"></a>
   <div class="h1">Environmental noise screening tool <span class="state-badge" id="stateBadge" style="display:none;"></span> <span id="resonateLibBadge" title="Noise source library status" style="display:inline-block;font-size:10px;font-weight:500;padding:2px 8px;margin-left:6px;border:1px solid #d1d5db;border-radius:999px;background:#f3f4f6;color:#4b5563;vertical-align:middle;cursor:pointer;">Library: offline snapshot</span> <span style="font-size:10px;font-weight:400;color:#888;vertical-align:middle;">v2.0 — March 2026</span></div>
   <div class="sheet1">
-  <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;color:#856404;text-align:left;">This tool is currently under construction. Features and data may be incomplete or subject to change.</div>
+  <div style="background:#0f172a;border-bottom:1px solid rgba(255,255,255,0.06);padding:5px 16px;font-size:11px;font-weight:400;color:#94a3b8;text-align:center;">Disclaimer: Results are indicative only. This tool is a preliminary screening aid — outputs should not be used as definitive compliance predictions or relied upon without independent professional verification.</div>
 
   <div class="p" id="policyRefText">
     A screening tool to predict noise levels at nearby receivers. Select source and receiver locations on the map, enter noise source data, and the tool will indicate potential compliance. Depending on location, the criteria will be automatically calculated or can be entered manually.
@@ -8240,7 +8240,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   // element between the header and the layout.
   var constructionBanner = document.createElement('div');
   constructionBanner.id = 'construction-banner';
-  constructionBanner.textContent = 'This tool is currently under construction. Features and data may be incomplete or subject to change.';
+  constructionBanner.textContent = 'Disclaimer: Results are indicative only. This tool is a preliminary screening aid — outputs should not be used as definitive compliance predictions or relied upon without independent professional verification.';
 
   // Delete the now-empty sheet1 wrapper
   if (sheet1 && sheet1.parentNode) sheet1.parentNode.removeChild(sheet1);
