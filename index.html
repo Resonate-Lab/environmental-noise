@@ -8098,6 +8098,12 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
     });
 
     actionRow.appendChild(gisDropdown);
+
+    // Methodology must be last — re-append it after GIS Export so it
+    // always sits at the end of the row regardless of static HTML order.
+    var methTopBtn = document.getElementById('methodologyTopBtn');
+    if (methTopBtn) actionRow.appendChild(methTopBtn);
+
     appHeader.appendChild(actionRow);
   }
 
