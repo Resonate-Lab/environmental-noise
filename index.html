@@ -1506,15 +1506,19 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   background: #f3f4f6;
 }
 
-/* Disclaimer banner — slim bar below the header */
+/* Disclaimer banner — fixed slim bar at the bottom of the viewport */
 #construction-banner {
-  flex-shrink: 0;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
   padding: 5px 16px;
   font-size: 11px;
   font-weight: 400;
   color: #94a3b8;
   background: #0f172a;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid rgba(255,255,255,0.06);
   text-align: center;
   letter-spacing: 0.01em;
 }
