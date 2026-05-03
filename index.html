@@ -10489,17 +10489,68 @@ var _libFilterSearch   = '';
 
 function loadCanonicalLibrary(cb) {
   if (_canonicalLibrary) { if (cb) cb(_canonicalLibrary); return; }
-  fetch('data/source-library.json')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      _canonicalLibrary = data;
-      _updateLibBadge(data);
-      if (cb) cb(data);
-    })
-    .catch(function(err) {
-      console.warn('[Library] Failed to load source-library.json:', err);
-      if (cb) cb(null);
+
+  // Convert SourceLibrary rows (Google Sheets format) to canonical panel format
+  function rowsToCanonical(rows) {
+    var entries = rows.map(function(e, idx) {
+      return {
+        id: 'sl-' + idx,
+        name:            e.name            || '',
+        description:     e.description     || '',
+        review:          e.review          || '',
+        dataType:        e.data_type        || '',
+        category:        e.category         || '',
+        sourceCitation:  e.source_citation  || '',
+        dbA:             e.lp_dba,
+        octaveBands: {
+          '63':   e.hz_63,   '125':  e.hz_125,
+          '250':  e.hz_250,  '500':  e.hz_500,
+          '1000': e.hz_1000, '2000': e.hz_2000,
+          '4000': e.hz_4000, '8000': e.hz_8000
+        }
+      };
     });
+    return { entries: entries, entryCount: entries.length };
+  }
+
+  // Fallback: data/source-library.json (static snapshot)
+  function _jsonFallback(callback) {
+    fetch('data/source-library.json')
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(data) {
+        _canonicalLibrary = data;
+        _updateLibBadge(data);
+        if (callback) callback(data);
+      })
+      .catch(function(err) {
+        console.warn('[Library] Fallback source-library.json also failed:', err);
+        _canonicalLibrary = { entries: [], entryCount: 0 };
+        if (callback) callback(null);
+      });
+  }
+
+  // Primary: Google Sheets via window.SourceLibrary (loaded by sources-library.js)
+  if (window.SourceLibrary && typeof window.SourceLibrary.loadSourceLibrary === 'function') {
+    window.SourceLibrary.loadSourceLibrary()
+      .then(function(rows) {
+        if (rows && rows.length > 0) {
+          _canonicalLibrary = rowsToCanonical(rows);
+          _updateLibBadge(_canonicalLibrary);
+          if (cb) cb(_canonicalLibrary);
+        } else {
+          console.warn('[Library] SourceLibrary returned no rows; using JSON fallback.');
+          _jsonFallback(cb);
+        }
+      })
+      .catch(function(err) {
+        console.warn('[Library] SourceLibrary fetch failed; using JSON fallback.', err);
+        _jsonFallback(cb);
+      });
+    return;
+  }
+
+  // SourceLibrary not available — go straight to JSON fallback
+  _jsonFallback(cb);
 }
 
 function _updateLibBadge(data) {
