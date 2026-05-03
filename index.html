@@ -1506,12 +1506,12 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   background: #f3f4f6;
 }
 
-/* Disclaimer banner — fixed slim bar at the bottom of the viewport */
+/* Disclaimer banner — fixed slim bar at the bottom of the map column */
 #construction-banner {
   position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
+  left: var(--side-panel-width, 76px);
+  right: var(--rhs-strip-width, 76px);
   z-index: 10000;
   padding: 5px 16px;
   font-size: 11px;
