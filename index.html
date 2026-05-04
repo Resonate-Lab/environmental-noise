@@ -32815,11 +32815,13 @@ if (window.pdfjsLib) {
       document.body.appendChild(dlg);
 
       document.getElementById('_soSnApply').onclick = function() {
-        dlg.remove();
+        // Read values BEFORE removing dialog (elements are destroyed by dlg.remove())
         var rotVal   = parseInt(document.getElementById('_soRotInput').value, 10) || 0;
         var scaleChk = document.getElementById('_soApplyScale');
+        var useScale = scaleChk && scaleChk.checked;
+        dlg.remove();
         var addOpts  = { imageSrc: opts.imageSrc, name: opts.name };
-        if (scaleChk && scaleChk.checked && scaleResult)
+        if (useScale && scaleResult)
           addOpts.bounds = _soCalcScaleBounds(scaleResult.widthM, scaleResult.heightM);
         if (rotVal) addOpts.rotation = ((rotVal % 360) + 360) % 360;
         _soAddOverlay(addOpts);
