@@ -28363,7 +28363,7 @@ if (window.pdfjsLib) {
 
     /* ---- Cadastre / building outlines overlay (Geoscape PBF vector tiles) ---- */
     /* SECURITY: This key is visible in client-side code (unavoidable for a static site).
-       Mitigate by restricting to HTTP Referer https://debjames.github.io in the PSMA portal.
+       Mitigate by restricting to HTTP Referer https://resonate-reflect.web.app in the PSMA portal.
        If the key is compromised, rotate it at https://portal.psma.com.au and update here. */
     var PSMA_CADASTRE_URL = 'https://api.psma.com.au/v1/maps/geoscape_v1/cadastre/{z}/{x}/{y}.pbf?key=mAKm81U5AjjAcZK3IMoK5q8Wskbp3M2N';
     var cadastreOverlay = null;
@@ -30867,7 +30867,7 @@ if (window.pdfjsLib) {
       fetch(
         'https://nominatim.openstreetmap.org/reverse?format=json&lat=' +
         latlng.lat + '&lon=' + latlng.lng + '&zoom=18&addressdetails=1',
-        { headers: { 'Accept-Language': 'en', 'Referer': 'https://debjames.github.io/sa-epa-noise-calculator-map/' } }
+        { headers: { 'Accept-Language': 'en', 'Referer': 'https://resonate-reflect.web.app/' } }
       )
       .then(function(r) { return r.json(); })
       .then(function(data) {
@@ -31972,7 +31972,7 @@ if (window.pdfjsLib) {
       return fetch(
         'https://nominatim.openstreetmap.org/search?format=json&limit=6&addressdetails=1&countrycodes=au&q=' +
         encodeURIComponent(q),
-        { headers: { 'Accept-Language': 'en', 'Referer': 'https://debjames.github.io/sa-epa-noise-calculator-map/' } }
+        { headers: { 'Accept-Language': 'en', 'Referer': 'https://resonate-reflect.web.app/' } }
       )
       .then(function(r) { return r.json(); });
     }

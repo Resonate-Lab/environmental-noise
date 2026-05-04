@@ -4,9 +4,9 @@
 
 Browser-based environmental noise assessment tool implementing ISO 9613-2 propagation for Australian multi-state acoustic assessments (SA, VIC, NSW).
 
-- **Repo:** `https://github.com/debjames/sa-epa-noise-calculator-map`
-- **Live:** `https://debjames.github.io/sa-epa-noise-calculator-map/`
-- **Stack:** Vanilla JavaScript, Leaflet.js, no npm/build step, deployed via GitHub Pages
+- **Repo:** `https://github.com/Resonate-Lab/environmental-noise`
+- **Live:** `https://resonate-reflect.web.app`
+- **Stack:** Vanilla JavaScript, Leaflet.js, no npm/build step, deployed via Firebase Hosting
 - **Benchmark:** SoundPLAN — features must be acoustically defensible against it
 
 ## Before Making Any Changes
