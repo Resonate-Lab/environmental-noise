@@ -15384,6 +15384,11 @@ async function generatePDFAppendix(btn) {
         var W = Math.round(mapRect.width), H = Math.round(mapRect.height), dpr = 3;
 
         var hideEls = [];
+        // Force site pin visible for capture (even if hidden by user)
+        var _spWasHidden = (typeof window._getSitePinVisible === 'function' && typeof window._getSitePin === 'function')
+          ? (window._getSitePin() && !window._getSitePinVisible())
+          : false;
+        if (_spWasHidden && typeof window._setSitePinVisible === 'function') window._setSitePinVisible(true);
         mapEl.querySelectorAll('.leaflet-top').forEach(function(el) { hideEls.push(el); });
         var popupPane = mapEl.querySelector('.leaflet-popup-pane');
         if (popupPane) hideEls.push(popupPane);
@@ -15438,17 +15443,96 @@ async function generatePDFAppendix(btn) {
             return p.then(function() { var ir = iconEl.getBoundingClientRect(); if (!ir.width || !ir.height) return; var ix = Math.round(ir.left - mapRect.left), iy = Math.round(ir.top - mapRect.top); if (ix + ir.width <= 0 || iy + ir.height <= 0 || ix >= W || iy >= H) return; return html2canvas(iconEl, { useCORS: true, scale: dpr, logging: false, backgroundColor: null, removeContainer: true }).then(function(c) { ctx.drawImage(c, 0, 0, c.width, c.height, ix, iy, ir.width, ir.height); }).catch(function(e) { console.warn('[PDF export] html2canvas failed:', e); }); });
           }, Promise.resolve());
         });
+
+        // Draw site pin directly onto canvas at its map latlng position.
+        // This is reliable regardless of Leaflet opacity or viewport clipping.
+        chain = chain.then(function() {
+          if (typeof window._getSitePin !== 'function') return;
+          var _sp = window._getSitePin();
+          if (!_sp) return;
+          var _map = typeof window._getMapRef === 'function' ? window._getMapRef() : null;
+          if (!_map) return;
+          var _pt = _map.latLngToContainerPoint(L.latLng(_sp.lat, _sp.lng));
+          var _px = _pt.x, _py = _pt.y;
+          // Only draw if pin is within or near the viewport
+          if (_px < -30 || _px > W + 30 || _py < -30 || _py > H + 30) return;
+          // Pin dimensions match iconSize [16,21] with iconAnchor [8,21] (tip = _px,_py)
+          var _pHeadR = 5.5;   // head circle radius (CSS px)
+          var _pHeadCy = _py - 13.5; // head circle centre-y (tip is anchor)
+          var _pTailHW = 3.5;  // tail triangle half-width
+          var _pTailY  = _py - 7;    // tail triangle base-y
+          ctx.save();
+          // Drop shadow
+          ctx.shadowColor = 'rgba(0,0,0,0.35)';
+          ctx.shadowBlur   = 4;
+          ctx.shadowOffsetY = 2;
+          // Grey pin head
+          ctx.beginPath();
+          ctx.arc(_px, _pHeadCy, _pHeadR, 0, Math.PI * 2);
+          ctx.fillStyle   = '#9ca3af';
+          ctx.strokeStyle = '#6b7280';
+          ctx.lineWidth   = 1.2;
+          ctx.fill();
+          ctx.stroke();
+          ctx.shadowColor = 'transparent';
+          // Grey triangular tail
+          ctx.beginPath();
+          ctx.moveTo(_px - _pTailHW, _pTailY);
+          ctx.lineTo(_px + _pTailHW, _pTailY);
+          ctx.lineTo(_px, _py);
+          ctx.closePath();
+          ctx.fillStyle   = '#9ca3af';
+          ctx.strokeStyle = '#6b7280';
+          ctx.lineWidth   = 1.2;
+          ctx.fill();
+          ctx.stroke();
+          // White inner dot
+          ctx.beginPath();
+          ctx.arc(_px, _pHeadCy, _pHeadR * 0.38, 0, Math.PI * 2);
+          ctx.fillStyle = 'white';
+          ctx.fill();
+          ctx.restore();
+        });
+
         // Only capture bottom-LEFT controls (zone legend, scale bar, attribution).
         // Skip bottom-RIGHT controls (noise map legend) — not wanted in zone map.
         // body.legend-export switches legends to 2× export size during capture.
+
+        // Inject a temporary "Subject site" legend entry (matching zone-legend style).
+        // Insert BEFORE the zone legend so it appears above it on the map.
+        var _spLegEl = null;
         chain = chain.then(function() {
-          document.body.classList.add('legend-export');
+          if (typeof window._getSitePin === 'function' && window._getSitePin()) {
+            _spLegEl = document.createElement('div');
+            _spLegEl.id = '_pdfSitePinLegend';
+            _spLegEl.className = 'leaflet-control zone-legend';
+            _spLegEl.innerHTML =
+              '<div class="zone-legend-item">' +
+                '<svg viewBox="0 0 24 32" width="10" height="14" style="flex-shrink:0;">' +
+                  '<path d="M12 0 C5 0 0 5 0 12 C0 19 12 32 12 32 C12 32 24 19 24 12 C24 5 19 0 12 0 Z"' +
+                  ' fill="#9ca3af" stroke="#6b7280" stroke-width="1.5"/>' +
+                  '<circle cx="12" cy="12" r="4" fill="white"/>' +
+                '</svg>' +
+                '<span class="zone-legend-name">Subject site</span>' +
+              '</div>';
+            var _blEl = mapEl.querySelector('.leaflet-bottom.leaflet-left');
+            if (_blEl) {
+              // Insert before the zone legend so it renders above it
+              var _zoneLeg = _blEl.querySelector('.zone-legend');
+              if (_zoneLeg) { _blEl.insertBefore(_spLegEl, _zoneLeg); }
+              else { _blEl.appendChild(_spLegEl); }
+            }
+          }
+        });
+
+        // Capture at normal screen size — do NOT add legend-export class (that is for Save JPG only).
+        chain = chain.then(function() {
           return Array.from(mapEl.querySelectorAll('.leaflet-bottom.leaflet-left .leaflet-control')).reduce(function(p, ctrl) {
             return p.then(function() { if (!ctrl.offsetWidth || !ctrl.offsetHeight) return; return html2canvas(ctrl, { useCORS: true, scale: dpr, logging: false, backgroundColor: null, removeContainer: true }).then(function(c) { var r = pos(ctrl); ctx.drawImage(c, 0, 0, c.width, c.height, r.x, r.y, r.w, r.h); }).catch(function(e) { console.warn('[PDF export] html2canvas failed:', e); }); });
           }, Promise.resolve()).then(function() {
-            document.body.classList.remove('legend-export');
+            if (_spLegEl && _spLegEl.parentNode) _spLegEl.parentNode.removeChild(_spLegEl);
           }, function(err) {
-            document.body.classList.remove('legend-export');
+            if (_spLegEl && _spLegEl.parentNode) _spLegEl.parentNode.removeChild(_spLegEl);
             throw err;
           });
         });
@@ -15456,10 +15540,12 @@ async function generatePDFAppendix(btn) {
         chain.then(function() {
           ctx.restore();
           hideEls.forEach(function(el) { el.style.visibility = ''; });
+          if (_spWasHidden && typeof window._setSitePinVisible === 'function') window._setSitePinVisible(false);
           resolve({ dataUrl: out.toDataURL('image/jpeg', 0.92), aspect: H / W });
         }).catch(function(err) {
           console.warn('[PDF Appendix] Map capture failed:', err);
           hideEls.forEach(function(el) { el.style.visibility = ''; });
+          if (_spWasHidden && typeof window._setSitePinVisible === 'function') window._setSitePinVisible(false);
           resolve(null);
         });
       });
@@ -16014,7 +16100,7 @@ async function generatePDFAppendix(btn) {
       pdf.setDrawColor(LINE[0], LINE[1], LINE[2]); pdf.setLineWidth(0.5);
       pdf.rect(mSide - 0.3, y - 0.3, _zmW + 0.6, _zmH + 0.6, 'S');
       pdf.addImage(zoneImg.dataUrl, 'JPEG', mSide, y, _zmW, _zmH);
-      y += _zmH + 1;
+      y += _zmH + 20 * PT;
     } else {
       h2Heading('Zoning');
       introPara(_introZoning);
@@ -16109,25 +16195,15 @@ async function generatePDFAppendix(btn) {
     introPara(_introCrit2);
     renderCritTablePaginated();
 
-    // ── H2: Emergency equipment criteria (conditional) ───────────────────────
+    // ── H2: Emergency equipment criteria (conditional) ────────────────────────────────────────
     if (fireOn || genOn) {
-      var _introEmerg = 'The development is to include equipment for fire protection and two standby generators. These items of equipment are only to be tested periodically during the day and would only operate in emergency situations when there is a fire or mains power is down. As such, the strict application of the Noise Policy criteria may be considered to be too onerous. The Guidelines for the use of the Environment Protection (Commercial \u0026 Industrial Noise) Policy 2023 (the Guidelines) provides guidance on reasonable adjustments for noise sources that are intermittent and infrequent. Based on these guidelines, alternative criteria for the operation and testing of emergency equipment is outlined in the table below.';
-      var _emergColCount = 1 + (fireOn ? 1 : 0) + (genOn ? 1 : 0);
-      var _emergRecvW = cW * 0.30;
-      var _emergEqW   = (cW - _emergRecvW) / (_emergColCount - 1);
+
+      // Shared drawing helpers — hoisted so Table 8, rationale, and receiver criteria tables all share them
       var _emergFs    = 8.5;
-      var _EMERG_TBL_H = 8 + 7 + 4 * 7; // hdr1 + hdr2 + up-to-4 body rows
-      var _emergBlockH = _mH2('Emergency equipment criteria') + _mParas([_introEmerg]) + _EMERG_TBL_H;
-      newPageIfNeeded(Math.min(_emergBlockH, cH));
-      h2Heading('Emergency equipment criteria');
-      introPara(_introEmerg);
+      var _emergLH    = _emergFs * PT * 1.35;
+      var _emergPad   = 2;
+      var _emergCap   = 0.72 * _emergFs * PT;
 
-      // Native emergency table — 2-row header (gold + grey) + body rows from DOM
-      var _emergLH  = _emergFs * PT * 1.35;   // ~4.05 mm line height
-      var _emergPad = 2;                       // top & bottom cell padding mm
-      var _emergCap = 0.72 * _emergFs * PT;    // ~2.16 mm cap-height
-
-      // Draw emergency cell: fill, then black border OVER fill, then top-aligned black text
       var _eCell = function(cx, cy, cw, ch, text, bold, bg, align) {
         if (bg) { pdf.setFillColor(bg[0],bg[1],bg[2]); pdf.rect(cx,cy,cw,ch,'F'); }
         pdf.setDrawColor(0,0,0); pdf.setLineWidth(0.18); pdf.rect(cx,cy,cw,ch,'S');
@@ -16158,6 +16234,125 @@ async function generatePDFAppendix(btn) {
         texts.forEach(function(t, i) { var k = _emergNL(t, widths[i], false); if (k > n) n = k; });
         return n * _emergLH + 2 * _emergPad;
       };
+
+      // 1. Conditional intro paragraph
+      var _introEmerg = (fireOn && genOn)
+        ? 'The development is to include equipment for fire protection and a standby generator. These items of equipment are only to be tested periodically during the day and would only operate in emergency situations when there is a fire or mains power is down. As such, the strict application of the Noise Policy criteria may be considered to be too onerous.'
+        : fireOn
+          ? 'The development is to include equipment for fire protection. These items of equipment are only to be tested periodically during the day and would only operate in emergency situations when there is a fire. As such, the strict application of the Noise Policy criteria may be considered to be too onerous.'
+          : 'The development is to include a standby generator. This item of equipment is only to be tested periodically during the day and would only operate in emergency situations when mains power is down. As such, the strict application of the Noise Policy criteria may be considered to be too onerous.';
+
+      // 2. Static Table 8 reference paragraph
+      var _tbl8Para = 'The Guidelines for the use of the Environment Protection (Commercial \u0026 Industrial Noise) Policy 2023 (the Guidelines) provides guidance on reasonable adjustments for noise sources that are intermittent and infrequent. The table below outlines the allowable adjustment to the Noise Policy criterion based on the duration and frequency of the noise event. Note that the compliance criterion is 5 dB higher at night.';
+
+      newPageIfNeeded(_mH2('Emergency equipment criteria') + _mParas([_introEmerg, _tbl8Para]));
+      h2Heading('Emergency equipment criteria');
+      introPara(_introEmerg);
+      introPara(_tbl8Para);
+
+      // 3. Table 8 duration table (static, native PDF)
+      //    Columns: Duration 45% | Day 27.5% | Night 27.5%
+      var _t8DurW   = cW * 0.45;
+      var _t8DayW   = cW * 0.275;
+      var _t8NightW = cW * 0.275;
+      var _t8Widths = [_t8DurW, _t8DayW, _t8NightW];
+      var _t8HdrH  = _emergRowH(['Allowable duration (1 event in a 24-hour period)', 'Day (7 am to 10 pm) +dB(A)', 'Night (10 pm to 7 am) +dB(A)'], _t8Widths);
+      var _t8Row1H = _emergRowH(['Under 2 hours',    '+3',  '0'],   _t8Widths);
+      var _t8Row2H = _emergRowH(['Under 1 hour',     '+5',  '0'],   _t8Widths);
+      var _t8Row3H = _emergRowH(['Under 15 minutes', '+10', '+3'],  _t8Widths);
+      newPageIfNeeded(_t8HdrH + _t8Row1H + _t8Row2H + _t8Row3H);
+
+      // Header (gold)
+      _eCell(mSide,                        y, _t8DurW,   _t8HdrH, 'Allowable duration (1 event in a 24-hour period)', true, TABLE_HEADER_YELLOW, 'left');
+      _eCell(mSide + _t8DurW,              y, _t8DayW,   _t8HdrH, 'Day (7 am to 10 pm) +dB(A)',                       true, TABLE_HEADER_YELLOW, 'center');
+      _eCell(mSide + _t8DurW + _t8DayW,   y, _t8NightW, _t8HdrH, 'Night (10 pm to 7 am) +dB(A)',                     true, TABLE_HEADER_YELLOW, 'center');
+      y += _t8HdrH;
+
+      // Row 1: Under 2 hours
+      _eCell(mSide,                        y, _t8DurW,   _t8Row1H, 'Under 2 hours',    false, null,          'left');
+      _eCell(mSide + _t8DurW,              y, _t8DayW,   _t8Row1H, '+3',               false, null,          'center');
+      _eCell(mSide + _t8DurW + _t8DayW,   y, _t8NightW, _t8Row1H, '0',                false, null,          'center');
+      y += _t8Row1H;
+
+      // Row 2: Under 1 hour (alternate shade)
+      _eCell(mSide,                        y, _t8DurW,   _t8Row2H, 'Under 1 hour',     false, [250,250,250], 'left');
+      _eCell(mSide + _t8DurW,              y, _t8DayW,   _t8Row2H, '+5',               false, [250,250,250], 'center');
+      _eCell(mSide + _t8DurW + _t8DayW,   y, _t8NightW, _t8Row2H, '0',                false, [250,250,250], 'center');
+      y += _t8Row2H;
+
+      // Row 3: Under 15 minutes
+      _eCell(mSide,                        y, _t8DurW,   _t8Row3H, 'Under 15 minutes', false, null,          'left');
+      _eCell(mSide + _t8DurW,              y, _t8DayW,   _t8Row3H, '+10',              false, null,          'center');
+      _eCell(mSide + _t8DurW + _t8DayW,   y, _t8NightW, _t8Row3H, '+3',               false, null,          'center');
+      y += _t8Row3H;
+      y += 20 * PT;
+
+      // 4. Conditional operation paragraphs + bullets
+      if (fireOn) {
+        introPara('For the fire protection equipment, we understand that the following operation is typical:');
+        bulletItem('Tested monthly for up to 15 minutes');
+        bulletItem('Tested during daytime only');
+        bulletItem('During emergency (fire)');
+        y += 6 * PT;
+      }
+      if (genOn) {
+        introPara('For the standby generator, we understand that the following operation is typical:');
+        bulletItem('Monthly for up to 30 minutes run time');
+        bulletItem('During emergency (mains power outage)');
+        y += 6 * PT;
+      }
+
+      // 5. Rationale table (conditional rows, native PDF)
+      //    Columns: Equipment 25% | Design criterion 22% | Rationale 53%
+      var _ratEqW  = cW * 0.25;
+      var _ratCrW  = cW * 0.22;
+      var _ratRatW = cW * 0.53;
+      var _ratWidths = [_ratEqW, _ratCrW, _ratRatW];
+
+      var _ratFireRat = 'Testing of the fire pump will only occur during the daytime period, once a month, for a 15-minute period. The daytime exceedance is consistent with Table 8. The nighttime criterion will be exceeded when the fire pump is in operation; however, this will be in the event of a fire when noise emissions and protection of amenity is not typically considered to be the priority.';
+      var _ratGenRat  = 'Testing of the standby generator will only occur during the daytime period, once a month, for a 30-minute period. The proposed daytime exceedance is 5 dB less than what is proposed in Table 8. Resonate believe that the adoption of this criterion will be suitable for both day and night based on the infrequent operation of the generator in an emergency.';
+
+      introPara('The criteria as outlined in the table below has been adopted for emergency equipment based on the above and the associated rationale.');
+
+      var _ratHdrH  = _emergRowH(['Equipment', 'Design criterion', 'Rationale'], _ratWidths);
+      var _ratFireH = fireOn ? _emergRowH(['Fire control and safety systems', 'Day INL+10', _ratFireRat], _ratWidths) : 0;
+      var _ratGenH  = genOn  ? _emergRowH(['Standby generator, Load bank', 'Day INL+0\nNight INL+7', _ratGenRat], _ratWidths) : 0;
+      newPageIfNeeded(_ratHdrH + (fireOn ? _ratFireH : _ratGenH));
+
+      // Header (gold)
+      _eCell(mSide,                    y, _ratEqW,  _ratHdrH, 'Equipment',        true, TABLE_HEADER_YELLOW, 'left');
+      _eCell(mSide + _ratEqW,          y, _ratCrW,  _ratHdrH, 'Design criterion', true, TABLE_HEADER_YELLOW, 'left');
+      _eCell(mSide + _ratEqW + _ratCrW, y, _ratRatW, _ratHdrH, 'Rationale',       true, TABLE_HEADER_YELLOW, 'left');
+      y += _ratHdrH;
+
+      if (fireOn) {
+        newPageIfNeeded(_ratFireH);
+        _eCell(mSide,                     y, _ratEqW,  _ratFireH, 'Fire control and safety systems', false, null, 'left');
+        _eCell(mSide + _ratEqW,           y, _ratCrW,  _ratFireH, 'Day INL+10',                      false, null, 'left');
+        _eCell(mSide + _ratEqW + _ratCrW, y, _ratRatW, _ratFireH, _ratFireRat,                        false, null, 'left');
+        y += _ratFireH;
+      }
+      if (genOn) {
+        newPageIfNeeded(_ratGenH);
+        var _ratGenBg = fireOn ? [250,250,250] : null;
+        _eCell(mSide,                     y, _ratEqW,  _ratGenH, 'Standby generator, Load bank', false, _ratGenBg, 'left');
+        _eCell(mSide + _ratEqW,           y, _ratCrW,  _ratGenH, 'Day INL+0\nNight INL+7',       false, _ratGenBg, 'left');
+        _eCell(mSide + _ratEqW + _ratCrW, y, _ratRatW, _ratGenH, _ratGenRat,                     false, _ratGenBg, 'left');
+        y += _ratGenH;
+      }
+      y += 20 * PT;
+
+      // 6. Transition sentence
+      introPara('Application of the proposed exceedance results in criteria as shown in the table below.');
+
+      // 7. Receiver criteria table (unchanged) ─────────────────────────────────────────
+      var _emergColCount = 1 + (fireOn ? 1 : 0) + (genOn ? 1 : 0);
+      var _emergRecvW = cW * 0.30;
+      var _emergEqW   = (cW - _emergRecvW) / (_emergColCount - 1);
+      var _EMERG_TBL_H = 8 + 7 + 4 * 7; // hdr1 + hdr2 + up-to-4 body rows
+      newPageIfNeeded(Math.min(_EMERG_TBL_H, cH));
+
+      // Native emergency table — 2-row header (gold + grey) + body rows from DOM
       var _emergHdr1H = (Math.max(_emergNL('Receiver', _emergRecvW, true), _emergNL('Criteria, LAeq dB', cW - _emergRecvW, true))) * _emergLH + 2 * _emergPad;
       var _eSubLabels = [].concat(fireOn ? ['Fire pump'] : []).concat(genOn ? ['Standby generator'] : []);
       var _emergHdr2H = (_emergNL(_eSubLabels.reduce(function(a,b){ return a.length>b.length?a:b; }, ''), _emergEqW, true)) * _emergLH + 2 * _emergPad;

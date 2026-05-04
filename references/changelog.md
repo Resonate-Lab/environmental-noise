@@ -2,6 +2,8 @@
 
 ## May 2026
 
+- **Emergency equipment PDF section: conditional content.** Replaced the hardcoded single paragraph in `generatePDFAppendix()` with a fully conditional block: (1) conditional intro paragraph (fire only / generator only / both); (2) static Table 8 duration table (3 data rows: under 2 h, 1 h, 15 min — native PDF cells, gold header); (3) conditional operation bullet lists (fire pump: tested monthly ≤15 min daytime; generator: monthly ≤30 min); (4) rationale table with conditional rows (Equipment / Design criterion / Rationale columns, 25/22/53% widths); (5) transition sentence before the existing receiver criteria table. Shared drawing helpers (`_emergFs`, `_emergLH`, `_emergPad`, `_emergCap`, `_eCell`, `_emergNL`, `_emergRowH`) hoisted to top of block so all four tables share them.
+
 - **Fix: VicPlan fetch calls now have a 10-second AbortController timeout.** `queryVicZoningAtPoint()` and `queryVicZonesInCircle()` previously had no timeout — a stalled VicPlan API response would hang indefinitely. Both functions now create an `AbortController`, set a 10 s timer to abort the signal, and call `clearTimeout` in `.then` and `.catch` to avoid leaking the timer.
 
 - **Fix: `localStorage.setItem` calls wrapped in try/catch throughout.** `saveLS()`, `savePred()`, `_saveCustomSources()`, the propagation-method click handler, ISO parameter change handler, `_prSave()`, terrain toggle handler, and the `loadAssessment` restore block now all catch `QuotaExceededError` and private-browsing `SecurityError` without crashing. Previously any of these would throw an uncaught exception in a storage-constrained environment (iOS private mode, full quota, strict privacy settings).
