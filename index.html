@@ -32730,75 +32730,101 @@ if (window.pdfjsLib) {
       return [[c.lat - latH, c.lng - lngH], [c.lat + latH, c.lng + lngH]];
     }
 
-    // Show detected scale / north dialog after rendering a page.
+    // Show place-site-plan dialog — always shown after PDF page render.
+    // Lets user confirm detected scale, review/override rotation, then place.
     function _soShowScaleNorthDialog(opts) {
       var old = document.getElementById('_soScaleNorthDlg');
       if (old) old.remove();
 
       var scaleResult = opts.scaleResult;
       var northResult = opts.northResult;
+      var defaultRot  = northResult ? northResult.rotation : 0;
 
-      var bodyHtml = '<p class="rn-modal-desc">The following were detected in the PDF. Apply them to the overlay?</p>';
-
+      // -- Scale row (only when detected) -------------------------------------------
+      var scaleHtml = '';
       if (scaleResult) {
-        bodyHtml +=
-          '<label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;cursor:pointer;">' +
+        scaleHtml =
+          '<label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;cursor:pointer;">' +
           '<input type="checkbox" id="_soApplyScale" checked style="margin-top:2px;flex-shrink:0;">' +
-          '<span><strong style="font-size:13px;">Scale 1:' + scaleResult.ratio + '</strong><br>' +
-          '<span style="color:#64748b;font-size:12px;">Overlay will be sized to approx. ' +
-          scaleResult.widthM + ' m × ' + scaleResult.heightM + ' m</span></span></label>';
+          '<span><strong style="font-size:13px;color:#1e293b;">Scale 1:' + scaleResult.ratio + '</strong><br>' +
+          '<span style="color:#64748b;font-size:12px;">Overlay will be sized to approx. ' +
+          scaleResult.widthM + ' m × ' + scaleResult.heightM + ' m</span></span></label>';
       }
 
+      // -- North status badge --------------------------------------------------------
+      var northBadge = '';
       if (northResult && northResult.rotation !== 0) {
-        bodyHtml +=
-          '<label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;cursor:pointer;">' +
-          '<input type="checkbox" id="_soApplyNorth" checked style="margin-top:2px;flex-shrink:0;">' +
-          '<span><strong style="font-size:13px;">North indicator — ' + northResult.desc + '</strong>' +
+        var badgeColour = northResult.confidence === 'low' ? '#f59e0b' : '#16a34a';
+        northBadge =
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">' +
+          '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + badgeColour + ';flex-shrink:0;"></span>' +
+          '<span style="font-size:12px;color:#1e293b;">North detected — ' + northResult.desc + '</span>' +
           (northResult.confidence === 'low'
-            ? '<br><span style="color:#f59e0b;font-size:12px;">Low confidence — verify after placement</span>'
+            ? '<span style="font-size:11px;color:#f59e0b;margin-left:4px;">(low confidence)</span>'
             : '') +
-          '</span></label>';
+          '</div>';
       } else if (northResult && northResult.rotation === 0) {
-        bodyHtml += '<p style="color:#64748b;font-size:12px;margin:0 0 14px;">✓ North indicator detected — plan is already oriented correctly.</p>';
+        northBadge =
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">' +
+          '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;flex-shrink:0;"></span>' +
+          '<span style="font-size:12px;color:#1e293b;">✓ North indicator detected — plan is already oriented correctly</span>' +
+          '</div>';
+      } else {
+        northBadge =
+          '<div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">' +
+          'No north indicator detected — set rotation below if the plan is not oriented north-up.' +
+          '</div>';
       }
 
-      bodyHtml += '<p style="color:#94a3b8;font-size:11px;margin:0;">You can adjust position and rotation after placement.</p>';
+      // -- Rotation input (always shown) --------------------------------------------
+      var presetStyle = 'padding:3px 8px;font-size:11px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;color:#1e293b;cursor:pointer;';
+      var rotHtml =
+        '<div style="border-top:1px solid #e5e7eb;padding-top:14px;margin-top:2px;">' +
+        '<div style="font-size:12px;font-weight:600;color:#1e293b;margin-bottom:8px;">Rotation</div>' +
+        northBadge +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+        '<input type="number" id="_soRotInput" min="0" max="359" step="1" value="' + defaultRot + '" ' +
+          'style="width:68px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;text-align:center;">' +
+        '<span style="color:#64748b;font-size:13px;">°</span>' +
+        '<div style="display:flex;gap:4px;">' +
+        '<button onclick="document.getElementById(\'_soRotInput\').value=0"   style="' + presetStyle + '">0°</button>' +
+        '<button onclick="document.getElementById(\'_soRotInput\').value=90"  style="' + presetStyle + '">90°</button>' +
+        '<button onclick="document.getElementById(\'_soRotInput\').value=180" style="' + presetStyle + '">180°</button>' +
+        '<button onclick="document.getElementById(\'_soRotInput\').value=270" style="' + presetStyle + '">270°</button>' +
+        '</div></div>' +
+        '</div>';
+
+      var bodyHtml =
+        '<p class="rn-modal-desc" style="margin-bottom:14px;">Review the settings below then place the overlay. You can refine position and rotation after placement.</p>' +
+        scaleHtml + rotHtml;
 
       var dlg = document.createElement('div');
       dlg.id  = '_soScaleNorthDlg';
       dlg.className = 'rn-overlay';
       dlg.innerHTML =
-        '<div class="rn-modal rn-modal-sm" style="max-width:440px;">' +
+        '<div class="rn-modal rn-modal-sm" style="max-width:460px;">' +
           '<div class="rn-modal-hdr">' +
-            '<span class="rn-modal-title">Site plan detected</span>' +
+            '<span class="rn-modal-title">Place site plan</span>' +
           '</div>' +
           '<div class="rn-modal-body">' + bodyHtml + '</div>' +
           '<div class="rn-modal-footer">' +
-            '<button class="rn-btn rn-btn-cancel" id="_soSnManual">Place manually</button>' +
-            '<button class="rn-btn rn-btn-ok" id="_soSnApply">Apply &amp; Place</button>' +
+            '<button class="rn-btn rn-btn-cancel" id="_soSnCancel">Cancel</button>' +
+            '<button class="rn-btn rn-btn-ok" id="_soSnApply">Place</button>' +
           '</div>' +
         '</div>';
       document.body.appendChild(dlg);
 
-      function _applyAndPlace(useScale, useNorth) {
-        dlg.remove();
-        var addOpts = { imageSrc: opts.imageSrc, name: opts.name };
-        if (useScale && scaleResult)
-          addOpts.bounds = _soCalcScaleBounds(scaleResult.widthM, scaleResult.heightM);
-        if (useNorth && northResult && northResult.rotation !== 0)
-          addOpts.rotation = northResult.rotation;
-        _soAddOverlay(addOpts);
-      }
-
       document.getElementById('_soSnApply').onclick = function() {
-        var scaleChk = document.getElementById('_soApplyScale');
-        var northChk = document.getElementById('_soApplyNorth');
-        _applyAndPlace(scaleChk && scaleChk.checked, northChk && northChk.checked);
-      };
-      document.getElementById('_soSnManual').onclick = function() {
         dlg.remove();
-        _soAddOverlay({ imageSrc: opts.imageSrc, name: opts.name });
+        var rotVal   = parseInt(document.getElementById('_soRotInput').value, 10) || 0;
+        var scaleChk = document.getElementById('_soApplyScale');
+        var addOpts  = { imageSrc: opts.imageSrc, name: opts.name };
+        if (scaleChk && scaleChk.checked && scaleResult)
+          addOpts.bounds = _soCalcScaleBounds(scaleResult.widthM, scaleResult.heightM);
+        if (rotVal) addOpts.rotation = ((rotVal % 360) + 360) % 360;
+        _soAddOverlay(addOpts);
       };
+      document.getElementById('_soSnCancel').onclick = function() { dlg.remove(); };
     }
 
     // Render chosen page at full quality, run detectors, then show dialog or place directly.
@@ -32824,12 +32850,9 @@ if (window.pdfjsLib) {
           var scaleResult = _soDetectScale(tc.items, viewport0);
           var northResult = _soDetectNorth(tc.items, viewport0);
 
-          if (scaleResult || northResult) {
-            _soShowScaleNorthDialog({ imageSrc: dataUrl, name: name,
-                                      scaleResult: scaleResult, northResult: northResult });
-          } else {
-            _soAddOverlay({ imageSrc: dataUrl, name: name });
-          }
+          // Always show dialog so user can set rotation even when nothing is detected
+          _soShowScaleNorthDialog({ imageSrc: dataUrl, name: name,
+                                    scaleResult: scaleResult, northResult: northResult });
         }).catch(function(e) {
           console.error('PDF render/text error:', e);
           alert('Could not render the PDF page as an image.');
