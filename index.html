@@ -32618,98 +32618,334 @@ if (window.pdfjsLib) {
       reader.readAsDataURL(file);
     }
 
-    /* ── PDF site plan: render page 1 as overlay + extract address ──────── */
-    function _soPdfProcess(file) {
-      var name = file.name.replace(/\.pdf$/i, '');
+    /* -- PDF site plan: multi-page picker, scale & north detection -------- */
 
-      // Helper: ensure pdfjsLib is available (UMD build loads synchronously), then run callback
-      function _withPdfJs(cb) {
+    // Helper: ensure pdfjsLib is available, then run callback
+    function _withPdfJs(cb) {
+      if (window.pdfjsLib && typeof window.pdfjsLib.getDocument === 'function') {
+        cb(window.pdfjsLib);
+        return;
+      }
+      var tries = 0;
+      var iv = setInterval(function() {
         if (window.pdfjsLib && typeof window.pdfjsLib.getDocument === 'function') {
-          cb(window.pdfjsLib);
-          return;
+          clearInterval(iv); cb(window.pdfjsLib);
+        } else if (++tries > 20) {
+          clearInterval(iv);
+          alert('PDF library failed to load. The page may need to be served via a web server rather than opened directly as a file.');
         }
-        // Fallback: poll briefly in case script hasn't finished executing yet
-        var tries = 0;
-        var iv = setInterval(function() {
-          if (window.pdfjsLib && typeof window.pdfjsLib.getDocument === 'function') {
-            clearInterval(iv);
-            cb(window.pdfjsLib);
-          } else if (++tries > 20) {
-            clearInterval(iv);
-            alert('PDF library failed to load. The page may need to be served via a web server rather than opened directly as a file.');
-          }
-        }, 250);
+      }, 250);
+    }
+
+    // Detect map scale ratio from PDF text items (e.g. "1:500").
+    // viewport0 must be at scale:1 so .width/.height are in PDF points.
+    function _soDetectScale(textItems, viewport0) {
+      var text = (textItems || []).map(function(it) { return it.str || ''; }).join(' ');
+      if (/\bN\.?\s*T\.?\s*S\.?\b/i.test(text)) return null;
+      var patterns = [
+        /scale\s+1\s*:\s*([\d,]+)/i,
+        /1\s*:\s*([\d,]+)/
+      ];
+      for (var i = 0; i < patterns.length; i++) {
+        var m = text.match(patterns[i]);
+        if (!m) continue;
+        var ratio = parseInt(m[1].replace(/,/g, ''), 10);
+        if (ratio < 10 || ratio > 100000) continue;
+        var ptToMm = 25.4 / 72;
+        var widthM  = Math.round(viewport0.width  * ptToMm * ratio / 1000);
+        var heightM = Math.round(viewport0.height * ptToMm * ratio / 1000);
+        return { ratio: ratio, text: m[0].trim(), widthM: widthM, heightM: heightM };
+      }
+      return null;
+    }
+
+    // Detect north orientation from PDF text items.
+    // PDF coords: transform[4]=x (left->right), transform[5]=y (bottom->top, 0=bottom).
+    function _soDetectNorth(textItems, viewport0) {
+      var cx = viewport0.width  / 2;
+      var cy = viewport0.height / 2;
+      var northPat = /^(N|NORTH|TRUE\s+NORTH|N\s*↑)$/i;
+      var best = null;
+      (textItems || []).forEach(function(item) {
+        if (!item.transform) return;
+        if (northPat.test((item.str || '').trim())) best = item;
+      });
+      if (!best) return null;
+      var dx = best.transform[4] - cx;
+      var dy = best.transform[5] - cy;
+      var angleDeg = Math.atan2(dx, dy) * 180 / Math.PI;
+      angleDeg = ((angleDeg % 360) + 360) % 360;
+      var rawRotation = (((-angleDeg) % 360) + 360) % 360;
+      var snapped = Math.round(rawRotation / 90) * 90 % 360;
+      var confidence = Math.abs(rawRotation - snapped) <= 20 ? 'high' : 'low';
+      var descs = {
+        0:   'North is already at the top',
+        90:  'Rotate 90° clockwise',
+        180: 'Rotate 180°',
+        270: 'Rotate 270° clockwise'
+      };
+      return {
+        rotation:    snapped,
+        rawRotation: Math.round(rawRotation),
+        confidence:  confidence,
+        desc:        descs[snapped] || ('Rotate ' + Math.round(rawRotation) + '°')
+      };
+    }
+
+    // Calculate overlay bounds from real-world dimensions, centred on current map view.
+    function _soCalcScaleBounds(widthM, heightM) {
+      var c = map.getCenter();
+      var mPerDegLat = 111320;
+      var mPerDegLng = 111320 * Math.cos(c.lat * Math.PI / 180);
+      var latH = (heightM / 2) / mPerDegLat;
+      var lngH = (widthM  / 2) / mPerDegLng;
+      return [[c.lat - latH, c.lng - lngH], [c.lat + latH, c.lng + lngH]];
+    }
+
+    // Show detected scale / north dialog after rendering a page.
+    function _soShowScaleNorthDialog(opts) {
+      var old = document.getElementById('_soScaleNorthDlg');
+      if (old) old.remove();
+
+      var scaleResult = opts.scaleResult;
+      var northResult = opts.northResult;
+
+      var bodyHtml = '<p class="rn-modal-desc">The following were detected in the PDF. Apply them to the overlay?</p>';
+
+      if (scaleResult) {
+        bodyHtml +=
+          '<label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;cursor:pointer;">' +
+          '<input type="checkbox" id="_soApplyScale" checked style="margin-top:2px;flex-shrink:0;">' +
+          '<span><strong style="font-size:13px;">Scale 1:' + scaleResult.ratio + '</strong><br>' +
+          '<span style="color:#64748b;font-size:12px;">Overlay will be sized to approx. ' +
+          scaleResult.widthM + ' m × ' + scaleResult.heightM + ' m</span></span></label>';
       }
 
-      // Show a quick loading toast
-      showToast('Loading PDF\u2026', 6000);
+      if (northResult && northResult.rotation !== 0) {
+        bodyHtml +=
+          '<label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;cursor:pointer;">' +
+          '<input type="checkbox" id="_soApplyNorth" checked style="margin-top:2px;flex-shrink:0;">' +
+          '<span><strong style="font-size:13px;">North indicator — ' + northResult.desc + '</strong>' +
+          (northResult.confidence === 'low'
+            ? '<br><span style="color:#f59e0b;font-size:12px;">Low confidence — verify after placement</span>'
+            : '') +
+          '</span></label>';
+      } else if (northResult && northResult.rotation === 0) {
+        bodyHtml += '<p style="color:#64748b;font-size:12px;margin:0 0 14px;">✓ North indicator detected — plan is already oriented correctly.</p>';
+      }
 
+      bodyHtml += '<p style="color:#94a3b8;font-size:11px;margin:0;">You can adjust position and rotation after placement.</p>';
+
+      var dlg = document.createElement('div');
+      dlg.id  = '_soScaleNorthDlg';
+      dlg.className = 'rn-overlay';
+      dlg.innerHTML =
+        '<div class="rn-modal rn-modal-sm" style="max-width:440px;">' +
+          '<div class="rn-modal-hdr">' +
+            '<span class="rn-modal-title">Site plan detected</span>' +
+          '</div>' +
+          '<div class="rn-modal-body">' + bodyHtml + '</div>' +
+          '<div class="rn-modal-footer">' +
+            '<button class="rn-btn rn-btn-cancel" id="_soSnManual">Place manually</button>' +
+            '<button class="rn-btn rn-btn-ok" id="_soSnApply">Apply &amp; Place</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(dlg);
+
+      function _applyAndPlace(useScale, useNorth) {
+        dlg.remove();
+        var addOpts = { imageSrc: opts.imageSrc, name: opts.name };
+        if (useScale && scaleResult)
+          addOpts.bounds = _soCalcScaleBounds(scaleResult.widthM, scaleResult.heightM);
+        if (useNorth && northResult && northResult.rotation !== 0)
+          addOpts.rotation = northResult.rotation;
+        _soAddOverlay(addOpts);
+      }
+
+      document.getElementById('_soSnApply').onclick = function() {
+        var scaleChk = document.getElementById('_soApplyScale');
+        var northChk = document.getElementById('_soApplyNorth');
+        _applyAndPlace(scaleChk && scaleChk.checked, northChk && northChk.checked);
+      };
+      document.getElementById('_soSnManual').onclick = function() {
+        dlg.remove();
+        _soAddOverlay({ imageSrc: opts.imageSrc, name: opts.name });
+      };
+    }
+
+    // Render chosen page at full quality, run detectors, then show dialog or place directly.
+    function _soRenderAndPlace(pdf, pageNum, name) {
+      showToast('Rendering page ' + pageNum + '…', 6000);
+      var numPages = pdf.numPages;
+
+      pdf.getPage(pageNum).then(function(page) {
+        var viewport0 = page.getViewport({ scale: 1 });
+        var renderScale = 1500 / viewport0.width;
+        var vp     = page.getViewport({ scale: renderScale });
+        var canvas = document.createElement('canvas');
+        canvas.width  = Math.round(vp.width);
+        canvas.height = Math.round(vp.height);
+        var ctx = canvas.getContext('2d');
+
+        var renderPromise = page.render({ canvasContext: ctx, viewport: vp }).promise;
+        var textPromise   = page.getTextContent();
+
+        Promise.all([renderPromise, textPromise]).then(function(results) {
+          var tc          = results[1];
+          var dataUrl     = canvas.toDataURL('image/png', 0.92);
+          var scaleResult = _soDetectScale(tc.items, viewport0);
+          var northResult = _soDetectNorth(tc.items, viewport0);
+
+          if (scaleResult || northResult) {
+            _soShowScaleNorthDialog({ imageSrc: dataUrl, name: name,
+                                      scaleResult: scaleResult, northResult: northResult });
+          } else {
+            _soAddOverlay({ imageSrc: dataUrl, name: name });
+          }
+        }).catch(function(e) {
+          console.error('PDF render/text error:', e);
+          alert('Could not render the PDF page as an image.');
+        });
+      });
+
+      // Background: extract text from all pages for keyword scan / project name
+      var allTextPromises = [];
+      for (var p = 1; p <= numPages; p++) {
+        allTextPromises.push(pdf.getPage(p).then(function(pg) {
+          return pg.getTextContent().then(function(tc) {
+            var rows = {};
+            tc.items.forEach(function(it) {
+              if (!it.str) return;
+              var y = Math.round((it.transform ? it.transform[5] : 0) / 4) * 4;
+              if (!rows[y]) rows[y] = [];
+              rows[y].push({ x: it.transform ? it.transform[4] : 0, str: it.str });
+            });
+            var ySorted = Object.keys(rows).map(Number).sort(function(a, b) { return b - a; });
+            return ySorted.map(function(y) {
+              return rows[y].sort(function(a, b) { return a.x - b.x; }).map(function(it) { return it.str; }).join(' ');
+            }).join('\n');
+          });
+        }));
+      }
+      Promise.all(allTextPromises).then(function(pages) {
+        var fullText = pages.join('\n');
+        if (typeof _soPdfScanSources     === 'function') _soPdfScanSources(fullText);
+        if (typeof updatePDCProvisions   === 'function') setTimeout(updatePDCProvisions, 50);
+        if (typeof window._soPdfExtractProjectName   === 'function') window._soPdfExtractProjectName(fullText);
+        if (typeof window._soPdfExtractProjectNumber === 'function') window._soPdfExtractProjectNumber(fullText);
+      }).catch(function(e) { console.warn('PDF text extraction failed:', e); });
+    }
+
+    // Show thumbnail grid so the user can pick which PDF page to use as the overlay.
+    function _soShowPagePicker(pdf, name) {
+      var numPages     = pdf.numPages;
+      var maxDisplay   = Math.min(numPages, 20);
+      var selectedPage = null;
+
+      var old = document.getElementById('_soPagePickerDlg');
+      if (old) old.remove();
+
+      var dlg = document.createElement('div');
+      dlg.id  = '_soPagePickerDlg';
+      dlg.className = 'rn-overlay';
+      dlg.innerHTML =
+        '<div class="rn-modal rn-modal-lg">' +
+          '<div class="rn-modal-hdr">' +
+            '<span class="rn-modal-title">Select page — ' + name + '</span>' +
+            '<button class="rn-modal-close" id="_soPagePickerClose">×</button>' +
+          '</div>' +
+          '<div class="rn-modal-body">' +
+            '<p class="rn-modal-desc">This PDF has ' + numPages + ' page' + (numPages !== 1 ? 's' : '') +
+              (numPages > 20 ? '. Showing pages 1–20.' : '.') +
+              ' Select the page to use as the map overlay.</p>' +
+            '<div id="_soPageGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;"></div>' +
+          '</div>' +
+          '<div class="rn-modal-footer">' +
+            '<button class="rn-btn rn-btn-cancel" id="_soPagePickerCancel">Cancel</button>' +
+            '<button class="rn-btn rn-btn-ok" id="_soPagePickerUse" disabled>Use this page</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(dlg);
+
+      var grid   = document.getElementById('_soPageGrid');
+      var useBtn = document.getElementById('_soPagePickerUse');
+
+      function _closePicker() { dlg.remove(); }
+      document.getElementById('_soPagePickerClose').onclick  = _closePicker;
+      document.getElementById('_soPagePickerCancel').onclick = _closePicker;
+
+      useBtn.onclick = function() {
+        if (!selectedPage) return;
+        _closePicker();
+        _soRenderAndPlace(pdf, selectedPage, name);
+      };
+
+      // Render thumbnails sequentially to avoid overloading the renderer
+      var thumbChain = Promise.resolve();
+      for (var pi = 1; pi <= maxDisplay; pi++) {
+        (function(pageNum) {
+          var cell = document.createElement('div');
+          cell.dataset.page = pageNum;
+          cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:6px;' +
+                                'cursor:pointer;padding:6px;border-radius:8px;' +
+                                'border:2px solid transparent;transition:border-color 0.15s;';
+          var placeholder = document.createElement('div');
+          placeholder.style.cssText = 'width:120px;height:90px;background:#f1f5f9;border-radius:4px;' +
+                                       'display:flex;align-items:center;justify-content:center;' +
+                                       'color:#94a3b8;font-size:11px;';
+          placeholder.textContent = 'Page ' + pageNum;
+          var lbl = document.createElement('span');
+          lbl.style.cssText = 'font-size:11px;color:#64748b;';
+          lbl.textContent = 'Page ' + pageNum;
+          cell.appendChild(placeholder);
+          cell.appendChild(lbl);
+          grid.appendChild(cell);
+
+          cell.onclick = function() {
+            grid.querySelectorAll('[data-page]').forEach(function(c) {
+              c.style.borderColor = 'transparent'; c.style.background = '';
+            });
+            cell.style.borderColor = '#1e2430';
+            cell.style.background  = '#f0f4ff';
+            selectedPage = pageNum;
+            useBtn.disabled = false;
+          };
+
+          thumbChain = thumbChain.then(function() {
+            return pdf.getPage(pageNum).then(function(pg) {
+              var vp0  = pg.getViewport({ scale: 1 });
+              var sc   = 150 / vp0.width;
+              var tvp  = pg.getViewport({ scale: sc });
+              var tc   = document.createElement('canvas');
+              tc.width  = Math.round(tvp.width);
+              tc.height = Math.round(tvp.height);
+              return pg.render({ canvasContext: tc.getContext('2d'), viewport: tvp }).promise.then(function() {
+                var img = document.createElement('img');
+                img.src = tc.toDataURL('image/jpeg', 0.75);
+                img.style.cssText = 'width:' + tc.width + 'px;height:' + tc.height + 'px;' +
+                                    'border-radius:4px;display:block;max-width:100%;';
+                cell.replaceChild(img, placeholder);
+              });
+            }).catch(function() {});
+          });
+        })(pi);
+      }
+    }
+
+    function _soPdfProcess(file) {
+      var name = file.name.replace(/\.pdf$/i, '');
+      showToast('Loading PDF…', 6000);
       var reader = new FileReader();
       reader.onload = function(ev) {
         var arrayBuffer = ev.target.result;
-
         _withPdfJs(function(pdfjs) {
           pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) }).promise
             .then(function(pdf) {
-              var numPages = pdf.numPages;
-
-              // ── 1. Render page 1 to canvas → dataURL → overlay ──────────
-              pdf.getPage(1).then(function(page) {
-                // Use a scale that gives ~1500px wide render for good quality
-                var viewport = page.getViewport({ scale: 1 });
-                var targetW  = 1500;
-                var scale    = targetW / viewport.width;
-                var vp       = page.getViewport({ scale: scale });
-
-                var canvas  = document.createElement('canvas');
-                canvas.width  = Math.round(vp.width);
-                canvas.height = Math.round(vp.height);
-                var ctx = canvas.getContext('2d');
-
-                page.render({ canvasContext: ctx, viewport: vp }).promise.then(function() {
-                  var dataUrl = canvas.toDataURL('image/png', 0.92);
-                  _soAddOverlay({ imageSrc: dataUrl, name: name });
-                }).catch(function(e) {
-                  console.error('PDF render error:', e);
-                  alert('Could not render the PDF page as an image.');
-                });
-              });
-
-              // ── 2. Extract text from all pages for address detection ─────
-              var allTextPromises = [];
-              for (var p = 1; p <= numPages; p++) {
-                allTextPromises.push(pdf.getPage(p).then(function(pg) {
-                  return pg.getTextContent().then(function(tc) {
-                    // Group items into lines using vertical position (transform[5] = y).
-                    // Items with similar y-coordinates are on the same line.
-                    // This preserves "SCOTCH COLLEGE PAVILION" as one line even when
-                    // the PDF stores each word as a separate text item.
-                    var rows = {};
-                    tc.items.forEach(function(it) {
-                      if (!it.str) return;
-                      var y = Math.round((it.transform ? it.transform[5] : 0) / 4) * 4; // bucket to nearest 4pt
-                      if (!rows[y]) rows[y] = [];
-                      rows[y].push({ x: it.transform ? it.transform[4] : 0, str: it.str });
-                    });
-                    // Sort rows by y descending (top of page first), items by x ascending
-                    var ySorted = Object.keys(rows).map(Number).sort(function(a, b) { return b - a; });
-                    return ySorted.map(function(y) {
-                      return rows[y].sort(function(a, b) { return a.x - b.x; }).map(function(it) { return it.str; }).join(' ');
-                    }).join('\n');
-                  });
-                }));
+              if (pdf.numPages === 1) {
+                _soRenderAndPlace(pdf, 1, name);
+              } else {
+                _soShowPagePicker(pdf, name);
               }
-              Promise.all(allTextPromises).then(function(pages) {
-                var fullText = pages.join('\n');
-                // Keyword scan for suggested noise sources
-                if (typeof _soPdfScanSources === 'function') _soPdfScanSources(fullText);
-                if (typeof updatePDCProvisions === 'function') setTimeout(updatePDCProvisions, 50);
-                // Extract project name and number from title block
-                if (typeof window._soPdfExtractProjectName   === 'function') window._soPdfExtractProjectName(fullText);
-                if (typeof window._soPdfExtractProjectNumber === 'function') window._soPdfExtractProjectNumber(fullText);
-              }).catch(function(e) {
-                console.warn('PDF text extraction failed:', e);
-              });
             })
             .catch(function(e) {
               console.error('PDF load error:', e);
