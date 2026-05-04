@@ -418,6 +418,8 @@ input[type="number"]{width:100%;border:1px solid var(--border);border-radius:10p
   border: 1px solid rgba(255,255,255,.2);
   border-radius: 3px;
 }
+/* Native option dropdown renders on white — force dark legible text */
+.mp-sub-row select option { color: #1e293b; background: #fff; }
 /* Lmax method div flows as column when shown (JS sets display:flex) */
 #noiseMapLmaxMethodRow { flex-direction: column; }
 /* noiseMapControls flows as column when shown (JS sets display:flex) */
@@ -2680,11 +2682,13 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 400;
   color: #1e293b;
   white-space: nowrap;
 }
+/* Override #app-header-actions .pdf-btn (ID specificity) for buttons inside the overflow menu */
+#app-header-actions .toolbar-overflow-menu button { color: #1e293b; font-size: 10px; font-weight: 400; }
 .toolbar-overflow-menu button:hover { background: #f1f5f9; }
 
 /* Crosshair cursor, no hover effects, and tooltip suppression in placement mode.
@@ -2694,6 +2698,59 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 #noise-map.placement-mode .leaflet-container { cursor: crosshair !important; }
 #noise-map.placement-mode .leaflet-interactive { pointer-events: none; cursor: crosshair !important; }
 #noise-map.placement-mode .leaflet-tooltip { display: none !important; }
+
+/* ── Unified modal design system ───────────────────────────────────── */
+.rn-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+}
+.rn-modal {
+  background: #fff; border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+  width: 90%; display: flex; flex-direction: column;
+  max-height: 90vh; overflow: hidden; font-family: inherit; font-size: 13px;
+}
+.rn-modal-sm { max-width: 400px; }
+.rn-modal-md { max-width: 540px; }
+.rn-modal-lg { max-width: 760px; }
+.rn-modal-xl { max-width: 900px; }
+.rn-modal-hdr {
+  background: #1e2430; border-radius: 10px 10px 0 0;
+  padding: 12px 20px; display: flex;
+  align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+.rn-modal-title { font-size: 14px; font-weight: 600; color: #f1f5f9; margin: 0; }
+.rn-modal-close {
+  background: none; border: none; cursor: pointer;
+  color: #9ca3af; font-size: 18px; line-height: 1; padding: 0 2px;
+}
+.rn-modal-close:hover { color: #f1f5f9; }
+.rn-modal-body {
+  padding: 20px; color: #1e293b; font-size: 13px;
+  line-height: 1.55; overflow-y: auto; flex: 1;
+}
+.rn-modal-body p, .rn-modal-desc {
+  color: #64748b; font-size: 12px; margin: 0 0 16px;
+}
+.rn-modal-body label { color: #1e293b; font-size: 12px; font-weight: 600; }
+.rn-modal-footer {
+  padding: 12px 20px; background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0;
+}
+.rn-btn {
+  padding: 7px 16px; font-size: 12px; font-weight: 500;
+  border-radius: 6px; cursor: pointer; font-family: inherit; white-space: nowrap; border: none;
+}
+.rn-btn-cancel { background: transparent; border: 1px solid #cbd5e1; color: #64748b; }
+.rn-btn-cancel:hover { background: #f1f5f9; }
+.rn-btn-ok { background: #1e2430; border: none; color: #fff; }
+.rn-btn-ok:hover { background: #2d3748; }
+.rn-btn-gold { background: #f2cb00; border: none; color: #1e2430; font-weight: 600; }
+.rn-btn-gold:hover { background: #e6bb00; }
+.rn-btn-danger { background: #dc2626; border: none; color: #fff; }
+.rn-btn-danger:hover { background: #b91c1c; }
 
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous"/>
@@ -2780,7 +2837,6 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
           style="flex:1;min-width:0;box-sizing:border-box;border:none;border-bottom:1px solid #e5e7eb;background:transparent;font-size:12px;font-weight:600;color:#1e293b;padding:3px 2px 2px;outline:none;font-family:inherit;"
           onfocus="this.style.borderBottomColor='#2563eb';"
           onblur="this.style.borderBottomColor='#e5e7eb';">
-        <button type="button" id="uploadProposalBtn" class="toolbar-secondary" title="Upload a Resonate proposal PDF to auto-fill project number and name" style="flex-shrink:0;display:inline-flex;align-items:center;gap:4px;padding:7px 10px;background:rgba(26,32,44,.9);color:#f3f4f6;border:none;border-radius:7px;font-size:12px;font-weight:600;letter-spacing:.02em;line-height:14px;white-space:nowrap;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.4);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(45,55,72,.95)'" onmouseout="this.style.background='rgba(26,32,44,.9)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload proposal</button>
         <input type="file" id="proposalFileInput" accept=".pdf,application/pdf" style="display:none;">
       </div>
 
@@ -3828,15 +3884,15 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
           <!-- ── End floating panels ── -->
 
           <!-- ── Custom Source Wizard Modal ── -->
-          <div id="customSrcWizardOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.38);z-index:9000;align-items:center;justify-content:center;">
-            <div id="customSrcWizardModal" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.18);width:420px;max-width:96vw;max-height:90vh;overflow-y:auto;font-size:13px;line-height:1.4;">
+          <div id="customSrcWizardOverlay" class="rn-overlay" style="display:none;">
+            <div id="customSrcWizardModal" class="rn-modal rn-modal-sm">
               <!-- Wizard Step 1: metric selector -->
               <div id="cswStep1">
-                <div style="background:rgba(26,32,44,.92);border-radius:10px 10px 0 0;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
-                  <span style="font-size:13px;font-weight:600;letter-spacing:.02em;color:#f3f4f6;">Add custom source — select type</span>
-                  <button onclick="closeCustomSourceWizard()" style="background:none;border:none;color:#9ca3af;font-size:16px;cursor:pointer;padding:0 2px;line-height:1;" title="Cancel" onmouseenter="this.style.color='#fff'" onmouseleave="this.style.color='#9ca3af'">&times;</button>
+                <div class="rn-modal-hdr">
+                  <span class="rn-modal-title">Add custom source — select type</span>
+                  <button onclick="closeCustomSourceWizard()" class="rn-modal-close" title="Cancel">&times;</button>
                 </div>
-                <div style="padding:14px 14px 8px;">
+                <div class="rn-modal-body">
                   <div style="font-size:11px;color:#64748b;margin-bottom:12px;">Choose the noise metric that describes this source.</div>
                   <div style="display:flex;flex-direction:column;gap:6px;">
                     <button onclick="cswSelectMetric('Lw')" style="display:flex;align-items:center;gap:12px;text-align:left;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;transition:background 0.12s;" onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background='#fff'">
@@ -3857,26 +3913,26 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
                     </button>
                   </div>
                 </div>
-                <div style="padding:8px 14px 12px;display:flex;justify-content:flex-end;border-top:1px solid #e2e8f0;margin-top:8px;">
-                  <button onclick="closeCustomSourceWizard()" class="mp-btn" style="padding:4px 14px;color:rgba(26,32,44,.92);">Cancel</button>
+                <div class="rn-modal-footer">
+                  <button onclick="closeCustomSourceWizard()" class="rn-btn rn-btn-cancel">Cancel</button>
                 </div>
               </div>
 
               <!-- Wizard Step 2: data entry form (populated by cswSelectMetric) -->
               <div id="cswStep2" style="display:none;">
-                <div style="background:rgba(26,32,44,.92);border-radius:10px 10px 0 0;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
-                  <span id="cswStep2Title" style="font-size:13px;font-weight:600;letter-spacing:.02em;color:#f3f4f6;">Add source</span>
-                  <button onclick="closeCustomSourceWizard()" style="background:none;border:none;color:#9ca3af;font-size:16px;cursor:pointer;padding:0 2px;line-height:1;" title="Cancel" onmouseenter="this.style.color='#fff'" onmouseleave="this.style.color='#9ca3af'">&times;</button>
+                <div class="rn-modal-hdr">
+                  <span id="cswStep2Title" class="rn-modal-title">Add source</span>
+                  <button onclick="closeCustomSourceWizard()" class="rn-modal-close" title="Cancel">&times;</button>
                 </div>
-                <div id="cswStep2Body" style="padding:14px 14px 8px;">
+                <div id="cswStep2Body" class="rn-modal-body">
                   <!-- populated by JS -->
                 </div>
-                <div style="padding:8px 14px 12px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e2e8f0;">
-                  <button onclick="cswGoBack()" class="mp-btn" style="padding:4px 12px;color:rgba(26,32,44,.92);">&#8592; Back</button>
+                <div class="rn-modal-footer" style="justify-content:space-between;">
+                  <button onclick="cswGoBack()" class="rn-btn rn-btn-cancel">&#8592; Back</button>
                   <div style="display:flex;gap:8px;align-items:center;">
                     <span id="cswError" style="font-size:11px;color:#dc2626;display:none;"></span>
-                    <button onclick="closeCustomSourceWizard()" class="mp-btn" style="padding:4px 12px;color:rgba(26,32,44,.92);">Cancel</button>
-                    <button onclick="cswSave()" class="mp-btn" style="padding:4px 14px;background:rgba(26,32,44,.92);color:#fff;border-color:rgba(26,32,44,.92);">Save source</button>
+                    <button onclick="closeCustomSourceWizard()" class="rn-btn rn-btn-cancel">Cancel</button>
+                    <button onclick="cswSave()" class="rn-btn rn-btn-ok">Save source</button>
                   </div>
                 </div>
               </div>
@@ -5097,54 +5153,34 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
        id we set below after walking the cloned IDs. */
     var backdrop = document.createElement('div');
     backdrop.id = 'methodologyModalBackdrop';
+    backdrop.className = 'rn-overlay';
     backdrop.setAttribute('role', 'dialog');
     backdrop.setAttribute('aria-modal', 'true');
     backdrop.setAttribute('aria-labelledby', 'meth-modal-heading');
-    backdrop.style.cssText =
-      'position:fixed;inset:0;z-index:10000;' +
-      'background:rgba(0,0,0,0.5);' +
-      'display:flex;align-items:flex-start;justify-content:center;' +
-      'padding:40px 20px;overflow-y:auto;';
 
-    /* Centred white box — flat panel chrome to match the RHS drawer:
-       1px border, soft shadow, 8 px radius (same as drawer cards),
-       slimmer padding so the box reads as a panel slice rather than
-       a heavy modal. */
+    /* Centred box using rn-* design system */
     var box = document.createElement('div');
-    box.style.cssText =
-      'position:relative;background:var(--bg, #ffffff);' +
-      'max-width:760px;width:100%;max-height:85vh;' +
-      'overflow-y:auto;border-radius:8px;' +
-      'border:1px solid var(--border, #e5e7eb);' +
-      'box-shadow:0 8px 32px rgba(0,0,0,0.18);' +
-      'padding:18px 22px 22px;';
+    box.className = 'rn-modal rn-modal-lg';
 
-    /* Sticky top-right close button — sized to match drawer-panel
-       aesthetic (smaller, subtler) */
+    /* Header bar with title and close button */
+    var hdr = document.createElement('div');
+    hdr.className = 'rn-modal-hdr';
+    var titleSpan = document.createElement('span');
+    titleSpan.className = 'rn-modal-title';
+    titleSpan.textContent = 'Methodology';
+    titleSpan.id = 'meth-modal-heading';
+    hdr.appendChild(titleSpan);
     var closeBtn = document.createElement('button');
     closeBtn.type = 'button';
+    closeBtn.className = 'rn-modal-close';
     closeBtn.setAttribute('aria-label', 'Close methodology');
-    closeBtn.innerHTML = '\u00d7';
-    closeBtn.style.cssText =
-      'position:sticky;top:0;float:right;' +
-      'width:24px;height:24px;padding:0;margin:-4px -8px 0 8px;' +
-      'border:none;background:transparent;' +
-      'font-size:20px;line-height:1;color:#9ca3af;' +
-      'cursor:pointer;border-radius:4px;' +
-      'transition:color 0.15s ease, background-color 0.15s ease;';
-    closeBtn.addEventListener('mouseover', function() {
-      closeBtn.style.color = '#374151';
-      closeBtn.style.background = 'rgba(0,0,0,0.06)';
-    });
-    closeBtn.addEventListener('mouseout', function() {
-      closeBtn.style.color = '#9ca3af';
-      closeBtn.style.background = 'transparent';
-    });
+    closeBtn.innerHTML = '×';
     closeBtn.addEventListener('click', function(e) {
       e.stopPropagation();
       closeMethodologyModal();
     });
-    box.appendChild(closeBtn);
+    hdr.appendChild(closeBtn);
+    box.appendChild(hdr);
 
     /* Clone the methodology card content (not the card itself — clone
        innerHTML so PDF export path and the original DOM are untouched).
@@ -5152,6 +5188,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
        block above can apply the RHS-drawer-style headings, tables, etc. */
     var contentWrap = document.createElement('div');
     contentWrap.id = 'methodologyModalContent';
+    contentWrap.className = 'rn-modal-body';
     contentWrap.innerHTML = card.innerHTML;
     /* Namespace any IDs in the cloned content so they don't collide with
        the original DOM — the methodology card has e.g. id="opTimeNote"
@@ -5167,12 +5204,6 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
        need the body uncollapsed so the content is visible. */
     contentWrap.querySelectorAll('.collapse-btn').forEach(function(btn) { btn.remove(); });
     contentWrap.querySelectorAll('.card-body.collapsed').forEach(function(b) { b.classList.remove('collapsed'); });
-    /* Tag the heading so aria-labelledby on the backdrop can find it.
-       The methodology card's h2 lives inside the .card-header wrapper
-       added by initCollapse(); fall back to a bare h2 if the structure
-       changes in future. */
-    var modalHeading = contentWrap.querySelector('.card-header h2') || contentWrap.querySelector('h2');
-    if (modalHeading) modalHeading.id = 'meth-modal-heading';
     box.appendChild(contentWrap);
 
     /* Click on backdrop (outside box) closes the modal */
@@ -7424,7 +7455,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
       'cursor:pointer;border-radius:4px;' +
       'transition:color 0.15s ease, background-color 0.15s ease;';
     closeBtn.addEventListener('mouseover', function() {
-      closeBtn.style.color = '#e5e7eb';
+      closeBtn.style.color = '#f1f5f9';
       closeBtn.style.background = 'rgba(255,255,255,0.08)';
     });
     closeBtn.addEventListener('mouseout', function() {
@@ -15119,19 +15150,17 @@ async function generatePDFAppendix(btn) {
   // SA-only notice — PDF criteria export only supports SA criteria at present.
   var _saConfirmed = await new Promise(function(resolve) {
     var overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;';
+    overlay.className = 'rn-overlay';
+    overlay.id = 'pdfCriteriaModal';
     var box = document.createElement('div');
-    box.style.cssText = 'background:#1e2430;color:#cbd5e1;border-radius:12px;padding:28px 28px 22px;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.45);font-family:inherit;';
+    box.className = 'rn-modal rn-modal-sm';
     box.innerHTML =
-      '<p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#f1f5f9;">PDF criteria export</p>' +
-      '<p style="margin:0 0 20px;font-size:12px;line-height:1.55;color:#94a3b8;">PDF export currently only supports SA criteria. Criteria for other states are not included in the exported document.</p>' +
-      '<div style="display:flex;gap:10px;justify-content:flex-end;">' +
-        '<button id="_pdfSaCancel" style="padding:7px 18px;font-size:12px;border-radius:7px;border:1px solid rgba(203,213,225,0.25);background:transparent;color:#cbd5e1;cursor:pointer;">Cancel</button>' +
-        '<button id="_pdfSaProceed" style="padding:7px 18px;font-size:12px;border-radius:7px;border:none;background:#f2cb00;color:#1e2430;font-weight:600;cursor:pointer;">Proceed</button>' +
-      '</div>';
+      '<div class="rn-modal-hdr"><span class="rn-modal-title">Export criteria PDF</span><button class="rn-modal-close" id="pdfCriteriaClose">×</button></div>' +
+      '<div class="rn-modal-body"><p class="rn-modal-desc">PDF export currently only supports SA criteria. Criteria for other states are not included in the exported document.</p></div>' +
+      '<div class="rn-modal-footer"><button class="rn-btn rn-btn-cancel" id="_pdfSaCancel">Cancel</button><button class="rn-btn rn-btn-gold" id="_pdfSaProceed">Proceed</button></div>';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', 'PDF criteria export');
+    overlay.setAttribute('aria-label', 'Export criteria PDF');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     document.getElementById('_pdfSaProceed').focus();
@@ -15140,6 +15169,7 @@ async function generatePDFAppendix(btn) {
     document.addEventListener('keydown', _pdfEsc, true);
     overlay.addEventListener('click', function(e) { if (e.target === overlay) _dismiss(false); });
     document.getElementById('_pdfSaCancel').addEventListener('click', function() { _dismiss(false); });
+    document.getElementById('pdfCriteriaClose').addEventListener('click', function() { _dismiss(false); });
     document.getElementById('_pdfSaProceed').addEventListener('click', function() { _dismiss(true); });
   });
   if (!_saConfirmed) return;
@@ -26693,12 +26723,11 @@ setInitialCollapseState();
     var html = '';
 
     // Header row
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">';
-    html += '<h2 style="margin:0;font-size:16px;font-weight:700;color:var(--text,#111);">Scenarios</h2>';
-    html += '<button id="scenModalClose" type="button" aria-label="Close scenarios" style="' +
-      'width:24px;height:24px;padding:0;border:none;background:transparent;' +
-      'font-size:20px;line-height:1;color:#9ca3af;cursor:pointer;border-radius:4px;">\u00d7</button>';
+    html += '<div class="rn-modal-hdr">';
+    html += '<span class="rn-modal-title">Scenarios</span>';
+    html += '<button id="scenModalClose" type="button" aria-label="Close scenarios" class="rn-modal-close">\u00d7</button>';
     html += '</div>';
+    html += '<div class="rn-modal-body" id="scenModalBodyInner">';
 
     // Save button
     html += '<button id="scenSaveBtn" type="button" class="pdf-btn" style="width:100%;margin-bottom:14px;">' +
@@ -26720,13 +26749,13 @@ setInitialCollapseState();
           '</span>';
         html += '<span style="display:flex;flex-wrap:wrap;gap:6px;margin-left:10px;flex-shrink:0;">';
         html += '<button type="button" data-scen-update="' + _escapeAttr(sc.id) + '" ' +
-          'class="pdf-btn" style="font-size:11px;padding:3px 10px;margin:0;">Update</button>';
+          'class="rn-btn rn-btn-cancel" style="font-size:11px;padding:3px 10px;margin:0;">Update</button>';
         html += '<button type="button" data-scen-restore="' + _escapeAttr(sc.id) + '" ' +
-          'class="pdf-btn" style="font-size:11px;padding:3px 10px;margin:0;font-weight:700;">Restore</button>';
+          'class="rn-btn rn-btn-ok" style="font-size:11px;padding:3px 10px;margin:0;">Restore</button>';
         html += '<button type="button" data-scen-rename="' + _escapeAttr(sc.id) + '" ' +
-          'class="pdf-btn" style="font-size:11px;padding:3px 10px;margin:0;">Rename</button>';
+          'class="rn-btn rn-btn-cancel" style="font-size:11px;padding:3px 10px;margin:0;">Rename</button>';
         html += '<button type="button" data-scen-delete="' + _escapeAttr(sc.id) + '" ' +
-          'class="pdf-btn" style="font-size:11px;padding:3px 10px;margin:0;color:#dc2626;">' +
+          'class="rn-btn rn-btn-danger" style="font-size:11px;padding:3px 10px;margin:0;">' +
           'Delete</button>';
         html += '</span>';
         html += '</li>';
@@ -26777,17 +26806,13 @@ setInitialCollapseState();
       }
     }
 
+    html += '</div>'; // close rn-modal-body
+
     box.innerHTML = html;
 
     // Wire close button
     var closeBtn = box.querySelector('#scenModalClose');
     if (closeBtn) {
-      closeBtn.addEventListener('mouseover', function() {
-        closeBtn.style.color = '#374151'; closeBtn.style.background = 'rgba(0,0,0,0.06)';
-      });
-      closeBtn.addEventListener('mouseout', function() {
-        closeBtn.style.color = '#9ca3af'; closeBtn.style.background = 'transparent';
-      });
       closeBtn.addEventListener('click', function(e) { e.stopPropagation(); closeScenariosModal(); });
     }
 
@@ -27057,24 +27082,14 @@ setInitialCollapseState();
 
     var backdrop = document.createElement('div');
     backdrop.id = 'scenariosModalBackdrop';
+    backdrop.className = 'rn-overlay';
     backdrop.setAttribute('role', 'dialog');
     backdrop.setAttribute('aria-modal', 'true');
     backdrop.setAttribute('aria-label', 'Scenarios');
-    backdrop.style.cssText =
-      'position:fixed;inset:0;z-index:10000;' +
-      'background:rgba(0,0,0,0.5);' +
-      'display:flex;align-items:flex-start;justify-content:center;' +
-      'padding:40px 20px;overflow-y:auto;';
 
     var box = document.createElement('div');
     box.id = 'scenModalBox';
-    box.style.cssText =
-      'position:relative;background:var(--bg,#ffffff);' +
-      'max-width:900px;width:100%;max-height:85vh;' +
-      'overflow-y:auto;border-radius:8px;' +
-      'border:1px solid var(--border,#e5e7eb);' +
-      'box-shadow:0 8px 32px rgba(0,0,0,0.18);' +
-      'padding:18px 22px 22px;';
+    box.className = 'rn-modal rn-modal-xl';
 
     backdrop.addEventListener('click', function(e) {
       if (e.target === backdrop) closeScenariosModal();
@@ -27199,10 +27214,11 @@ setInitialCollapseState();
 
     var h = '';
     // Header
-    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">';
-    h += '<h3 style="margin:0;font-size:15px;font-weight:700;color:#111;">Submit to source library</h3>';
-    h += '<button id="slm-close" style="background:none;border:none;cursor:pointer;font-size:20px;color:#6b7280;line-height:1;padding:2px 6px;" title="Close">&times;</button>';
+    h += '<div class="rn-modal-hdr">';
+    h += '<span class="rn-modal-title">Submit source</span>';
+    h += '<button id="slm-close" class="rn-modal-close" title="Close">&times;</button>';
     h += '</div>';
+    h += '<div class="rn-modal-body">';
     // Name
     h += '<div style="' + RS + '">';
     h += '<label style="' + LS + '">Name <span style="color:#b91c1c;">*</span></label>';
@@ -27250,18 +27266,20 @@ setInitialCollapseState();
     h += '</div>';
     // Status
     h += '<div id="slm-status" style="display:none;padding:8px 12px;border-radius:4px;font-size:12px;margin-bottom:12px;"></div>';
+    h += '</div>'; // close rn-modal-body
     // Buttons
-    h += '<div style="display:flex;justify-content:flex-end;gap:8px;">';
-    h += '<button id="slm-cancel" style="padding:6px 16px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:12px;">Cancel</button>';
-    h += '<button id="slm-submit" style="padding:6px 16px;background:#6d28d9;color:#fff;border:1px solid #5b21b6;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;">Submit</button>';
+    h += '<div class="rn-modal-footer">';
+    h += '<button id="slm-cancel" class="rn-btn rn-btn-cancel">Cancel</button>';
+    h += '<button id="slm-submit" class="rn-btn rn-btn-ok">Submit</button>';
     h += '</div>';
 
     var backdrop = document.createElement('div');
-    backdrop.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.5);display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;';
+    backdrop.className = 'rn-overlay';
+    backdrop.style.cssText = 'z-index:10001;';
     backdrop.addEventListener('click', function (e) { if (e.target === backdrop) _close(); });
 
     var box = document.createElement('div');
-    box.style.cssText = 'position:relative;background:#fff;max-width:540px;width:100%;border-radius:8px;border:1px solid #e5e7eb;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:20px 24px 24px;';
+    box.className = 'rn-modal rn-modal-md';
     box.innerHTML = h;
 
     backdrop.appendChild(box);
@@ -46548,7 +46566,7 @@ if (window.pdfjsLib) {
         'background:#fff;border:1px solid #e2e8f0;border-radius:10px;' +
         'box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:9991;overflow:hidden;}' +
       '#_gisModalHdr{display:flex;align-items:center;gap:8px;padding:10px 14px;' +
-        'background:rgba(26,32,44,.92);color:#f3f4f6;border-radius:10px 10px 0 0;flex-shrink:0;}' +
+        'background:#1e2430;color:#f3f4f6;border-radius:10px 10px 0 0;flex-shrink:0;}' +
       '#_gisModalHdr span{flex:1;font-size:13px;font-weight:600;letter-spacing:.02em;}' +
       '#_gisModalHdrClose{background:none;border:none;color:#9ca3af;font-size:16px;' +
         'cursor:pointer;padding:0 2px;line-height:1;}' +
@@ -46585,9 +46603,9 @@ if (window.pdfjsLib) {
       '.gis-footer-row{display:flex;align-items:center;gap:8px;}' +
       '.gis-footer-count{font-size:11px;color:#6b7280;flex:1;}' +
       '.gis-btn{padding:6px 14px;font-size:12px;border-radius:4px;cursor:pointer;border:1px solid #d1d5db;}' +
-      '.gis-btn-primary{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:600;}' +
-      '.gis-btn-primary:hover:not(:disabled){background:#1d4ed8;}' +
-      '.gis-btn-primary:disabled{background:#93c5fd;border-color:#93c5fd;cursor:not-allowed;}' +
+      '.gis-btn-primary{background:#1e2430;color:#fff;border-color:#1e2430;font-weight:600;}' +
+      '.gis-btn-primary:hover:not(:disabled){background:#2d3748;}' +
+      '.gis-btn-primary:disabled{background:#6b7280;border-color:#6b7280;cursor:not-allowed;}' +
       '.gis-btn-cancel{background:#fff;color:#374151;}' +
       '.gis-btn-cancel:hover{background:#f3f4f6;}' +
       '.gis-crs-block{border-top:1px solid #e5e7eb;padding:8px 10px;background:#fafbfc;}' +
@@ -48166,12 +48184,14 @@ if (window.pdfjsLib) {
 </script>
 
 <!-- ─── PDF map framing panel — must be outside #pdfArea (which is display:none when drawer closed) ── -->
-<div id="pdfFramingPanel" style="display:none;position:fixed;top:72px;left:50%;transform:translateX(-50%);z-index:10000;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.22);padding:16px 18px;min-width:280px;max-width:360px;flex-direction:column;gap:10px;">
-  <div style="font-weight:700;font-size:13px;color:#1e293b;">Prepare map for PDF</div>
-  <div style="font-size:12px;color:#475569;line-height:1.55;">Adjust the zoom and pan of the map to frame your site and receivers as they should appear in the PDF zone map figure. Click <b>Accept</b> when ready.</div>
-  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:2px;">
-    <button id="pdfFrameCancelBtn" style="padding:5px 14px;font-size:12px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;cursor:pointer;">Cancel</button>
-    <button id="pdfFrameAcceptBtn" style="padding:5px 14px;font-size:12px;border:none;border-radius:6px;background:#1e293b;color:#fff;cursor:pointer;">Accept</button>
+<div id="pdfFramingPanel" style="display:none;position:fixed;top:72px;left:50%;transform:translateX(-50%);z-index:10000;min-width:280px;max-width:360px;flex-direction:column;">
+  <div class="rn-modal" style="max-width:360px;">
+    <div class="rn-modal-hdr"><span class="rn-modal-title">Prepare map for PDF</span></div>
+    <div class="rn-modal-body"><p>Adjust the zoom and pan of the map to frame your site and receivers as they should appear in the PDF zone map figure. Click <b>Accept</b> when ready.</p></div>
+    <div class="rn-modal-footer">
+      <button id="pdfFrameCancelBtn" class="rn-btn rn-btn-cancel">Cancel</button>
+      <button id="pdfFrameAcceptBtn" class="rn-btn rn-btn-ok">Accept</button>
+    </div>
   </div>
 </div>
 <script>
