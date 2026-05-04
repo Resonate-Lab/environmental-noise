@@ -32664,20 +32664,48 @@ if (window.pdfjsLib) {
     function _soDetectNorth(textItems, viewport0) {
       var cx = viewport0.width  / 2;
       var cy = viewport0.height / 2;
-      var northPat = /^(N|NORTH|TRUE\s+NORTH|N\s*↑)$/i;
-      var best = null;
+
+      // North label variants found on engineering site plans:
+      //   N  N.  N°  N↑  N↗  N⬆  NORTH  TRUE NORTH  TRUE N
+      var northPat = /^N[.°↑↗⬆]?$|^(NORTH|TRUE\s*NORTH|TRUE\s*N)$/i;
+      // Standalone up-arrow used as a north symbol (no N label)
+      var arrowPat = /^[↑⬆]$/;
+      // South label — when found alongside N, use N↔S axis (much more reliable
+      // than N position relative to page centre, especially for off-centre symbols)
+      var southPat = /^S[.]?$|^SOUTH$/i;
+
+      var northItem = null;
+      var southItem = null;
+
       (textItems || []).forEach(function(item) {
         if (!item.transform) return;
-        if (northPat.test((item.str || '').trim())) best = item;
+        var s = (item.str || '').trim();
+        if (!s) return;
+        if (!northItem && (northPat.test(s) || arrowPat.test(s))) northItem = item;
+        if (!southItem && southPat.test(s)) southItem = item;
       });
-      if (!best) return null;
-      var dx = best.transform[4] - cx;
-      var dy = best.transform[5] - cy;
+
+      if (!northItem) return null;
+
+      var dx, dy;
+      if (southItem) {
+        // Vector from S to N points north — use it directly
+        dx = northItem.transform[4] - southItem.transform[4];
+        dy = northItem.transform[5] - southItem.transform[5];
+      } else {
+        // Fall back: N position relative to page centre
+        dx = northItem.transform[4] - cx;
+        dy = northItem.transform[5] - cy;
+      }
+
+      // Angle from "up" clockwise: 0=top, 90=right, 180=bottom, 270=left
       var angleDeg = Math.atan2(dx, dy) * 180 / Math.PI;
       angleDeg = ((angleDeg % 360) + 360) % 360;
       var rawRotation = (((-angleDeg) % 360) + 360) % 360;
       var snapped = Math.round(rawRotation / 90) * 90 % 360;
-      var confidence = Math.abs(rawRotation - snapped) <= 20 ? 'high' : 'low';
+      // N+S cross-validation gives high confidence regardless of snap distance
+      var confidence = southItem ? 'high'
+                     : Math.abs(rawRotation - snapped) <= 20 ? 'high' : 'low';
       var descs = {
         0:   'North is already at the top',
         90:  'Rotate 90° clockwise',
