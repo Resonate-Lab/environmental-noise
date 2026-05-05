@@ -3707,8 +3707,8 @@ body.panel-resizing #map-column {
                 <button class="mp-btn aerial-toggle-btn" id="aerialToggleBtn" title="Toggle aerial imagery overlay (I)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8"/><ellipse cx="12" cy="12" rx="4" ry="9"/></svg> Aerial<span class="mp-kbd">I</span></button>
                 <div id="aerialOpacityRow" style="display:flex;align-items:center;gap:8px;margin-top:7px;">
                   <label for="aerialOpacitySlider" style="font-size:11px;color:var(--muted);white-space:nowrap;">Opacity</label>
-                  <input type="range" id="aerialOpacitySlider" min="0" max="100" value="70" step="5" style="flex:1;cursor:pointer;" title="Aerial opacity">
-                  <span id="aerialOpacityVal" style="font-size:11px;color:var(--muted);width:32px;text-align:right;">70%</span>
+                  <input type="range" id="aerialOpacitySlider" min="0" max="100" value="100" step="5" style="flex:1;cursor:pointer;" title="Aerial opacity">
+                  <span id="aerialOpacityVal" style="font-size:11px;color:var(--muted);width:32px;text-align:right;">100%</span>
                 </div>
               </section>
 
@@ -28430,7 +28430,7 @@ if (window.pdfjsLib) {
     streetLayer.addTo(map);
     var AERIAL_OPACITY_KEY = 'resonate_aerial_opacity';
     var aerialOpacity = Math.min(1, Math.max(0,
-      parseFloat(localStorage.getItem(AERIAL_OPACITY_KEY) || '0.7')));
+      parseFloat(localStorage.getItem(AERIAL_OPACITY_KEY) || '1')));
     aerialLayer.addTo(map);
     aerialLayer.setOpacity(aerialOpacity);
     var isAerial = true;
