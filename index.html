@@ -3361,6 +3361,8 @@ body.panel-resizing #map-column {
                 if (libraryPanelEl) appLayout.insertBefore(libraryPanelEl, mapCol);
                 var toolsPanelEl = document.getElementById('toolsPanel');
                 if (toolsPanelEl) appLayout.insertBefore(toolsPanelEl, mapCol);
+                var annotationsPanelEl = document.getElementById('annotationsPanel');
+                if (annotationsPanelEl) appLayout.insertBefore(annotationsPanelEl, mapCol);
                 appLayout.insertBefore(searchPopover, mapCol);
 
                 function nudgeMap() {
