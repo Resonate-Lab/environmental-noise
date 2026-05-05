@@ -10,7 +10,7 @@ http.createServer((req, res) => {
     if (e) { res.writeHead(404); res.end('Not found'); return; }
     const ext = path.extname(fp).slice(1);
     const ct = { html: 'text/html', js: 'application/javascript', css: 'text/css', json: 'application/json' }[ext] || 'text/plain';
-    res.writeHead(200, { 'Content-Type': ct });
+    res.writeHead(200, { 'Content-Type': ct, 'Cache-Control': 'no-cache, no-store, must-revalidate' });
     res.end(d);
   });
 }).listen(3737, () => console.log('Server on 3737'));

@@ -1500,13 +1500,9 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   background: #f3f4f6;
 }
 
-/* Disclaimer banner — fixed slim bar at the bottom of the map column */
+/* Disclaimer banner — flex child below #app-layout in body column */
 #construction-banner {
-  position: fixed;
-  bottom: 0;
-  left: var(--side-panel-width, 76px);
-  right: var(--rhs-strip-width, 76px);
-  z-index: 10000;
+  flex-shrink: 0;
   padding: 5px 16px;
   font-size: 11px;
   font-weight: 400;
@@ -1515,10 +1511,6 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   border-top: 1px solid rgba(255,255,255,0.06);
   text-align: center;
   letter-spacing: 0.01em;
-}
-#construction-banner::before {
-  content: '';
-  margin-right: 0;
 }
 
 #app-layout {
@@ -1533,10 +1525,14 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
 #map-column {
   position: absolute;
   top: 0;
-  right: var(--rhs-strip-width, 76px);
+  right: calc(var(--rhs-strip-width, 76px) + var(--rhs-open-extra, 0px));
   bottom: 0;
   left: var(--side-panel-width);
   z-index: 1;
+  transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+body.panel-resizing #map-column {
+  transition: none;
 }
 #app-layout.side-panel-collapsed #map-column {
   left: 0;
@@ -2423,7 +2419,7 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   top: 0;
   bottom: 0;
   width: 16px;
-  cursor: pointer;                  /* click-to-toggle is the primary action */
+  cursor: col-resize;
   z-index: 10;
   background: transparent;
   background-clip: content-box;
@@ -2967,6 +2963,7 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
               var mc = document.getElementById('map-column');
               if (mc) mc.style.left = (spW + panel.offsetWidth) + 'px';
               if (window._map && typeof window._map.invalidateSize === 'function') window._map.invalidateSize();
+              _positionLhsResizeHandle(panel);
             }
 
             function _closeSlideoutPanel(panelId) {
@@ -2985,10 +2982,80 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
                 mc.style.left = sp.getBoundingClientRect().width + 'px';
               }
               if (window._map && typeof window._map.invalidateSize === 'function') window._map.invalidateSize();
+              _hideLhsResizeHandle();
             }
 
             function closeAllSlideouts() {
               Object.keys(_slideoutPanels).forEach(function(id) { _closeSlideoutPanel(id); });
+              _hideLhsResizeHandle();
+            }
+
+            // ── LHS slide-out drag-to-resize ──────────────────────────────
+            function _getActiveSlideoutPanel() {
+              return Object.keys(_slideoutPanels).reduce(function(found, id) {
+                if (found) return found;
+                var el = document.getElementById(id);
+                return (el && !el.hidden) ? el : null;
+              }, null);
+            }
+
+            var _lhsResizeHandle = (function() {
+              var el = document.createElement('div');
+              el.id = 'lhs-resize-handle';
+              el.style.cssText = 'position:fixed;top:0;bottom:0;width:16px;' +
+                'cursor:col-resize;z-index:9999;display:none;' +
+                'background:transparent;background-clip:content-box;' +
+                'padding:0 5px;box-sizing:border-box;transition:background 0.15s;';
+              document.body.appendChild(el);
+
+              el.addEventListener('mouseenter', function() {
+                el.style.background = 'rgba(74,144,217,0.35)';
+              });
+              el.addEventListener('mouseleave', function() {
+                if (!el._dragging) el.style.background = '';
+              });
+              el.addEventListener('mousedown', function(e) {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                var activePanel = _getActiveSlideoutPanel();
+                if (!activePanel) return;
+                var startX = e.clientX;
+                var startW = activePanel.offsetWidth;
+                el._dragging = true;
+                el.style.background = 'rgba(74,144,217,0.35)';
+                document.body.classList.add('panel-resizing');
+                document.body.style.userSelect = 'none';
+                function onMove(ev) {
+                  var newW = Math.max(200, Math.min(700, startW + (ev.clientX - startX)));
+                  activePanel.style.width = newW + 'px';
+                  var mc = document.getElementById('map-column');
+                  var sp = document.getElementById('side-panel');
+                  if (mc && sp) mc.style.left = (sp.offsetWidth + newW) + 'px';
+                  _positionLhsResizeHandle(activePanel);
+                  if (window._map) window._map.invalidateSize();
+                }
+                function onUp() {
+                  el._dragging = false;
+                  el.style.background = '';
+                  document.body.classList.remove('panel-resizing');
+                  document.body.style.userSelect = '';
+                  document.removeEventListener('mousemove', onMove);
+                  document.removeEventListener('mouseup', onUp);
+                }
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+              });
+              return el;
+            })();
+
+            function _positionLhsResizeHandle(panel) {
+              var r = panel.getBoundingClientRect();
+              _lhsResizeHandle.style.left = (r.right - 8) + 'px';
+              _lhsResizeHandle.style.display = '';
+            }
+
+            function _hideLhsResizeHandle() {
+              _lhsResizeHandle.style.display = 'none';
             }
 
             /* In-panel mode banner for the Modelling (toolsPanel) slide-out */
@@ -8253,9 +8320,12 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   csDiv.id = 'compliance-strip';
   csDiv.innerHTML = '<div class="cs-empty">Place source and receivers to see compliance</div>';
 
+  var drawerResizeHandle = document.createElement('div');
+  drawerResizeHandle.id = 'drawer-resize-handle';
   drawerPanel.appendChild(drawerHeader);
   drawerPanel.appendChild(csDiv);
   drawerPanel.appendChild(drawerContent);
+  drawerPanel.appendChild(drawerResizeHandle);
 
   // ── 3. Move panels into drawer ─────────────────────────────────────
   // Collect everything that goes in the drawer:
@@ -8474,8 +8544,8 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   // Insert into the DOM: place header and layout before #pdfArea
   var body = document.body;
   body.insertBefore(appHeader, pdfArea);
-  body.insertBefore(constructionBanner, pdfArea);
   body.insertBefore(appLayout, pdfArea);
+  body.insertBefore(constructionBanner, pdfArea);
 
   // Phase 2: insert group anchors now that moved panels are back in the document
   _insertAllGroupAnchors();
@@ -8528,14 +8598,46 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   function setDrawerOpen(open, sectionId) {
     drawerPanel.classList.toggle('drawer-open', open);
     drawerPanel.classList.toggle('drawer-closed', !open);
+    // Shift map-column right edge to make room for the drawer
+    var extra = open ? drawerPanel.offsetWidth : 0;
+    document.documentElement.style.setProperty('--rhs-open-extra', extra + 'px');
     // Reflect active state on RHS icon buttons via aria-expanded
     Object.keys(_rhsSectionBtnIds).forEach(function(k) {
       var btn = document.getElementById(_rhsSectionBtnIds[k]);
       if (btn) btn.setAttribute('aria-expanded', String(open && k === sectionId));
     });
-    if (window._map && typeof window._map.invalidateSize === 'function') window._map.invalidateSize();
+    // Invalidate after the 300ms CSS transition completes
+    if (window._map) setTimeout(function() { if (window._map) window._map.invalidateSize(); }, 320);
     try { localStorage.setItem(DRAWER_KEY, open ? (sectionId || '') : ''); } catch(e) {}
   }
+
+  // ── RHS drawer drag-to-resize ─────────────────────────────────────────
+  (function() {
+    drawerResizeHandle.addEventListener('mousedown', function(e) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      var startX = e.clientX;
+      var startW = drawerPanel.offsetWidth;
+      drawerResizeHandle.classList.add('dragging');
+      document.body.classList.add('panel-resizing');
+      document.body.style.userSelect = 'none';
+      function onMove(ev) {
+        var newW = Math.max(200, Math.min(800, startW - (ev.clientX - startX)));
+        drawerPanel.style.width = newW + 'px';
+        document.documentElement.style.setProperty('--rhs-open-extra', newW + 'px');
+        if (window._map) window._map.invalidateSize();
+      }
+      function onUp() {
+        drawerResizeHandle.classList.remove('dragging');
+        document.body.classList.remove('panel-resizing');
+        document.body.style.userSelect = '';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  })();
 
   // Auto-open disabled — user opens RHS panels explicitly via icon strip
   function _maybeAutoOpenDrawer() {}

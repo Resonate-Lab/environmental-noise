@@ -1353,28 +1353,29 @@ item.addEventListener('click', function() {
 
 This avoids duplicating the export logic (which builds GeoJSON feature collections, KML placemarks, and CSV rows) — any future changes to the drawer buttons' handlers automatically flow through to the header dropdown. Toggle is `e.stopPropagation()` + `classList.toggle('open')`; outside click uses a document-level listener that removes `.open`. Menu is absolutely positioned below the button with `top: calc(100% + 4px); right: 0` so it aligns to the button's right edge (never overflows the viewport on typical button positions).
 
-### Construction banner
+### Disclaimer banner
 
-A standalone `#construction-banner` element is inserted between `#app-header` and `#app-layout`:
+A standalone `#construction-banner` element is a `flex-shrink: 0` flex child of `<body>`, inserted **after** `#app-layout` so it sits below the map without overlapping it:
 
 ```css
 #construction-banner {
   flex-shrink: 0;
-  padding: 4px 16px;
+  padding: 5px 16px;
   font-size: 11px;
-  font-weight: 600;
-  color: #92400e;
-  background: #fef3c7;
-  border-bottom: 1px solid #fcd34d;
+  font-weight: 400;
+  color: #94a3b8;
+  background: #0f172a;
+  border-top: 1px solid rgba(255,255,255,0.06);
   text-align: center;
+  letter-spacing: 0.01em;
 }
-#construction-banner::before { content: "⚠"; margin-right: 6px; }
 ```
 
-Height ≈ 23px. Created in the Phase 1 IIFE by extracting the text from the old `.sheet1` > inner warning div, then inserted into `<body>` via:
+Created in the Phase 1 IIFE and inserted into `<body>` via:
 
 ```js
 body.insertBefore(appHeader, pdfArea);
+body.insertBefore(appLayout, pdfArea);
 body.insertBefore(constructionBanner, pdfArea);
 body.insertBefore(appLayout, pdfArea);
 ```
@@ -1715,8 +1716,8 @@ The page loads with the original HTML structure intact, then an inline `<script>
 | `#app-header` | Compact header: logo + title + action buttons (row 1), under-construction notice + intro text (row 2) |
 | `#app-header-row1` | Horizontal flex row for logo, `.h1` title, Collapse All btn, Save/Load/Report/Share buttons |
 | `#app-layout` | Flex child that fills remaining viewport height below header |
-| `#map-column` | Absolutely positioned within `#app-layout`; `left` tracks LHS panel width, `right` tracks RHS drawer width (0 when closed, drawer `offsetWidth` when open). `transition: right 0.3s cubic-bezier(0.4,0,0.2,1)`. Contains `#mapInnerWrapper` (with `#noise-map`, toolbars, fullscreen sidebar), search bar overlay (`#mapSearchWrapper`), and status row |
-| `#drawer-panel` | 520px right-side panel. `position:absolute; right:0`. Animates open/closed via `transform:translateX()`. Opening sets `mapColumn.style.right` so the map shrinks rather than being overlaid. Classes: `drawer-open` / `drawer-closed` |
+| `#map-column` | Absolutely positioned within `#app-layout`; `left` set inline by `_openSlideoutPanel`/`_closeSlideoutPanel`. `right: calc(var(--rhs-strip-width, 76px) + var(--rhs-open-extra, 0px))` — `--rhs-open-extra` is set to the drawer `offsetWidth` by `setDrawerOpen` when open, 0 when closed. `transition: right 0.3s` (disabled via `body.panel-resizing` during drag). Contains `#mapInnerWrapper`, toolbars, and status row |
+| `#drawer-panel` | 480px right-side panel. `position:absolute; right: var(--rhs-strip-width)`. Animates open/closed via `transform:translateX()`. `setDrawerOpen(open)` sets `--rhs-open-extra` so the map column right edge tracks the drawer. Classes: `drawer-open` / `drawer-closed`. Drag-to-resize via `#drawer-resize-handle` (mousedown/mousemove/mouseup; clamps 200–800px; updates `--rhs-open-extra` in real-time) |
 | `#drawer-toggle` | Button docked to left edge of drawer, toggles open/closed |
 | `#drawer-content` | Scrollable container inside drawer, holds all panels in original order |
 
