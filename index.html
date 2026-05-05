@@ -28611,9 +28611,7 @@ if (window.pdfjsLib) {
     });
     // Street is always the base; aerial sits on top at adjustable opacity.
     streetLayer.addTo(map);
-    var AERIAL_OPACITY_KEY = 'resonate_aerial_opacity';
-    var aerialOpacity = Math.min(1, Math.max(0,
-      parseFloat(localStorage.getItem(AERIAL_OPACITY_KEY) || '1')));
+    var aerialOpacity = 1;  // always full opacity on load
     aerialLayer.addTo(map);
     aerialLayer.setOpacity(aerialOpacity);
     var isAerial = true;
@@ -28627,7 +28625,6 @@ if (window.pdfjsLib) {
       aerialLayer.setOpacity(aerialOpacity);
       if (aerialSlider) aerialSlider.value = Math.round(aerialOpacity * 100);
       if (aerialValEl)  aerialValEl.textContent = Math.round(aerialOpacity * 100) + '%';
-      try { localStorage.setItem(AERIAL_OPACITY_KEY, String(aerialOpacity)); } catch(e) {}
     }
     _setAerialOpacity(aerialOpacity);  // sync slider UI on load
 
