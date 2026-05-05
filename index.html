@@ -37048,17 +37048,19 @@ if (window.pdfjsLib) {
         return Number.isFinite(lpOct[b]) && Number.isFinite(cons.octaveR[b]);
       });
       if (!allValid) return null;
-      var elementAreas = 0, validElements = [];
+      var remArea = facadeArea, validElements = [];
       if (elements) elements.forEach(function(el) {
         var elA = (Number.isFinite(el.width) && Number.isFinite(el.height) && el.width > 0 && el.height > 0)
           ? el.width * el.height : (Number.isFinite(el.area) ? el.area : 0);
         if (elA <= 0 || !el.construction || !el.construction.octaveR) return;
         if (BS_OCTAVE_BANDS.every(function(b) { return Number.isFinite(el.construction.octaveR[b]); })) {
-          // Store effective area on a shadow property for use in the map below
-          elementAreas += elA; validElements.push(Object.assign({}, el, { _effectiveArea: elA }));
+          var effA = Math.min(elA, remArea);
+          if (effA <= 0) return;
+          remArea -= effA;
+          validElements.push(Object.assign({}, el, { _effectiveArea: effA }));
         }
       });
-      var residualArea = Math.max(0, facadeArea - elementAreas);
+      var residualArea = remArea;
       return BS_OCTAVE_BANDS.map(function(b, bi) {
         var linSum = 0;
         if (residualArea > 0)
@@ -37593,7 +37595,10 @@ if (window.pdfjsLib) {
 
     // ── Floating panel ────────────────────────────────────────────────────────
 
+    var _bsPanelDragCleanup = null;
+
     function closeBsPanel() {
+      if (_bsPanelDragCleanup) { _bsPanelDragCleanup(); _bsPanelDragCleanup = null; }
       var ex = document.getElementById('bsFloatPanel');
       if (ex && ex.parentNode) ex.parentNode.removeChild(ex);
       _bsPanel = null; _bsPanelId = null;
@@ -38084,11 +38089,14 @@ if (window.pdfjsLib) {
           _drg=true; _dX=ev.clientX; _dY=ev.clientY;
           var r=panel.getBoundingClientRect(); _pX=r.left; _pY=r.top;
         });
-        document.addEventListener('mousemove', function(ev) {
-          if (!_drg) return;
-          panel.style.left=(_pX+ev.clientX-_dX)+'px'; panel.style.top=(_pY+ev.clientY-_dY)+'px';
-        });
-        document.addEventListener('mouseup', function(){_drg=false;});
+        function _bsDragMove(ev) { if (!_drg) return; panel.style.left=(_pX+ev.clientX-_dX)+'px'; panel.style.top=(_pY+ev.clientY-_dY)+'px'; }
+        function _bsDragUp() { _drg=false; }
+        document.addEventListener('mousemove', _bsDragMove);
+        document.addEventListener('mouseup', _bsDragUp);
+        _bsPanelDragCleanup = function() {
+          document.removeEventListener('mousemove', _bsDragMove);
+          document.removeEventListener('mouseup', _bsDragUp);
+        };
       }
 
       // Street View
@@ -38237,7 +38245,7 @@ if (window.pdfjsLib) {
       if (htInp) htInp.addEventListener('change', function() {
         var v = parseFloat(this.value);
         if (Number.isFinite(v) && v > 0) {
-          bs.height_m = v;
+          bs.height_m = Math.min(v, 500); // clamp at 500 m
           _bsUpdateTopDisplay();
           _bsPanelUpdateTerrainInfo();
           _bsRefreshStats();
@@ -38412,7 +38420,14 @@ if (window.pdfjsLib) {
           if (inp) inp.addEventListener('input', function() {
             var v = parseFloat(this.value);
             if (!bs.interiorLp[period].octave) bs.interiorLp[period].octave = {};
-            bs.interiorLp[period].octave[b] = Number.isFinite(v) ? v : null;
+            if (Number.isFinite(v)) {
+              var clamped = Math.max(0, Math.min(150, v));
+              bs.interiorLp[period].octave[b] = clamped;
+              this.style.borderColor = (v !== clamped) ? '#f87171' : '';
+            } else {
+              bs.interiorLp[period].octave[b] = null;
+              this.style.borderColor = '';
+            }
             _bsRefreshDerived(); if (typeof render === 'function') render();
           });
         });
