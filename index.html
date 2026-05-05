@@ -20998,31 +20998,31 @@ window.runUAT = async function() {
       return;
     }
 
-    // ── 23.1  Facade Lw: Lp=85 Rw=25 A=60 hem=6 → 85−25+10·log₁₀(60)+6 ≈ 83.78 ──
-    var lw1 = oneFacade(85, null, {rw:25}, 60, null, 6);
-    t(cat, '23.1', Number.isFinite(lw1) && Math.abs(lw1 - 83.78) < 0.5,
-      '23.1 Lp85 Rw25 A60=' + (Number.isFinite(lw1)?lw1.toFixed(2):'null') + ' expected ≈83.78');
+    // ── 23.1  Facade Lw: Lp=85 Rw=25 A=60 hem=−6 → 85−25+10·log₁₀(60)−6 ≈ 71.78 ──
+    var lw1 = oneFacade(85, null, {rw:25}, 60, null, -6);
+    t(cat, '23.1', Number.isFinite(lw1) && Math.abs(lw1 - 71.78) < 0.5,
+      '23.1 Lp85 Rw25 A60=' + (Number.isFinite(lw1)?lw1.toFixed(2):'null') + ' expected ≈71.78');
 
-    // ── 23.2  Facade Lw: Lp=85 Rw=20 A=200 hem=6 → ≈94.01 ──
-    var lw2 = oneFacade(85, null, {rw:20}, 200, null, 6);
-    t(cat, '23.2', Number.isFinite(lw2) && Math.abs(lw2 - 94.01) < 0.5,
-      '23.2 Lp85 Rw20 A200=' + (Number.isFinite(lw2)?lw2.toFixed(2):'null') + ' expected ≈94.01');
+    // ── 23.2  Facade Lw: Lp=85 Rw=20 A=200 hem=−6 → ≈82.01 ──
+    var lw2 = oneFacade(85, null, {rw:20}, 200, null, -6);
+    t(cat, '23.2', Number.isFinite(lw2) && Math.abs(lw2 - 82.01) < 0.5,
+      '23.2 Lp85 Rw20 A200=' + (Number.isFinite(lw2)?lw2.toFixed(2):'null') + ' expected ≈82.01');
 
-    // ── 23.3  Facade Lw: Lp=85 Rw=5 A=2 hem=6 → 85−5+3.010+6 ≈ 89.01 ──
-    var lw3 = oneFacade(85, null, {rw:5}, 2, null, 6);
-    t(cat, '23.3', Number.isFinite(lw3) && Math.abs(lw3 - 89.01) < 0.5,
-      '23.3 Lp85 Rw5 A2=' + (Number.isFinite(lw3)?lw3.toFixed(2):'null') + ' expected ≈89.01');
+    // ── 23.3  Facade Lw: Lp=85 Rw=5 A=2 hem=−6 → 85−5+3.010−6 ≈ 77.01 ──
+    var lw3 = oneFacade(85, null, {rw:5}, 2, null, -6);
+    t(cat, '23.3', Number.isFinite(lw3) && Math.abs(lw3 - 77.01) < 0.5,
+      '23.3 Lp85 Rw5 A2=' + (Number.isFinite(lw3)?lw3.toFixed(2):'null') + ' expected ≈77.01');
 
     // ── 23.4  Composite Rw ≈ 20 dB: wall 90m² Rw25 + louvre 2m² Rw5 ──
     //   τ_comp = (2·10^(−5/10) + 90·10^(−25/10))/92 → Rw_eff ≈ 20 dB
     //   Composite Lw should be within 1 dB of an equivalent all-Rw20 wall of same area.
-    var compLw4  = oneFacade(80, null, {rw:25}, 92, {rw:25, elements:[{construction:{rw:5},area:2}]}, 6);
-    var rw20Lw4  = oneFacade(80, null, {rw:20}, 92, null, 6);
+    var compLw4  = oneFacade(80, null, {rw:25}, 92, {rw:25, elements:[{construction:{rw:5},area:2}]}, -6);
+    var rw20Lw4  = oneFacade(80, null, {rw:20}, 92, null, -6);
     t(cat, '23.4', Number.isFinite(compLw4) && Number.isFinite(rw20Lw4) && Math.abs(compLw4 - rw20Lw4) < 1.0,
       '23.4 composite=' + (Number.isFinite(compLw4)?compLw4.toFixed(2):'null') + ' Rw20-eq=' + (Number.isFinite(rw20Lw4)?rw20Lw4.toFixed(2):'null') + ' Δ<1 dB');
 
     // ── 23.5  Louvre raises Lw: composite > solid wall (Rw_element < Rw_wall) ──
-    var solidLw5 = oneFacade(80, null, {rw:25}, 92, null, 6);
+    var solidLw5 = oneFacade(80, null, {rw:25}, 92, null, -6);
     t(cat, '23.5', Number.isFinite(compLw4) && Number.isFinite(solidLw5) && compLw4 > solidLw5,
       '23.5 composite(' + (Number.isFinite(compLw4)?compLw4.toFixed(2):'?') + ') > solid(' + (Number.isFinite(solidLw5)?solidLw5.toFixed(2):'?') + ')');
 
@@ -35547,6 +35547,14 @@ if (window.pdfjsLib) {
       // Handle Escape / cancel (Leaflet.draw fires this)
       map.on('draw:drawstop', function() {
         if (_annLineHandler || _annRectHandler || _annPolyHandler) return; // annotation draw — let annotation code handle it
+        if (_drawingBuildingSource) {
+          // Leaflet has already cancelled the draw — just clear state
+          _bsDrawHandler = null;
+          _drawingBuildingSource = false;
+          _drawingActive = false;
+          if (drawBuildingSourceBtn) drawBuildingSourceBtn.classList.remove('active');
+          return;
+        }
         if (_drawingActive && !_drawHandler) stopDrawing();
       });
 
