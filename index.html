@@ -1739,31 +1739,39 @@ body.panel-resizing #map-column {
 }
 .panel-mode-cancel:hover { background: #fef3c7; }
 
-/* Annotation map overlay banner */
+/* Annotation map overlay banner — matches #mode-banner blue pill style */
 #annMapBanner {
   display: none;
-  position: absolute;
-  top: 0; left: 0; right: 0;
+  position: fixed;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 1500;
-  background: #fef3c7;
-  border-bottom: 2px solid #fde68a;
-  align-items: center;
-  padding: 8px 14px;
-  gap: 10px;
+  background: #1e40af;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  white-space: nowrap;
+  letter-spacing: 0.01em;
   pointer-events: all;
+  align-items: center;
+  gap: 10px;
 }
 #annMapBanner.active { display: flex; }
-#annMapBanner .ann-banner-text { font-size: 12px; font-weight: 500; color: #78350f; flex: 1; }
+#annMapBanner .ann-banner-text { font-size: 13px; font-weight: 600; color: #fff; }
 #annMapBanner .ann-banner-save {
-  background: #2563eb; color: white; border: none;
-  padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; white-space: nowrap;
+  background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: #fff;
+  padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; cursor: pointer; flex-shrink: 0;
 }
-#annMapBanner .ann-banner-save:hover { background: #1d4ed8; }
+#annMapBanner .ann-banner-save:hover { background: rgba(255,255,255,0.35); }
 #annMapBanner .ann-banner-cancel {
-  background: white; border: 1px solid #b45309; color: #78350f;
-  padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; white-space: nowrap;
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff;
+  padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; cursor: pointer; flex-shrink: 0;
 }
-#annMapBanner .ann-banner-cancel:hover { background: #fef3c7; }
+#annMapBanner .ann-banner-cancel:hover { background: rgba(255,255,255,0.3); }
 
 /* tc-button-group — sub-group within a Modelling panel sub-card */
 .tc-button-group { margin: 10px 0 0; }
@@ -4035,6 +4043,9 @@ body.panel-resizing #map-column {
                   </button>
                   <button class="ann-tool-btn" id="annDrawRectBtn" onclick="_annStartDraw('rect')">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Rectangle
+                  </button>
+                  <button class="ann-tool-btn" id="annDrawPolyBtn" onclick="_annStartDraw('poly')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12,3 21,9 17,20 7,20 3,9"/></svg> Polygon
                   </button>
                   <button class="ann-tool-btn" id="annDrawCircleBtn" onclick="_annStartDraw('circle')">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg> Circle
@@ -34099,6 +34110,7 @@ if (window.pdfjsLib) {
     var _annLineHandler   = null;
     var _annRectHandler   = null;
     var _annCircleHandler = null;
+    var _annPolyHandler   = null;
 
     // Floating map banner — overlays the map so it's visible regardless of which panel is open
     (function() {
@@ -34150,6 +34162,8 @@ if (window.pdfjsLib) {
         var layer;
         if (ann.type === 'line') {
           layer = L.polyline(ann.vertices, style);
+        } else if (ann.type === 'poly') {
+          layer = L.polygon(ann.vertices, style);
         } else if (ann.type === 'rect') {
           layer = L.rectangle([ann.vertices[0], ann.vertices[1]], style);
         } else if (ann.type === 'circle') {
@@ -34171,11 +34185,41 @@ if (window.pdfjsLib) {
         }
         if (layer) {
           layer._annId = ann.id;
+          var _annOnDragEnd = (function(capturedAnn) {
+            return function() {
+              renderAnnotationLayer();
+              if (typeof _renderObjectList === 'function') _renderObjectList();
+              if (typeof setUnsaved === 'function') setUnsaved();
+            };
+          })(ann);
+          if (ann.type === 'circle' || ann.type === 'text') {
+            _attachCenterDrag(layer,
+              (function(a) { return function() { return a.center.slice(); }; })(ann),
+              (function(a) { return function(c) { a.center = c; }; })(ann),
+              _annOnDragEnd
+            );
+          } else {
+            _attachMoveDrag(layer, null,
+              (function(a) { return function() { return a.vertices; }; })(ann),
+              (function(a) { return function(v) { a.vertices = v; }; })(ann),
+              _annOnDragEnd
+            );
+          }
+          layer.on('contextmenu', (function(capturedAnn, capturedLayer) {
+            return function(e) {
+              if (_drawingActive) return;
+              L.DomEvent.stopPropagation(e);
+              L.DomEvent.preventDefault(e);
+              _showMapCtxMenu(e.originalEvent.clientX, e.originalEvent.clientY,
+                _annCtxMenuItems(capturedAnn, capturedLayer));
+            };
+          })(ann, layer));
           annotationLayer.addLayer(layer);
         }
       });
       annotationLayer.bringToFront();
       _annRefreshPanel();
+      if (typeof _renderObjectList === 'function') _renderObjectList();
     }
 
     function _annRefreshPanel() {
@@ -34184,7 +34228,7 @@ if (window.pdfjsLib) {
       if (!listSec || !listBody) return;
       if (!annotations.length) { listSec.style.display = 'none'; return; }
       listSec.style.display = '';
-      var TYPE_LABEL = { line: 'Line', rect: 'Rectangle', circle: 'Circle', text: 'Text' };
+      var TYPE_LABEL = { line: 'Line', poly: 'Polygon', rect: 'Rectangle', circle: 'Circle', text: 'Text' };
       listBody.innerHTML = annotations.map(function(ann, i) {
         var swatchStyle = ann.type !== 'text'
           ? 'width:12px;height:3px;background:' + (ann.color || '#e11d48') + ';border-radius:1px;display:inline-block;vertical-align:middle;margin-right:5px;'
@@ -34235,6 +34279,16 @@ if (window.pdfjsLib) {
         }
         return;
       }
+      if (ann.type === 'circle') {
+        var newR = prompt('Edit radius (metres):', Math.round(ann.radius) || '');
+        if (newR !== null && !isNaN(parseFloat(newR)) && parseFloat(newR) > 0) {
+          ann.radius = parseFloat(newR);
+          renderAnnotationLayer();
+          if (typeof _renderObjectList === 'function') _renderObjectList();
+          if (typeof setUnsaved === 'function') setUnsaved();
+        }
+        return;
+      }
       if (!targetLayer) return;
 
       annotationLayer.removeLayer(targetLayer);
@@ -34247,6 +34301,8 @@ if (window.pdfjsLib) {
         map.removeLayer(editFG);
         if (ann.type === 'line') {
           ann.vertices = targetLayer.getLatLngs().map(function(ll) { return [ll.lat, ll.lng]; });
+        } else if (ann.type === 'poly') {
+          ann.vertices = targetLayer.getLatLngs()[0].map(function(ll) { return [ll.lat, ll.lng]; });
         } else if (ann.type === 'rect') {
           var b = targetLayer.getBounds();
           ann.vertices = [[b.getSouth(), b.getWest()], [b.getNorth(), b.getEast()]];
@@ -34276,9 +34332,10 @@ if (window.pdfjsLib) {
       if (_annLineHandler)   { try { _annLineHandler.disable();   } catch(e) {} _annLineHandler   = null; }
       if (_annRectHandler)   { try { _annRectHandler.disable();   } catch(e) {} _annRectHandler   = null; }
       if (_annCircleHandler) { try { _annCircleHandler.disable(); } catch(e) {} _annCircleHandler = null; }
+      if (_annPolyHandler)   { try { _annPolyHandler.disable();   } catch(e) {} _annPolyHandler   = null; }
       _drawingActive = false;
 
-      function _placeFn(e) {
+      function _clickHandler(e) {
         _annClearBanner();
         ann.center = [e.latlng.lat, e.latlng.lng];
         renderAnnotationLayer();
@@ -34286,10 +34343,10 @@ if (window.pdfjsLib) {
         if (typeof setUnsaved === 'function') setUnsaved();
       }
       function _cancelMove() {
-        map.off('click', _placeFn);
+        map.off('click', _clickHandler);
       }
       _annSetBanner('Click anywhere on the map to reposition the label', _cancelMove);
-      map.once('click', function(e) { _annClearBanner(); _placeFn(e); });
+      map.once('click', _clickHandler);
     }
     window._annMoveText = _annMoveText;
 
@@ -34298,7 +34355,7 @@ if (window.pdfjsLib) {
       if (!ann || ann.type === 'text') return;
       function _moveFn(e) {
         var ll = e.latlng;
-        if (ann.type === 'line') {
+        if (ann.type === 'line' || ann.type === 'poly') {
           var sumLat = 0, sumLng = 0;
           ann.vertices.forEach(function(v) { sumLat += v[0]; sumLng += v[1]; });
           var dLat = ll.lat - sumLat / ann.vertices.length;
@@ -34325,6 +34382,74 @@ if (window.pdfjsLib) {
     }
     window._annMoveShape = _annMoveShape;
 
+    function _annCtxMenuItems(ann, layer) {
+      var _re = function() {
+        renderAnnotationLayer();
+        if (typeof _renderObjectList === 'function') _renderObjectList();
+        if (typeof setUnsaved === 'function') setUnsaved();
+      };
+      var _idx = function() { return annotations.indexOf(ann); };
+      var items = [];
+
+      if (ann.type === 'text') {
+        items.push({ id: 'edit', label: 'Edit text', icon: '✎', action: function() { var i = _idx(); if (i >= 0) _annEdit(i); } });
+      } else if (ann.type === 'circle') {
+        items.push({ id: 'edit', label: 'Edit radius', icon: '✎', action: function() { var i = _idx(); if (i >= 0) _annEdit(i); } });
+      } else {
+        items.push({ id: 'edit', label: 'Edit vertices', icon: '✎', action: function() { var i = _idx(); if (i >= 0) _annEdit(i); } });
+      }
+
+      items.push({ id: 'move', label: 'Move', icon: '⊹', action: function() {
+        _ctxActivateMoveMode();
+        if (ann.type === 'text') { if (typeof _ctxFlashMarker === 'function') _ctxFlashMarker(layer); }
+        else { if (typeof _ctxFlashPolyLayer === 'function') _ctxFlashPolyLayer(layer); }
+      }});
+
+      items.push('sep');
+
+      items.push({ id: 'rename', label: 'Rename…', action: function() {
+        var n = prompt('Rename:', ann.name || '');
+        if (n !== null && n.trim()) { ann.name = n.trim(); _re(); }
+      }});
+
+      items.push({ id: 'colour', label: 'Change colour…', action: function() {
+        var inp = document.createElement('input');
+        inp.type = 'color'; inp.value = (ann.color || '#e11d48');
+        inp.style.cssText = 'position:absolute;opacity:0;pointer-events:none;';
+        document.body.appendChild(inp);
+        inp.addEventListener('input', function() { ann.color = inp.value; _re(); });
+        inp.addEventListener('change', function() { ann.color = inp.value; _re(); setTimeout(function() { if (inp.parentNode) inp.parentNode.removeChild(inp); }, 200); });
+        inp.click();
+      }});
+
+      if (ann.type === 'text') {
+        items.push({ id: 'fontsize', label: 'Font size…', action: function() {
+          var v = prompt('Font size (px):', ann.fontSize || 14);
+          if (v !== null && !isNaN(parseInt(v, 10))) { ann.fontSize = Math.max(8, Math.min(72, parseInt(v, 10))); _re(); }
+        }});
+      } else {
+        items.push({ id: 'weight', label: 'Line weight…', action: function() {
+          var v = prompt('Line weight (1–8):', ann.weight || 2);
+          if (v !== null && !isNaN(parseInt(v, 10))) { ann.weight = Math.max(1, Math.min(8, parseInt(v, 10))); _re(); }
+        }});
+        if (ann.type !== 'line') {
+          items.push({ id: 'fillopacity', label: 'Fill opacity…', action: function() {
+            var v = prompt('Fill opacity (0–1):', ann.fillOpacity !== undefined ? ann.fillOpacity : 0.15);
+            if (v !== null && !isNaN(parseFloat(v))) {
+              ann.fillOpacity = Math.max(0, Math.min(1, parseFloat(v)));
+              ann.fill = ann.fillOpacity > 0;
+              _re();
+            }
+          }});
+        }
+      }
+
+      items.push('sep');
+      items.push({ id: 'delete', label: 'Delete', cls: 'ctx-danger', action: function() { var i = _idx(); if (i >= 0) _annDelete(i); } });
+      return items;
+    }
+    window._annCtxMenuItems = _annCtxMenuItems;
+
     function _annObjMenu(idx, btn) {
       var ann = annotations[idx];
       if (!ann) return;
@@ -34332,7 +34457,11 @@ if (window.pdfjsLib) {
         { id: 'edit', label: ann.type === 'text' ? 'Edit text' : 'Edit / move vertices', icon: '✎', action: function() { _annEdit(idx); } }
       ];
       if (ann.type === 'text') {
-        items.push({ id: 'move', label: 'Move label', icon: '⊹', action: function() { _annMoveText(idx); } });
+        items.push({ id: 'move', label: 'Move (drag in move mode)', icon: '⊹', action: function() {
+          _ctxActivateMoveMode();
+          var tl = null; annotationLayer.eachLayer(function(l) { if (l._annId === ann.id) tl = l; });
+          if (tl && typeof _ctxFlashMarker === 'function') _ctxFlashMarker(tl);
+        }});
         items.push({ id: 'fontsize', label: 'Font size…', icon: 'A', action: function() {
           var cur = ann.fontSize || 14;
           var v = prompt('Font size (px):', cur);
@@ -34342,7 +34471,11 @@ if (window.pdfjsLib) {
           }
         }});
       } else {
-        items.push({ id: 'move', label: 'Move shape', icon: '⊹', action: function() { _annMoveShape(idx); } });
+        items.push({ id: 'move', label: 'Move (drag in move mode)', icon: '⊹', action: function() {
+          _ctxActivateMoveMode();
+          var tl = null; annotationLayer.eachLayer(function(l) { if (l._annId === ann.id) tl = l; });
+          if (tl && typeof _ctxFlashPolyLayer === 'function') _ctxFlashPolyLayer(tl);
+        }});
         items.push({ id: 'weight', label: 'Line weight…', icon: '—', action: function() {
           var cur = ann.weight || 2;
           var v = prompt('Line weight (1–8):', cur);
@@ -34351,7 +34484,7 @@ if (window.pdfjsLib) {
             renderAnnotationLayer(); if (typeof _renderObjectList === 'function') _renderObjectList(); if (typeof setUnsaved === 'function') setUnsaved();
           }
         }});
-        if (ann.type === 'rect' || ann.type === 'circle') {
+        if (ann.type === 'rect' || ann.type === 'circle' || ann.type === 'poly') {
           items.push({ id: 'fillopacity', label: 'Fill opacity…', icon: '◑', action: function() {
             var cur = ann.fillOpacity != null ? ann.fillOpacity : 0.15;
             var v = prompt('Fill opacity (0 = none, 1 = solid):', cur);
@@ -34408,11 +34541,11 @@ if (window.pdfjsLib) {
 
     function _annStartDraw(type) {
       if (typeof _drawingActive !== 'undefined' && _drawingActive) return;
-      _annLineHandler = _annRectHandler = _annCircleHandler = null;
-      ['annDrawLineBtn','annDrawRectBtn','annDrawCircleBtn','annDrawTextBtn'].forEach(function(id) {
+      _annLineHandler = _annRectHandler = _annCircleHandler = _annPolyHandler = null;
+      ['annDrawLineBtn','annDrawRectBtn','annDrawPolyBtn','annDrawCircleBtn','annDrawTextBtn'].forEach(function(id) {
         var b = document.getElementById(id); if (b) b.classList.remove('active');
       });
-      var activeBtn = document.getElementById({ line:'annDrawLineBtn', rect:'annDrawRectBtn', circle:'annDrawCircleBtn', text:'annDrawTextBtn' }[type]);
+      var activeBtn = document.getElementById({ line:'annDrawLineBtn', rect:'annDrawRectBtn', poly:'annDrawPolyBtn', circle:'annDrawCircleBtn', text:'annDrawTextBtn' }[type]);
       if (activeBtn) activeBtn.classList.add('active');
       var shapeOpts = { color: _annStyle.color, weight: _annStyle.weight, opacity: 1, fill: type !== 'line', fillOpacity: type !== 'line' ? 0.15 : 0, fillColor: _annStyle.color };
 
@@ -34499,16 +34632,20 @@ if (window.pdfjsLib) {
       if (type === 'line') {
         handler = new L.Draw.Polyline(map, { shapeOptions: shapeOpts, metric: true });
         _annLineHandler = handler;
+      } else if (type === 'poly') {
+        handler = new L.Draw.Polygon(map, { shapeOptions: Object.assign({}, shapeOpts, { fill: true, fillOpacity: 0.15 }), metric: true });
+        _annPolyHandler = handler;
       } else {
         handler = new L.Draw.Rectangle(map, { shapeOptions: shapeOpts });
         _annRectHandler = handler;
       }
       handler.enable();
       var bannerMsg = type === 'line' ? 'Drawing line — click points, double-click to finish'
+                    : type === 'poly' ? 'Drawing polygon — click vertices, double-click to finish'
                                       : 'Drawing rectangle — click and drag';
       _annSetBanner(bannerMsg, function() {
         try { handler.disable(); } catch(e) {}
-        _annLineHandler = _annRectHandler = _annCircleHandler = null;
+        _annLineHandler = _annRectHandler = _annCircleHandler = _annPolyHandler = null;
         _drawingActive = false;
         _annClearBanner();
         if (activeBtn) activeBtn.classList.remove('active');
@@ -34607,6 +34744,43 @@ if (window.pdfjsLib) {
         if (_moveMode && !dragging) {
           map.getContainer().style.cursor = '';
         }
+      });
+    }
+
+    /** Drag-to-move for single-point layers (L.circle, L.marker). */
+    function _attachCenterDrag(layer, getCenterFn, setCenterFn, onDragEnd) {
+      var dragging = false, startLL = null, origC = null;
+      layer.on('mousedown', function(e) {
+        if (!_moveMode || _drawingActive) return;
+        L.DomEvent.stop(e);
+        map.dragging.disable();
+        map.closePopup();
+        dragging = true;
+        startLL = e.latlng;
+        origC = getCenterFn();
+        map.getContainer().style.cursor = 'grabbing';
+        function onMove(me) {
+          if (!dragging) return;
+          layer.setLatLng([origC[0] + me.latlng.lat - startLL.lat, origC[1] + me.latlng.lng - startLL.lng]);
+        }
+        function onUp(ue) {
+          if (!dragging) return;
+          dragging = false;
+          map.dragging.enable();
+          map.off('mousemove', onMove);
+          map.off('mouseup', onUp);
+          map.getContainer().style.cursor = '';
+          setCenterFn([origC[0] + ue.latlng.lat - startLL.lat, origC[1] + ue.latlng.lng - startLL.lng]);
+          onDragEnd();
+        }
+        map.on('mousemove', onMove);
+        map.on('mouseup', onUp);
+      });
+      layer.on('mouseover', function() {
+        if (_moveMode && !_drawingActive && !dragging) map.getContainer().style.cursor = 'grab';
+      });
+      layer.on('mouseout', function() {
+        if (_moveMode && !dragging) map.getContainer().style.cursor = '';
       });
     }
 
@@ -35366,6 +35540,7 @@ if (window.pdfjsLib) {
 
       // Handle Escape / cancel (Leaflet.draw fires this)
       map.on('draw:drawstop', function() {
+        if (_annLineHandler || _annRectHandler || _annPolyHandler) return; // annotation draw — let annotation code handle it
         if (_drawingActive && !_drawHandler) stopDrawing();
       });
 
@@ -40193,11 +40368,12 @@ if (window.pdfjsLib) {
       var isAnnLine = (e.layerType === 'polyline')   && _annLineHandler;
       var isAnnRect = (e.layerType === 'rectangle')  && _annRectHandler;
       var isAnnCirc = (e.layerType === 'circle')     && _annCircleHandler;
-      if (!isAnnLine && !isAnnRect && !isAnnCirc) return;
-      _annLineHandler = _annRectHandler = _annCircleHandler = null;
+      var isAnnPoly = (e.layerType === 'polygon')    && _annPolyHandler;
+      if (!isAnnLine && !isAnnRect && !isAnnCirc && !isAnnPoly) return;
+      _annLineHandler = _annRectHandler = _annCircleHandler = _annPolyHandler = null;
       _drawingActive = false;
       if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
-      ['annDrawLineBtn','annDrawRectBtn','annDrawCircleBtn'].forEach(function(id) {
+      ['annDrawLineBtn','annDrawRectBtn','annDrawPolyBtn','annDrawCircleBtn'].forEach(function(id) {
         var b = document.getElementById(id); if (b) b.classList.remove('active');
       });
 
@@ -40212,6 +40388,9 @@ if (window.pdfjsLib) {
       if (e.layerType === 'polyline') {
         ann.type = 'line';
         ann.vertices = e.layer.getLatLngs().map(function(ll) { return [ll.lat, ll.lng]; });
+      } else if (e.layerType === 'polygon') {
+        ann.type = 'poly';
+        ann.vertices = e.layer.getLatLngs()[0].map(function(ll) { return [ll.lat, ll.lng]; });
       } else if (e.layerType === 'rectangle') {
         ann.type = 'rect';
         var rb = e.layer.getBounds();
@@ -43796,7 +43975,7 @@ if (window.pdfjsLib) {
 
       // Annotations group
       if (typeof annotations !== 'undefined' && annotations.length > 0) {
-        var ANN_TYPE_LABEL = { line: 'Line', rect: 'Rectangle', circle: 'Circle', text: 'Text label' };
+        var ANN_TYPE_LABEL = { line: 'Line', poly: 'Polygon', rect: 'Rectangle', circle: 'Circle', text: 'Text label' };
         html += '<div style="margin-bottom:10px;">';
         html += '<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Annotations</div>';
         annotations.forEach(function(ann, i) {
