@@ -3703,8 +3703,13 @@ body.panel-resizing #map-column {
               <!-- Card 1: Basemap -->
               <section class="modelling-card" id="map-basemap">
                 <h3>Basemap</h3>
-                <p class="card-hint">Switch between street map and aerial imagery as the underlying map layer.</p>
-                <button class="mp-btn aerial-toggle-btn" id="aerialToggleBtn" title="Switch between street map and aerial imagery"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8"/><ellipse cx="12" cy="12" rx="4" ry="9"/></svg> Aerial<span class="mp-kbd">I</span></button>
+                <p class="card-hint">Street map is always visible underneath. Toggle the aerial overlay on/off and adjust its opacity so zone overlays remain legible.</p>
+                <button class="mp-btn aerial-toggle-btn" id="aerialToggleBtn" title="Toggle aerial imagery overlay (I)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8"/><ellipse cx="12" cy="12" rx="4" ry="9"/></svg> Aerial<span class="mp-kbd">I</span></button>
+                <div id="aerialOpacityRow" style="display:flex;align-items:center;gap:8px;margin-top:7px;">
+                  <label for="aerialOpacitySlider" style="font-size:11px;color:var(--muted);white-space:nowrap;">Opacity</label>
+                  <input type="range" id="aerialOpacitySlider" min="0" max="100" value="70" step="5" style="flex:1;cursor:pointer;" title="Aerial opacity">
+                  <span id="aerialOpacityVal" style="font-size:11px;color:var(--muted);width:32px;text-align:right;">70%</span>
+                </div>
               </section>
 
               <!-- Card 2: Map layers -->
@@ -15419,12 +15424,15 @@ async function generatePDFAppendix(btn) {
     var _basemapSwapped = false;
     if (_zcs && _zcs.isAerial && _map) {
       _map.removeLayer(_zcs.aerialLayer);
-      _zcs.streetLayer.addTo(_map);
+      // street layer is always present — no need to add it
       _basemapSwapped = true;
       _pdfRestore.push((function(cs) {
         return function() {
-          if (_map && cs.streetLayer) _map.removeLayer(cs.streetLayer);
-          if (_map && cs.aerialLayer) cs.aerialLayer.addTo(_map);
+          // Restore aerial on top of the always-present street layer
+          if (_map && cs.aerialLayer) {
+            cs.aerialLayer.addTo(_map);
+            cs.aerialLayer.setOpacity(cs.aerialOpacity != null ? cs.aerialOpacity : 1);
+          }
         };
       })(_zcs));
     }
@@ -28418,26 +28426,51 @@ if (window.pdfjsLib) {
       maxNativeZoom: 20,
       crossOrigin: 'anonymous'  // required for html2canvas map export
     });
+    // Street is always the base; aerial sits on top at adjustable opacity.
+    streetLayer.addTo(map);
+    var AERIAL_OPACITY_KEY = 'resonate_aerial_opacity';
+    var aerialOpacity = Math.min(1, Math.max(0,
+      parseFloat(localStorage.getItem(AERIAL_OPACITY_KEY) || '0.7')));
     aerialLayer.addTo(map);
+    aerialLayer.setOpacity(aerialOpacity);
     var isAerial = true;
 
-    var aerialBtn = document.getElementById('aerialToggleBtn');
+    var aerialBtn    = document.getElementById('aerialToggleBtn');
+    var aerialSlider = document.getElementById('aerialOpacitySlider');
+    var aerialValEl  = document.getElementById('aerialOpacityVal');
+
+    function _setAerialOpacity(val) {
+      aerialOpacity = Math.min(1, Math.max(0, val));
+      aerialLayer.setOpacity(aerialOpacity);
+      if (aerialSlider) aerialSlider.value = Math.round(aerialOpacity * 100);
+      if (aerialValEl)  aerialValEl.textContent = Math.round(aerialOpacity * 100) + '%';
+      try { localStorage.setItem(AERIAL_OPACITY_KEY, String(aerialOpacity)); } catch(e) {}
+    }
+    _setAerialOpacity(aerialOpacity);  // sync slider UI on load
+
     if (aerialBtn) {
       aerialBtn.classList.add('active');
       aerialBtn.innerHTML = (typeof ICON_GLOBE !== 'undefined' ? ICON_GLOBE : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8"/><ellipse cx="12" cy="12" rx="4" ry="9"/></svg>') + ' Street<span class="mp-kbd">I</span>';
       aerialBtn.addEventListener('click', function() {
         if (isAerial) {
-          map.removeLayer(aerialLayer);
-          streetLayer.addTo(map);
+          aerialLayer.setOpacity(0);
+          if (aerialSlider) aerialSlider.disabled = true;
           aerialBtn.classList.remove('active');
-          aerialBtn.innerHTML = ICON_GLOBE + ' Aerial';
+          aerialBtn.innerHTML = (typeof ICON_GLOBE !== 'undefined' ? ICON_GLOBE : '') + ' Aerial<span class="mp-kbd">I</span>';
         } else {
-          map.removeLayer(streetLayer);
-          aerialLayer.addTo(map);
+          aerialLayer.setOpacity(aerialOpacity);
+          if (aerialSlider) aerialSlider.disabled = false;
           aerialBtn.classList.add('active');
-          aerialBtn.innerHTML = ICON_GLOBE + ' Street';
+          aerialBtn.innerHTML = (typeof ICON_GLOBE !== 'undefined' ? ICON_GLOBE : '') + ' Street<span class="mp-kbd">I</span>';
         }
         isAerial = !isAerial;
+        bringOverlaysToFront();
+      });
+    }
+
+    if (aerialSlider) {
+      aerialSlider.addEventListener('input', function() {
+        _setAerialOpacity(parseInt(this.value, 10) / 100);
         bringOverlaysToFront();
       });
     }
@@ -28984,6 +29017,7 @@ if (window.pdfjsLib) {
         streetLayer:         streetLayer,
         aerialLayer:         aerialLayer,
         isAerial:            isAerial,
+        aerialOpacity:       aerialOpacity,
         isZoneOn:            isZoneOn,
         effectiveZoneOn:     isZoneOn || saZonesOn,
         saZonesOn:           saZonesOn,
