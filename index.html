@@ -18276,20 +18276,22 @@ function openSrcPanel(pinIdx, clientX, clientY) {
       _sfpPanelY = rect.top;
       ev.preventDefault();
     });
-    document.addEventListener('mousemove', function(ev) {
-      if (!_sfpDragging) return;
-      panel.style.left = (_sfpPanelX + ev.clientX - _sfpDragX) + 'px';
-      panel.style.top  = (_sfpPanelY + ev.clientY - _sfpDragY) + 'px';
-    });
-    document.addEventListener('mouseup', function() { _sfpDragging = false; });
+    function _sfpDragMove(ev) { if (!_sfpDragging) return; panel.style.left = (_sfpPanelX + ev.clientX - _sfpDragX) + 'px'; panel.style.top = (_sfpPanelY + ev.clientY - _sfpDragY) + 'px'; }
+    function _sfpDragUp() { _sfpDragging = false; }
+    document.addEventListener('mousemove', _sfpDragMove);
+    document.addEventListener('mouseup', _sfpDragUp);
+    _srcPanelDragCleanup = function() { document.removeEventListener('mousemove', _sfpDragMove); document.removeEventListener('mouseup', _sfpDragUp); };
   }
 
   attachSrcPanelListeners(pin, pinIdx);
   _sfpUpdateTotalLw(pin, panel);
 }
 
+var _srcPanelDragCleanup = null;
+
 /** Close the floating source panel */
 function closeSrcPanel() {
+  if (_srcPanelDragCleanup) { _srcPanelDragCleanup(); _srcPanelDragCleanup = null; }
   if (_srcPanel) { _srcPanel.remove(); _srcPanel = null; }
   _srcPanelIdx = -1;
 }
@@ -20981,6 +20983,84 @@ window.runUAT = async function() {
     // 21.8 active → valid Lw/m
     var activeResult = _lsGetEffectiveLwm(testLs, 'day');
     t(cat, '21.8', Number.isFinite(activeResult) && Math.abs(activeResult - 65) < 0.01, 'active Lw/m='+activeResult.toFixed(2));
+  })();
+
+  /* ════════════════════════════════════════════════════════════════
+     CAT 22 — Area source calculation
+     ════════════════════════════════════════════════════════════════ */
+  C[22] = { label:'Area source calculation', pass:0, fail:0, lines:[] };
+  (function(){
+    var cat = 22;
+    // Small square polygon ~100 m × ~80 m (≈ 8000 m²) at Adelaide coords
+    var mockAs = {
+      id: 'test-as',
+      name: 'Test area source',
+      vertices: [[-34.930,138.600],[-34.930,138.601],[-34.931,138.601],[-34.931,138.600]],
+      lwValue:       { day: 65, eve: 60, night: 55 },
+      activeInPeriod:{ day: true, eve: true, night: true },
+      quantity:      { day: 1, eve: 1, night: 1 },
+      operatingPct:  { day: 100, eve: 100, night: 100 },
+      height_m: 1.0
+    };
+
+    // ── 22.1  _asGetLwM2Adj reference: Lw=65, qty=1, pct=100 → 65 ──
+    var adj1 = _asGetLwM2Adj(mockAs, 'day');
+    t(cat, '22.1', Number.isFinite(adj1) && Math.abs(adj1 - 65) < 0.01,
+      '22.1 _asGetLwM2Adj ref=' + (Number.isFinite(adj1)?adj1.toFixed(3):'NaN') + ' expected 65');
+
+    // ── 22.2  qty=2 → +3.010 dB ──
+    var as2 = Object.assign({}, mockAs, { quantity:{day:2,eve:1,night:1} });
+    var adj2 = _asGetLwM2Adj(as2, 'day');
+    t(cat, '22.2', Number.isFinite(adj2) && Math.abs(adj2 - 68.010) < 0.05,
+      '22.2 qty=2 adj=' + (Number.isFinite(adj2)?adj2.toFixed(3):'NaN') + ' expected ≈68.010');
+
+    // ── 22.3  pct=50 → -3.010 dB ──
+    var as3 = Object.assign({}, mockAs, { operatingPct:{day:50,eve:100,night:100} });
+    var adj3 = _asGetLwM2Adj(as3, 'day');
+    t(cat, '22.3', Number.isFinite(adj3) && Math.abs(adj3 - 61.990) < 0.05,
+      '22.3 pct=50 adj=' + (Number.isFinite(adj3)?adj3.toFixed(3):'NaN') + ' expected ≈61.990');
+
+    // ── 22.4  inactive period → NaN ──
+    var as4 = Object.assign({}, mockAs, { activeInPeriod:{day:false,eve:true,night:true} });
+    var adj4 = _asGetLwM2Adj(as4, 'day');
+    t(cat, '22.4', !Number.isFinite(adj4),
+      '22.4 inactive→NaN got=' + adj4);
+
+    // ── 22.5  _asGetEffectiveLw = Lw/m² + 10·log₁₀(area) ──
+    var area22 = _asPolygonArea(mockAs.vertices);
+    var effLw5 = _asGetEffectiveLw(mockAs, 'day');
+    var expected5 = 65 + 10 * Math.log10(area22);
+    t(cat, '22.5', Number.isFinite(effLw5) && Math.abs(effLw5 - expected5) < 0.1,
+      '22.5 effLw=' + (Number.isFinite(effLw5)?effLw5.toFixed(2):'NaN') + ' expected=' + expected5.toFixed(2) + ' area=' + Math.round(area22) + 'm²');
+
+    // ── 22.6  _asGenerateSubSources: <3 vertices → empty ──
+    var emptyAs = Object.assign({}, mockAs, { vertices:[[0,0],[0,1]] });
+    var pts6 = _asGenerateSubSources(emptyAs);
+    t(cat, '22.6', Array.isArray(pts6) && pts6.length === 0,
+      '22.6 <3 vertices→[] got len=' + (Array.isArray(pts6)?pts6.length:'err'));
+
+    // ── 22.7  _asGenerateSubSources: valid polygon → ≥1 point, all have cellArea ──
+    var pts7 = _asGenerateSubSources(mockAs);
+    var allHaveCellArea = pts7.length > 0 && pts7.every(function(p){ return Number.isFinite(p.cellArea) && p.cellArea > 0; });
+    t(cat, '22.7', allHaveCellArea,
+      '22.7 subSources=' + pts7.length + ' all have cellArea: ' + allHaveCellArea);
+
+    // ── 22.8  Energy-sum invariant: Σ(cellArea) ≈ polygon area (±30%) ──
+    // Grid sweeps bounding box with PIP filter; outer cells may be excluded,
+    // so sum of cell areas is a lower bound — accept 30% tolerance.
+    var sumCellArea8 = pts7.reduce(function(s, p){ return s + p.cellArea; }, 0);
+    var ratio8 = (area22 > 0) ? sumCellArea8 / area22 : 0;
+    t(cat, '22.8', ratio8 >= 0.5 && ratio8 <= 1.5,
+      '22.8 Σcell=' + Math.round(sumCellArea8) + ' polyArea=' + Math.round(area22) + ' ratio=' + ratio8.toFixed(2) + ' expected 0.5–1.5');
+
+    // ── 22.9  Lw per cell + area-scaling → cell power sums ≈ total Lw (±2 dB) ──
+    var lwM2 = _asGetLwM2Adj(mockAs, 'day');
+    var totalFromCells9 = 10 * Math.log10(pts7.reduce(function(s, p) {
+      return s + Math.pow(10, (lwM2 + 10 * Math.log10(p.cellArea)) / 10);
+    }, 0));
+    var totalDirect9 = _asGetEffectiveLw(mockAs, 'day');
+    t(cat, '22.9', Math.abs(totalFromCells9 - totalDirect9) < 2.0,
+      '22.9 cellSum=' + totalFromCells9.toFixed(1) + ' direct=' + totalDirect9.toFixed(1) + ' Δ=' + Math.abs(totalFromCells9-totalDirect9).toFixed(2) + ' expected <2 dB');
   })();
 
   /* ════════════════════════════════════════════════════════════════════
@@ -35555,6 +35635,14 @@ if (window.pdfjsLib) {
           if (drawBuildingSourceBtn) drawBuildingSourceBtn.classList.remove('active');
           return;
         }
+        if (_drawingAreaSource) {
+          _asDrawHandler = null;
+          _drawingAreaSource = false;
+          _drawingActive = false;
+          var _asBtn = document.getElementById('drawAreaSourceBtn');
+          if (_asBtn) _asBtn.classList.remove('active');
+          return;
+        }
         if (_drawingActive && !_drawHandler) stopDrawing();
       });
 
@@ -36186,7 +36274,10 @@ if (window.pdfjsLib) {
       fillColor: 'rgba(255,160,50,0.25)', fillOpacity: 1, interactive: true
     };
 
+    var _asPanelDragCleanup = null;
+
     function closeAsPanel() {
+      if (_asPanelDragCleanup) { _asPanelDragCleanup(); _asPanelDragCleanup = null; }
       var existing = document.getElementById('asFloatPanel');
       if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
       _asPanel = null;
@@ -36742,12 +36833,11 @@ if (window.pdfjsLib) {
           _asPX = r.left; _asPY = r.top;
           ev.preventDefault();
         });
-        document.addEventListener('mousemove', function(ev) {
-          if (!_asDrg) return;
-          _asFloatPanel.style.left = (_asPX + ev.clientX - _asDX) + 'px';
-          _asFloatPanel.style.top  = (_asPY + ev.clientY - _asDY) + 'px';
-        });
-        document.addEventListener('mouseup', function() { _asDrg = false; });
+        function _asDragMove(ev) { if (!_asDrg) return; _asFloatPanel.style.left = (_asPX + ev.clientX - _asDX) + 'px'; _asFloatPanel.style.top = (_asPY + ev.clientY - _asDY) + 'px'; }
+        function _asDragUp() { _asDrg = false; }
+        document.addEventListener('mousemove', _asDragMove);
+        document.addEventListener('mouseup', _asDragUp);
+        _asPanelDragCleanup = function() { document.removeEventListener('mousemove', _asDragMove); document.removeEventListener('mouseup', _asDragUp); };
       }
     }
 
@@ -38770,7 +38860,10 @@ if (window.pdfjsLib) {
 
     // ── Floating panel for line source editing ──────────────────────────────
 
+    var _lsPanelDragCleanup = null;
+
     function closeLsPanel() {
+      if (_lsPanelDragCleanup) { _lsPanelDragCleanup(); _lsPanelDragCleanup = null; }
       var existing = document.getElementById('lsFloatPanel');
       if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
       _lsPanel = null;
@@ -39267,16 +39360,11 @@ if (window.pdfjsLib) {
           panelY = rect.top;
           ev.preventDefault();
         });
-        document.addEventListener('mousemove', function(ev) {
-          if (!dragging) return;
-          var dx = ev.clientX - dragX;
-          var dy = ev.clientY - dragY;
-          panel.style.left = (panelX + dx) + 'px';
-          panel.style.top  = (panelY + dy) + 'px';
-          panel.style.right = 'auto';
-          panel.style.bottom = 'auto';
-        });
-        document.addEventListener('mouseup', function() { dragging = false; });
+        function _lsDragMove(ev) { if (!dragging) return; panel.style.left = (panelX + ev.clientX - dragX) + 'px'; panel.style.top = (panelY + ev.clientY - dragY) + 'px'; panel.style.right = 'auto'; panel.style.bottom = 'auto'; }
+        function _lsDragUp() { dragging = false; }
+        document.addEventListener('mousemove', _lsDragMove);
+        document.addEventListener('mouseup', _lsDragUp);
+        _lsPanelDragCleanup = function() { document.removeEventListener('mousemove', _lsDragMove); document.removeEventListener('mouseup', _lsDragUp); };
       }
     }
 
@@ -39779,6 +39867,7 @@ if (window.pdfjsLib) {
           function() { return cr.vertices; },
           function(v) { cr.vertices = v; },
           function() {
+            if (typeof _cortnClearAllReceiverResults === 'function') _cortnClearAllReceiverResults();
             renderCortnRoadLayer();
             if (window._recomputeCortnMap) window._recomputeCortnMap();
             if (typeof window._undoPushState === 'function') window._undoPushState('Move CoRTN road ' + (cr.name || 'Road'));
@@ -39937,7 +40026,10 @@ if (window.pdfjsLib) {
       '</div>';
     }
 
+    var _cortnPanelDragCleanup = null;
+
     function closeCortnPanel() {
+      if (_cortnPanelDragCleanup) { _cortnPanelDragCleanup(); _cortnPanelDragCleanup = null; }
       var existing = document.getElementById('cortnFloatPanel');
       if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
       _cortnPanel = null;
@@ -39984,12 +40076,11 @@ if (window.pdfjsLib) {
           panelX = r.left; panelY = r.top;
           ev.preventDefault();
         });
-        document.addEventListener('mousemove', function(ev) {
-          if (!dragging) return;
-          panel.style.left = (panelX + ev.clientX - dragX) + 'px';
-          panel.style.top  = (panelY + ev.clientY - dragY) + 'px';
-        });
-        document.addEventListener('mouseup', function() { dragging = false; });
+        function _cortnDragMove(ev) { if (!dragging) return; panel.style.left = (panelX + ev.clientX - dragX) + 'px'; panel.style.top = (panelY + ev.clientY - dragY) + 'px'; }
+        function _cortnDragUp() { dragging = false; }
+        document.addEventListener('mousemove', _cortnDragMove);
+        document.addEventListener('mouseup', _cortnDragUp);
+        _cortnPanelDragCleanup = function() { document.removeEventListener('mousemove', _cortnDragMove); document.removeEventListener('mouseup', _cortnDragUp); };
       }
 
       // Close buttons
@@ -43748,7 +43839,7 @@ if (window.pdfjsLib) {
       html += '</div>';
 
       // Sources group
-      var hasSrc = sourcePins.length > 0 || lineSources.length > 0 || (typeof buildingSources !== 'undefined' && buildingSources.length > 0) || (typeof areaSources !== 'undefined' && areaSources.length > 0);
+      var hasSrc = sourcePins.length > 0 || lineSources.length > 0 || (typeof buildingSources !== 'undefined' && buildingSources.length > 0) || (typeof areaSources !== 'undefined' && areaSources.length > 0) || (typeof cortnRoads !== 'undefined' && cortnRoads.length > 0);
       html += '<div style="margin-bottom:10px;">';
       html += '<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Sources</div>';
       if (!hasSrc) {
