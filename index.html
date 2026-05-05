@@ -4018,6 +4018,14 @@ body.panel-resizing #map-column {
                   </button>
                 </div>
               </section>
+              <section class="modelling-card">
+                <h3>Editing annotations</h3>
+                <p class="card-hint" style="margin-bottom:8px;">Click the <strong style="color:#e2e8f0;">⋮</strong> menu on any annotation in the Objects panel to edit vertices, move, change colour, weight, font size, or delete.</p>
+                <button onclick="(function(){var p=document.getElementById('objectsFloatPanel'),b=document.getElementById('objectsToggleBtn');if(p&&b&&p.style.display!=='flex')b.click();})()" style="width:100%;padding:6px 10px;border-radius:5px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#e2e8f0;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 12l9-5"/><path d="M12 12v10"/><path d="M12 12L3 7"/></svg>
+                  Open Objects panel
+                </button>
+              </section>
               <section class="modelling-card" id="annListSection" style="display:none;">
                 <h3>Placed annotations</h3>
                 <div id="annListBody"></div>
@@ -34207,23 +34215,78 @@ if (window.pdfjsLib) {
     }
     window._annEdit = _annEdit;
 
+    function _annMoveText(idx) {
+      var ann = annotations[idx];
+      if (!ann || ann.type !== 'text') return;
+      if (_drawingActive) return;
+      _drawingActive = true;
+      if (typeof setPanelModeBanner === 'function') {
+        setPanelModeBanner('Click map to reposition text label', function() {
+          _drawingActive = false;
+          if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
+          map.off('click', _placeFn);
+        });
+      }
+      function _placeFn(e) {
+        _drawingActive = false;
+        if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
+        ann.center = [e.latlng.lat, e.latlng.lng];
+        renderAnnotationLayer();
+        if (typeof _renderObjectList === 'function') _renderObjectList();
+        if (typeof setUnsaved === 'function') setUnsaved();
+      }
+      map.once('click', _placeFn);
+    }
+    window._annMoveText = _annMoveText;
+
     function _annObjMenu(idx, btn) {
       var ann = annotations[idx];
       if (!ann) return;
       var items = [
-        { id: 'edit', label: 'Edit / move', icon: '✎', action: function() { _annEdit(idx); } },
-        { id: 'rename', label: 'Rename', icon: '✏', action: function() {
-          var n = prompt('Annotation name:', ann.name || '');
-          if (n !== null) { ann.name = n; renderAnnotationLayer(); if (typeof _renderObjectList === 'function') _renderObjectList(); if (typeof setUnsaved === 'function') setUnsaved(); }
-        }},
-        { id: 'color', label: 'Change colour', icon: '🎨', action: function() {
-          var inp = document.createElement('input'); inp.type = 'color'; inp.value = ann.color || '#e11d48';
-          inp.oninput = function() { ann.color = inp.value; renderAnnotationLayer(); if (typeof _renderObjectList === 'function') _renderObjectList(); if (typeof setUnsaved === 'function') setUnsaved(); };
-          inp.click();
-        }},
-        'sep',
-        { id: 'del', label: 'Delete', icon: '🗑', cls: 'ctx-danger', action: function() { _annDelete(idx); } }
+        { id: 'edit', label: ann.type === 'text' ? 'Edit text' : 'Edit / move vertices', icon: '✎', action: function() { _annEdit(idx); } }
       ];
+      if (ann.type === 'text') {
+        items.push({ id: 'move', label: 'Move label', icon: '⊹', action: function() { _annMoveText(idx); } });
+        items.push({ id: 'fontsize', label: 'Font size…', icon: 'A', action: function() {
+          var cur = ann.fontSize || 14;
+          var v = prompt('Font size (px):', cur);
+          if (v !== null && !isNaN(parseInt(v, 10))) {
+            ann.fontSize = Math.max(8, Math.min(72, parseInt(v, 10)));
+            renderAnnotationLayer(); if (typeof _renderObjectList === 'function') _renderObjectList(); if (typeof setUnsaved === 'function') setUnsaved();
+          }
+        }});
+      } else {
+        items.push({ id: 'weight', label: 'Line weight…', icon: '—', action: function() {
+          var cur = ann.weight || 2;
+          var v = prompt('Line weight (1–8):', cur);
+          if (v !== null && !isNaN(parseInt(v, 10))) {
+            ann.weight = Math.max(1, Math.min(8, parseInt(v, 10)));
+            renderAnnotationLayer(); if (typeof _renderObjectList === 'function') _renderObjectList(); if (typeof setUnsaved === 'function') setUnsaved();
+          }
+        }});
+        if (ann.type === 'rect' || ann.type === 'circle') {
+          items.push({ id: 'fillopacity', label: 'Fill opacity…', icon: '◑', action: function() {
+            var cur = ann.fillOpacity != null ? ann.fillOpacity : 0.15;
+            var v = prompt('Fill opacity (0 = none, 1 = solid):', cur);
+            if (v !== null && !isNaN(parseFloat(v))) {
+              ann.fillOpacity = Math.max(0, Math.min(1, parseFloat(v)));
+              ann.fill = ann.fillOpacity > 0;
+              renderAnnotationLayer(); if (typeof _renderObjectList === 'function') _renderObjectList(); if (typeof setUnsaved === 'function') setUnsaved();
+            }
+          }});
+        }
+      }
+      items.push({ id: 'rename', label: 'Rename', icon: '✏', action: function() {
+        var n = prompt('Annotation name:', ann.name || '');
+        if (n !== null) { ann.name = n; renderAnnotationLayer(); if (typeof _renderObjectList === 'function') _renderObjectList(); if (typeof setUnsaved === 'function') setUnsaved(); }
+      }});
+      items.push({ id: 'color', label: 'Change colour', icon: '🎨', action: function() {
+        var inp = document.createElement('input'); inp.type = 'color'; inp.value = ann.color || '#e11d48';
+        inp.oninput = function() { ann.color = inp.value; renderAnnotationLayer(); if (typeof _renderObjectList === 'function') _renderObjectList(); if (typeof setUnsaved === 'function') setUnsaved(); };
+        inp.click();
+      }});
+      items.push('sep');
+      items.push({ id: 'del', label: 'Delete', icon: '🗑', cls: 'ctx-danger', action: function() { _annDelete(idx); } });
       var r = btn.getBoundingClientRect();
       if (typeof _showMapCtxMenu === 'function') _showMapCtxMenu(Math.round(r.left), Math.round(r.bottom + 4), items);
     }
