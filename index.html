@@ -34293,6 +34293,38 @@ if (window.pdfjsLib) {
     }
     window._annMoveText = _annMoveText;
 
+    function _annMoveShape(idx) {
+      var ann = annotations[idx];
+      if (!ann || ann.type === 'text') return;
+      function _moveFn(e) {
+        var ll = e.latlng;
+        if (ann.type === 'line') {
+          var sumLat = 0, sumLng = 0;
+          ann.vertices.forEach(function(v) { sumLat += v[0]; sumLng += v[1]; });
+          var dLat = ll.lat - sumLat / ann.vertices.length;
+          var dLng = ll.lng - sumLng / ann.vertices.length;
+          ann.vertices = ann.vertices.map(function(v) { return [v[0] + dLat, v[1] + dLng]; });
+        } else if (ann.type === 'rect') {
+          var cLat = (ann.vertices[0][0] + ann.vertices[1][0]) / 2;
+          var cLng = (ann.vertices[0][1] + ann.vertices[1][1]) / 2;
+          var dLat = ll.lat - cLat, dLng = ll.lng - cLng;
+          ann.vertices = ann.vertices.map(function(v) { return [v[0] + dLat, v[1] + dLng]; });
+        } else if (ann.type === 'circle') {
+          ann.center = [ll.lat, ll.lng];
+        }
+        _annClearBanner();
+        renderAnnotationLayer();
+        if (typeof _renderObjectList === 'function') _renderObjectList();
+        if (typeof setUnsaved === 'function') setUnsaved();
+      }
+      _annSetBanner('Click map to move shape to this position', function() {
+        map.off('click', _moveFn);
+        _annClearBanner();
+      });
+      map.once('click', _moveFn);
+    }
+    window._annMoveShape = _annMoveShape;
+
     function _annObjMenu(idx, btn) {
       var ann = annotations[idx];
       if (!ann) return;
@@ -34310,6 +34342,7 @@ if (window.pdfjsLib) {
           }
         }});
       } else {
+        items.push({ id: 'move', label: 'Move shape', icon: '⊹', action: function() { _annMoveShape(idx); } });
         items.push({ id: 'weight', label: 'Line weight…', icon: '—', action: function() {
           var cur = ann.weight || 2;
           var v = prompt('Line weight (1–8):', cur);
@@ -34410,21 +34443,69 @@ if (window.pdfjsLib) {
       }
 
       _drawingActive = true;
+
+      if (type === 'circle') {
+        // Two-click circle: click 1 = centre, click 2 = edge. Avoids L.Draw.Circle drag issues.
+        var _circCenter = null;
+        var _circPreview = null;
+        function _circCancel() {
+          map.off('click', _circClick1);
+          map.off('click', _circClick2);
+          map.off('mousemove', _circMove);
+          if (_circPreview) { map.removeLayer(_circPreview); _circPreview = null; }
+          _circCenter = null;
+          _annCircleHandler = null;
+          _drawingActive = false;
+          if (activeBtn) activeBtn.classList.remove('active');
+        }
+        function _circMove(e) {
+          if (!_circCenter || !_circPreview) return;
+          _circPreview.setRadius(Math.max(1, _circCenter.distanceTo(e.latlng)));
+        }
+        function _circClick2(e) {
+          map.off('mousemove', _circMove);
+          var radius = Math.max(1, _circCenter.distanceTo(e.latlng));
+          var center = _circCenter;
+          if (_circPreview) { map.removeLayer(_circPreview); _circPreview = null; }
+          _circCenter = null;
+          _annCircleHandler = null;
+          _drawingActive = false;
+          _annClearBanner();
+          if (activeBtn) activeBtn.classList.remove('active');
+          _annOpenNamePopup(map.latLngToContainerPoint(center), function(name) {
+            _addAnnotation({
+              id: 'ann_' + Date.now(), type: 'circle',
+              center: [center.lat, center.lng], radius: radius,
+              color: _annStyle.color, weight: _annStyle.weight,
+              fill: true, fillOpacity: 0.15, fillColor: _annStyle.color,
+              name: name, vertices: null, text: null, fontSize: null
+            });
+          });
+        }
+        function _circClick1(e) {
+          _circCenter = e.latlng;
+          _circPreview = L.circle(_circCenter, Object.assign({ radius: 10 }, shapeOpts)).addTo(map);
+          map.on('mousemove', _circMove);
+          map.once('click', _circClick2);
+          _annSetBanner('Click again to set the circle edge', _circCancel);
+        }
+        _annCircleHandler = { disable: _circCancel };
+        _annSetBanner('Click map to set circle centre', _circCancel);
+        map.once('click', _circClick1);
+        return;
+      }
+
       var handler;
       if (type === 'line') {
         handler = new L.Draw.Polyline(map, { shapeOptions: shapeOpts, metric: true });
         _annLineHandler = handler;
-      } else if (type === 'rect') {
+      } else {
         handler = new L.Draw.Rectangle(map, { shapeOptions: shapeOpts });
         _annRectHandler = handler;
-      } else if (type === 'circle') {
-        handler = new L.Draw.Circle(map, { shapeOptions: shapeOpts });
-        _annCircleHandler = handler;
       }
       handler.enable();
       var bannerMsg = type === 'line' ? 'Drawing line — click points, double-click to finish'
-                    : type === 'rect' ? 'Drawing rectangle — click and drag'
-                    : 'Drawing circle — click centre, drag to set radius';
+                                      : 'Drawing rectangle — click and drag';
       _annSetBanner(bannerMsg, function() {
         try { handler.disable(); } catch(e) {}
         _annLineHandler = _annRectHandler = _annCircleHandler = null;
@@ -34434,6 +34515,29 @@ if (window.pdfjsLib) {
       });
     }
     window._annStartDraw = _annStartDraw;
+
+    // Shared name popup for newly drawn annotations (reused by circle two-click path)
+    function _annOpenNamePopup(containerPt, onAdd) {
+      var mapCenter = map.containerPointToLatLng(containerPt);
+      var nameHtml = '<div style="min-width:190px;font-size:13px;">' +
+        '<b>Name this annotation</b>' +
+        '<div style="margin:6px 0;"><input id="annNameInp" type="text" placeholder="Optional label" ' +
+        'style="width:100%;box-sizing:border-box;padding:4px 6px;font-size:12px;border-radius:4px;border:1px solid #ccc;"></div>' +
+        '<div style="display:flex;gap:6px;">' +
+        '<button id="annNameOk" style="flex:1;font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #4a90d9;background:#2563eb;color:#fff;cursor:pointer;">Add</button> ' +
+        '<button id="annNameCancel" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #ccc;cursor:pointer;color:#555;">Cancel</button>' +
+        '</div></div>';
+      L.popup({ closeOnClick: false, maxWidth: 260 }).setLatLng(mapCenter).setContent(nameHtml).openOn(map);
+      setTimeout(function() {
+        var okBtn = document.getElementById('annNameOk');
+        var clBtn = document.getElementById('annNameCancel');
+        var nameInp = document.getElementById('annNameInp');
+        if (nameInp) { nameInp.focus(); nameInp.onkeydown = function(ev) { if (ev.key === 'Enter' && okBtn) okBtn.onclick(); }; }
+        if (okBtn) okBtn.onclick = function() { var n = (nameInp ? nameInp.value.trim() : '') || null; map.closePopup(); onAdd(n); };
+        if (clBtn) clBtn.onclick = function() { map.closePopup(); };
+      }, 50);
+    }
+    window._annOpenNamePopup = _annOpenNamePopup;
 
     // ─── Annotation CREATED handler ──────────────────────────────────────────
 
