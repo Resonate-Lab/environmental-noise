@@ -612,32 +612,11 @@ input[data-mbs-key]:checked::after {
 .nsaleg-badge { font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: 500; }
 .nsaleg-frac { font-size: 9px; color: var(--muted); margin-top: 1px; }
 
-/* === Export-size legends: applied via body.legend-export (Save JPG) === */
-body.legend-export .zone-legend { font-size: 22px; padding: 16px 20px; border-radius: 16px; max-height: 520px; min-width: 280px; max-width: 440px; }
-body.legend-export .zone-legend-title { font-size: 22px; margin-bottom: 10px; padding-bottom: 8px; }
-body.legend-export .zone-legend-item { gap: 12px; padding: 2px 0; }
-body.legend-export .zone-legend-swatch { width: 28px; height: 28px; border-radius: 6px; }
-body.legend-export .zone-legend-name { font-size: 22px; }
-body.legend-export .noise-legend { font-size: 22px; padding: 16px 24px; border-radius: 12px; }
-body.legend-export .noise-legend-sub { font-size: 20px; }
-body.legend-export .noise-legend-swatch { width: 28px; height: 20px; margin-right: 8px; border-radius: 4px; }
+/* === Export legends: applied via body.legend-export (Save JPG) === */
+/* Size overrides removed — html2canvas at scale=3 into a 3× canvas already */
+/* preserves screen proportions without any CSS enlargement.                 */
 body.legend-export .legend-popover { display: none !important; }
 body.legend-export .noise-legend { cursor: default !important; }
-body.legend-export .mbs-legend-title { margin-bottom: 8px; }
-body.legend-export .mbs-legend-row { gap: 12px; }
-body.legend-export .mbs-legend-swatch { width: 28px; height: 28px; border-radius: 4px; }
-body.legend-export input[data-mbs-key] { width: 28px; height: 28px; border-width: 3px; border-radius: 4px; }
-body.legend-export input[data-mbs-key]:checked::after { top: -4px; left: 2px; font-size: 24px; }
-body.legend-export .nsaleg-wrapper { gap: 12px; }
-body.legend-export .nsaleg-card { max-width: 480px; min-width: 340px; border-left-width: 6px; }
-body.legend-export .nsaleg-type-row { font-size: 16px; gap: 12px; margin-bottom: 6px; }
-body.legend-export .nsaleg-footer { font-size: 20px; margin-top: 6px; }
-body.legend-export .nsaleg-section { margin-bottom: 8px; }
-body.legend-export .nsaleg-zone-label { font-size: 20px; }
-body.legend-export .nsaleg-no-zones { font-size: 20px; }
-body.legend-export .nsaleg-badge-row { gap: 6px; margin-top: 4px; }
-body.legend-export .nsaleg-badge { font-size: 18px; padding: 2px 10px; border-radius: 6px; }
-body.legend-export .nsaleg-frac { font-size: 18px; margin-top: 2px; }
 
 /* === Export-size legends: @media print (browser Ctrl+P) === */
 @media print {
@@ -15526,7 +15505,7 @@ async function generatePDFAppendix(btn) {
 
         // Only capture bottom-LEFT controls (zone legend, scale bar, attribution).
         // Skip bottom-RIGHT controls (noise map legend) — not wanted in zone map.
-        // body.legend-export switches legends to 2× export size during capture.
+        // body.legend-export hides the legend popover and disables cursor during capture.
 
         // Inject a temporary "Subject site" legend entry (matching zone-legend style).
         // Insert BEFORE the zone legend so it appears above it on the map.

@@ -2,6 +2,8 @@
 
 ## May 2026
 
+- **Fix: legend in Save JPG now renders at screen size (100%) rather than 200%.** Removed erroneous 2× CSS size overrides from the `body.legend-export` block (font-size, padding, swatch dimensions, gap, min/max-width). With html2canvas running at `scale: dpr` (3×) into a 3× output canvas, no CSS enlargement is needed — the legend naturally lands at the correct screen proportion. The `@media print` block (Ctrl+P) is unchanged.
+
 - **Hosting migrated from GitHub Pages to Firebase Hosting.** Added `firebase.json` (static hosting, root public dir, dev files ignored) and `.firebaserc`. Replaced GitHub Pages `deploy.yml` workflow with `FirebaseExtended/action-hosting-deploy`. Requires `FIREBASE_SERVICE_ACCOUNT` GitHub secret. Live URL: `https://resonate-reflect.web.app`.
 
 - **Repo transferred to Resonate-Lab organisation and renamed.** New repo: `github.com/Resonate-Lab/environmental-noise`. New live URL: `https://resonate-lab.github.io/environmental-noise/`. Updated Nominatim `Referer` headers, PSMA portal comment, CLAUDE.md, and local git remote to match.
