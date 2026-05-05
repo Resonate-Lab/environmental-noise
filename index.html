@@ -15408,7 +15408,8 @@ async function generatePDFAppendix(btn) {
     }
 
     function _isPdfWhitelisted(layer) {
-      if (_zcs && layer === _zcs.streetLayer) return true;  // basemap always
+      if (_zcs && layer === _zcs.streetLayer) return true;  // street always
+      if (_zcs && layer === _zcs.aerialLayer) return true;  // aerial always (50% for PDF)
       if (_whitelistGroups.indexOf(layer) !== -1) return true;  // direct match
       // Parent-group check: catches child features of LayerGroup / FeatureGroup
       for (var _gi = 0; _gi < _whitelistGroups.length; _gi++) {
@@ -15418,23 +15419,25 @@ async function generatePDFAppendix(btn) {
       return false;
     }
 
-    // Force street basemap if user is currently on aerial.
-    // Push the restore BEFORE the layer sweep so it fires first on restore,
-    // re-adding the aerial layer before the overlays are stacked back on top.
-    var _basemapSwapped = false;
-    if (_zcs && _zcs.isAerial && _map) {
-      _map.removeLayer(_zcs.aerialLayer);
-      // street layer is always present — no need to add it
-      _basemapSwapped = true;
-      _pdfRestore.push((function(cs) {
+    // Zone image always uses aerial at 50% over street, regardless of current
+    // map state. If aerial is currently off, add it temporarily; if on, drop
+    // opacity to 0.5. Restore to original state after capture.
+    var _basemapSwapped = false;  // no longer used for delay; kept for safety
+    if (_zcs && _map) {
+      var _pdfAerialWasAdded  = !_zcs.isAerial;
+      var _pdfAerialPrevOp    = _zcs.aerialOpacity != null ? _zcs.aerialOpacity : 1;
+      if (_pdfAerialWasAdded) _zcs.aerialLayer.addTo(_map);
+      _zcs.aerialLayer.setOpacity(0.5);
+      _pdfRestore.push((function(cs, wasAdded, prevOp) {
         return function() {
-          // Restore aerial on top of the always-present street layer
-          if (_map && cs.aerialLayer) {
-            cs.aerialLayer.addTo(_map);
-            cs.aerialLayer.setOpacity(cs.aerialOpacity != null ? cs.aerialOpacity : 1);
+          if (!_map || !cs.aerialLayer) return;
+          if (wasAdded) {
+            _map.removeLayer(cs.aerialLayer);
+          } else {
+            cs.aerialLayer.setOpacity(prevOp);
           }
         };
-      })(_zcs));
+      })(_zcs, _pdfAerialWasAdded, _pdfAerialPrevOp));
     }
 
     // Diagnostic: log whitelist refs as flat primitives (visible without expanding in DevTools).
@@ -15491,9 +15494,8 @@ async function generatePDFAppendix(btn) {
     _pdfRestore.push(function() { _noiseLegEls.forEach(function(el) { el.style.display = ''; }); });
 
     // Settle: 2× rAF for Leaflet reflow + base wait.
-    // Extra 400 ms if basemap was swapped to allow street tiles to load.
     await new Promise(function(r) { requestAnimationFrame(function() { requestAnimationFrame(r); }); });
-    await new Promise(function(r) { setTimeout(r, _basemapSwapped ? 600 : 200); });
+    await new Promise(function(r) { setTimeout(r, 200); });
 
     var zoneImg = null;
 
