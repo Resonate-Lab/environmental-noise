@@ -1739,6 +1739,32 @@ body.panel-resizing #map-column {
 }
 .panel-mode-cancel:hover { background: #fef3c7; }
 
+/* Annotation map overlay banner */
+#annMapBanner {
+  display: none;
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 1500;
+  background: #fef3c7;
+  border-bottom: 2px solid #fde68a;
+  align-items: center;
+  padding: 8px 14px;
+  gap: 10px;
+  pointer-events: all;
+}
+#annMapBanner.active { display: flex; }
+#annMapBanner .ann-banner-text { font-size: 12px; font-weight: 500; color: #78350f; flex: 1; }
+#annMapBanner .ann-banner-save {
+  background: #2563eb; color: white; border: none;
+  padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; white-space: nowrap;
+}
+#annMapBanner .ann-banner-save:hover { background: #1d4ed8; }
+#annMapBanner .ann-banner-cancel {
+  background: white; border: 1px solid #b45309; color: #78350f;
+  padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; white-space: nowrap;
+}
+#annMapBanner .ann-banner-cancel:hover { background: #fef3c7; }
+
 /* tc-button-group — sub-group within a Modelling panel sub-card */
 .tc-button-group { margin: 10px 0 0; }
 .tc-button-group:first-of-type { margin-top: 0; }
@@ -34073,6 +34099,40 @@ if (window.pdfjsLib) {
     var _annLineHandler   = null;
     var _annRectHandler   = null;
     var _annCircleHandler = null;
+
+    // Floating map banner — overlays the map so it's visible regardless of which panel is open
+    (function() {
+      var mc = document.getElementById('map-column');
+      if (!mc) return;
+      var el = document.createElement('div');
+      el.id = 'annMapBanner';
+      el.innerHTML =
+        '<span class="ann-banner-text" id="annBannerText"></span>' +
+        '<button class="ann-banner-save" id="annBannerSave">Save</button>' +
+        '<button class="ann-banner-cancel" id="annBannerCancel">Cancel</button>';
+      mc.insertBefore(el, mc.firstChild);
+    })();
+
+    function _annSetBanner(text, cancelFn, saveFn) {
+      var el     = document.getElementById('annMapBanner');
+      var txt    = document.getElementById('annBannerText');
+      var saveBtn   = document.getElementById('annBannerSave');
+      var cancelBtn = document.getElementById('annBannerCancel');
+      if (!el) return;
+      if (txt) txt.textContent = text;
+      if (saveBtn) {
+        saveBtn.style.display = saveFn ? '' : 'none';
+        saveBtn.onclick = saveFn ? function() { _annClearBanner(); saveFn(); } : null;
+      }
+      if (cancelBtn) cancelBtn.onclick = function() { _annClearBanner(); if (cancelFn) cancelFn(); };
+      el.classList.add('active');
+    }
+    function _annClearBanner() {
+      var el = document.getElementById('annMapBanner');
+      if (el) el.classList.remove('active');
+    }
+    window._annSetBanner  = _annSetBanner;
+    window._annClearBanner = _annClearBanner;
     // ─── End annotation declarations ────────────────────────────────────────
 
     function renderAnnotationLayer() {
@@ -34177,26 +34237,14 @@ if (window.pdfjsLib) {
       }
       if (!targetLayer) return;
 
-      // Temporarily remove from annotationLayer, add to a temporary featureGroup for editing
       annotationLayer.removeLayer(targetLayer);
       var editFG = L.featureGroup([targetLayer]).addTo(map);
       var editTool = new L.EditToolbar.Edit(map, { featureGroup: editFG });
       editTool.enable();
 
-      if (typeof setPanelModeBanner === 'function') {
-        setPanelModeBanner('Editing annotation — drag handles then click Save', function() {
-          try { editTool.revertLayers(); editTool.disable(); } catch(e2) {}
-          map.removeLayer(editFG);
-          if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
-          renderAnnotationLayer();
-        });
-      }
-
-      function _saveEdit() {
+      function _commitEdit() {
         try { editTool.save(); editTool.disable(); } catch(e2) {}
         map.removeLayer(editFG);
-        if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
-        // Extract updated geometry from the edited layer
         if (ann.type === 'line') {
           ann.vertices = targetLayer.getLatLngs().map(function(ll) { return [ll.lat, ll.lng]; });
         } else if (ann.type === 'rect') {
@@ -34209,33 +34257,39 @@ if (window.pdfjsLib) {
         renderAnnotationLayer();
         if (typeof _renderObjectList === 'function') _renderObjectList();
         if (typeof setUnsaved === 'function') setUnsaved();
-        map.off('draw:editstop', _saveEdit);
       }
-      map.once('draw:editstop', _saveEdit);
+
+      function _cancelEdit() {
+        try { editTool.revertLayers(); editTool.disable(); } catch(e2) {}
+        map.removeLayer(editFG);
+        renderAnnotationLayer();
+      }
+
+      _annSetBanner('Drag handles to edit — click Save when done', _cancelEdit, _commitEdit);
     }
     window._annEdit = _annEdit;
 
     function _annMoveText(idx) {
       var ann = annotations[idx];
       if (!ann || ann.type !== 'text') return;
-      if (_drawingActive) return;
-      _drawingActive = true;
-      if (typeof setPanelModeBanner === 'function') {
-        setPanelModeBanner('Click map to reposition text label', function() {
-          _drawingActive = false;
-          if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
-          map.off('click', _placeFn);
-        });
-      }
+      // Cancel any active Leaflet.draw before entering move mode
+      if (_annLineHandler)   { try { _annLineHandler.disable();   } catch(e) {} _annLineHandler   = null; }
+      if (_annRectHandler)   { try { _annRectHandler.disable();   } catch(e) {} _annRectHandler   = null; }
+      if (_annCircleHandler) { try { _annCircleHandler.disable(); } catch(e) {} _annCircleHandler = null; }
+      _drawingActive = false;
+
       function _placeFn(e) {
-        _drawingActive = false;
-        if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
+        _annClearBanner();
         ann.center = [e.latlng.lat, e.latlng.lng];
         renderAnnotationLayer();
         if (typeof _renderObjectList === 'function') _renderObjectList();
         if (typeof setUnsaved === 'function') setUnsaved();
       }
-      map.once('click', _placeFn);
+      function _cancelMove() {
+        map.off('click', _placeFn);
+      }
+      _annSetBanner('Click anywhere on the map to reposition the label', _cancelMove);
+      map.once('click', function(e) { _annClearBanner(); _placeFn(e); });
     }
     window._annMoveText = _annMoveText;
 
@@ -34331,16 +34385,14 @@ if (window.pdfjsLib) {
 
       if (type === 'text') {
         _drawingActive = true;
-        if (typeof setPanelModeBanner === 'function') {
-          setPanelModeBanner('Text label — click map to place', function() {
-            _drawingActive = false;
-            if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
-            if (activeBtn) activeBtn.classList.remove('active');
-          });
-        }
+        _annSetBanner('Click anywhere on the map to place a text label', function() {
+          _drawingActive = false;
+          _annClearBanner();
+          if (activeBtn) activeBtn.classList.remove('active');
+        });
         map.once('click', function(e) {
           _drawingActive = false;
-          if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
+          _annClearBanner();
           if (activeBtn) activeBtn.classList.remove('active');
           var txt = prompt('Label text:');
           if (!txt) return;
@@ -34366,22 +34418,20 @@ if (window.pdfjsLib) {
         handler = new L.Draw.Rectangle(map, { shapeOptions: shapeOpts });
         _annRectHandler = handler;
       } else if (type === 'circle') {
-        handler = new L.Draw.Circle(map, { shapeOptions: shapeOpts, metric: true });
+        handler = new L.Draw.Circle(map, { shapeOptions: shapeOpts });
         _annCircleHandler = handler;
       }
       handler.enable();
-      if (typeof setPanelModeBanner === 'function') {
-        var bannerMsg = type === 'line' ? 'Drawing line — click points, double-click to finish'
-                      : type === 'rect' ? 'Drawing rectangle — click and drag'
-                      : 'Drawing circle — click centre, drag to set radius';
-        setPanelModeBanner(bannerMsg, function() {
-          try { handler.disable(); } catch(e) {}
-          _annLineHandler = _annRectHandler = _annCircleHandler = null;
-          _drawingActive = false;
-          if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
-          if (activeBtn) activeBtn.classList.remove('active');
-        });
-      }
+      var bannerMsg = type === 'line' ? 'Drawing line — click points, double-click to finish'
+                    : type === 'rect' ? 'Drawing rectangle — click and drag'
+                    : 'Drawing circle — click centre, drag to set radius';
+      _annSetBanner(bannerMsg, function() {
+        try { handler.disable(); } catch(e) {}
+        _annLineHandler = _annRectHandler = _annCircleHandler = null;
+        _drawingActive = false;
+        _annClearBanner();
+        if (activeBtn) activeBtn.classList.remove('active');
+      });
     }
     window._annStartDraw = _annStartDraw;
 
