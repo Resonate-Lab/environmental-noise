@@ -1563,7 +1563,8 @@ body.panel-resizing #map-column {
 #modellingPanel,
 #mappingPanel,
 #libraryPanel,
-#toolsPanel {
+#toolsPanel,
+#annotationsPanel {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -1583,7 +1584,27 @@ body.panel-resizing #map-column {
 #modellingPanel[hidden],
 #mappingPanel[hidden],
 #libraryPanel[hidden],
-#toolsPanel[hidden] { display: none; }
+#toolsPanel[hidden],
+#annotationsPanel[hidden] { display: none; }
+
+/* Annotation tool buttons */
+.ann-tool-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 10px; border-radius: 5px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05); color: #e2e8f0;
+  font-size: 12px; cursor: pointer; margin: 2px 2px 4px 0;
+  white-space: nowrap;
+}
+.ann-tool-btn:hover { background: rgba(255,255,255,0.12); }
+.ann-tool-btn.active { background: rgba(74,144,217,0.25); border-color: #4a90d9; color: #93c5fd; }
+.ann-color-swatch {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer;
+  display: inline-block; margin: 2px; vertical-align: middle;
+  flex-shrink: 0;
+}
+.ann-color-swatch.selected { border-color: #fff; box-shadow: 0 0 0 1px rgba(255,255,255,0.4); }
 
 /* Library panel is wider than the standard 340px */
 #libraryPanel { width: 1000px; }
@@ -2937,10 +2958,11 @@ body.panel-resizing #map-column {
             // ── Slide-out panel registry ──────────────────────────────────
             // Each entry: { headerBtnId, arrowId, closeBtnId }
             var _slideoutPanels = {
-              modellingPanel: { headerBtnId: 'lhsCalculationBtn', arrowId: null, closeBtnId: 'modellingPanelClose' },
-              mappingPanel:   { headerBtnId: 'lhsMappingBtn',     arrowId: null, closeBtnId: 'mappingPanelClose'   },
-              libraryPanel:   { headerBtnId: 'lhsLibraryBtn',     arrowId: null, closeBtnId: 'libraryPanelClose'   },
-              toolsPanel:     { headerBtnId: 'lhsModellingBtn',   arrowId: null, closeBtnId: 'toolsPanelClose'     }
+              modellingPanel:   { headerBtnId: 'lhsCalculationBtn',  arrowId: null, closeBtnId: 'modellingPanelClose'   },
+              mappingPanel:     { headerBtnId: 'lhsMappingBtn',      arrowId: null, closeBtnId: 'mappingPanelClose'     },
+              libraryPanel:     { headerBtnId: 'lhsLibraryBtn',      arrowId: null, closeBtnId: 'libraryPanelClose'     },
+              toolsPanel:       { headerBtnId: 'lhsModellingBtn',    arrowId: null, closeBtnId: 'toolsPanelClose'       },
+              annotationsPanel: { headerBtnId: 'lhsAnnotationsBtn',  arrowId: null, closeBtnId: 'annotationsPanelClose' }
             };
 
             function _openSlideoutPanel(panelId) {
@@ -3098,6 +3120,12 @@ body.panel-resizing #map-column {
             function toggleToolsPanel() {
               var p = document.getElementById('toolsPanel');
               if (p && !p.hidden) closeToolsPanel(); else openToolsPanel();
+            }
+            function openAnnotationsPanel()  { _openSlideoutPanel('annotationsPanel'); }
+            function closeAnnotationsPanel() { _closeSlideoutPanel('annotationsPanel'); }
+            function toggleAnnotationsPanel() {
+              var p = document.getElementById('annotationsPanel');
+              if (p && !p.hidden) closeAnnotationsPanel(); else openAnnotationsPanel();
             }
             function openLibraryPanel() {
               _openSlideoutPanel('libraryPanel');
@@ -3260,6 +3288,11 @@ body.panel-resizing #map-column {
                   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
                   'Library',
                   function() { if (typeof toggleLibraryPanel === 'function') toggleLibraryPanel(); }
+                ));
+                g2.appendChild(_mkIconBtn('lhsAnnotationsBtn', 'Annotations',
+                  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+                  'Annotations',
+                  function() { if (typeof toggleAnnotationsPanel === 'function') toggleAnnotationsPanel(); }
                 ));
                 strip.appendChild(g2);
 
@@ -3930,6 +3963,66 @@ body.panel-resizing #map-column {
             </div>
           </div>
           <!-- END MODELLING SLIDE-OUT PANEL -->
+
+          <!-- ANNOTATIONS SLIDE-OUT PANEL -->
+          <div id="annotationsPanel" role="dialog" aria-labelledby="annotationsPanelTitle" aria-modal="false" hidden>
+            <div class="slideout-header">
+              <h2 id="annotationsPanelTitle">ANNOTATIONS</h2>
+              <button class="slideout-close" id="annotationsPanelClose" aria-label="Close Annotations panel">&times;</button>
+            </div>
+            <div class="slideout-body">
+              <section class="modelling-card">
+                <h3>Style</h3>
+                <div style="margin-bottom:8px;">
+                  <div style="font-size:11px;color:#94a3b8;margin-bottom:5px;">Colour</div>
+                  <span id="annColorSwatches">
+                    <span class="ann-color-swatch selected" data-color="#e11d48" style="background:#e11d48;" title="Red" onclick="_annPickColor(this)"></span>
+                    <span class="ann-color-swatch" data-color="#2563eb" style="background:#2563eb;" title="Blue" onclick="_annPickColor(this)"></span>
+                    <span class="ann-color-swatch" data-color="#f59e0b" style="background:#f59e0b;" title="Amber" onclick="_annPickColor(this)"></span>
+                    <span class="ann-color-swatch" data-color="#16a34a" style="background:#16a34a;" title="Green" onclick="_annPickColor(this)"></span>
+                    <span class="ann-color-swatch" data-color="#ffffff" style="background:#fff;" title="White" onclick="_annPickColor(this)"></span>
+                    <span class="ann-color-swatch" data-color="#111827" style="background:#111827;border:1px solid #374151;" title="Black" onclick="_annPickColor(this)"></span>
+                    <label title="Custom colour" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:2px dashed rgba(255,255,255,0.3);margin:2px;vertical-align:middle;">
+                      <input type="color" id="annColorCustom" style="opacity:0;width:0;height:0;position:absolute;" oninput="_annPickCustomColor(this.value)">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </label>
+                  </span>
+                </div>
+                <div>
+                  <div style="font-size:11px;color:#94a3b8;margin-bottom:5px;">Weight</div>
+                  <div style="display:flex;gap:6px;" id="annWeightBtns">
+                    <button onclick="_annPickWeight(1,this)" style="padding:3px 9px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#e2e8f0;font-size:11px;cursor:pointer;">1px</button>
+                    <button onclick="_annPickWeight(2,this)" style="padding:3px 9px;border-radius:4px;border:1px solid #4a90d9;background:rgba(74,144,217,0.25);color:#93c5fd;font-size:11px;cursor:pointer;">2px</button>
+                    <button onclick="_annPickWeight(3,this)" style="padding:3px 9px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#e2e8f0;font-size:11px;cursor:pointer;">3px</button>
+                    <button onclick="_annPickWeight(4,this)" style="padding:3px 9px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#e2e8f0;font-size:11px;cursor:pointer;">4px</button>
+                  </div>
+                </div>
+              </section>
+              <section class="modelling-card">
+                <h3>Draw</h3>
+                <p class="card-hint">Click a tool then draw on the map. Double-click to finish lines.</p>
+                <div style="display:flex;flex-wrap:wrap;gap:0;">
+                  <button class="ann-tool-btn" id="annDrawLineBtn" onclick="_annStartDraw('line')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="19" x2="19" y2="5"/></svg> Line
+                  </button>
+                  <button class="ann-tool-btn" id="annDrawRectBtn" onclick="_annStartDraw('rect')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Rectangle
+                  </button>
+                  <button class="ann-tool-btn" id="annDrawCircleBtn" onclick="_annStartDraw('circle')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg> Circle
+                  </button>
+                  <button class="ann-tool-btn" id="annDrawTextBtn" onclick="_annStartDraw('text')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><line x1="12" y1="4" x2="12" y2="20"/></svg> Text label
+                  </button>
+                </div>
+              </section>
+              <section class="modelling-card" id="annListSection" style="display:none;">
+                <h3>Placed annotations</h3>
+                <div id="annListBody"></div>
+              </section>
+            </div>
+          </div>
+          <!-- END ANNOTATIONS SLIDE-OUT PANEL -->
 
           </div>
           <!-- ── End floating panels ── -->
@@ -24643,7 +24736,7 @@ setInitialCollapseState();
       try {
         var data = {};
         data._format = 'resonate-noise-tool';
-        data._version = 6;
+        data._version = 7;
         data._exportedAt = new Date().toISOString();
 
         // State
@@ -24944,6 +25037,17 @@ setInitialCollapseState();
           data.groundZones = gzones.map(function(gz) {
             return { id: gz.id, name: gz.name, g: gz.g, vertices: gz.vertices,
                      vertexElevations: gz.vertexElevations || null };
+          });
+        }
+
+        // Annotations (drawing set tool)
+        if (typeof annotations !== 'undefined' && annotations.length > 0) {
+          data.annotations = annotations.map(function(ann) {
+            return { id: ann.id, type: ann.type, name: ann.name,
+                     color: ann.color, weight: ann.weight,
+                     fill: ann.fill, fillOpacity: ann.fillOpacity,
+                     vertices: ann.vertices, center: ann.center,
+                     radius: ann.radius, text: ann.text, fontSize: ann.fontSize };
           });
         }
 
@@ -25857,9 +25961,9 @@ setInitialCollapseState();
 
     function loadAssessment(data, opts) {
       // Guard: warn if the file was saved by a future version of this app.
-      if (data._version && data._version > 6) {
+      if (data._version && data._version > 7) {
         console.warn('[loadAssessment] File is format v' + data._version +
-          ' (this app supports v6) — some fields may not load correctly.');
+          ' (this app supports v7) — some fields may not load correctly.');
       }
 
       // Version ladder: migrate older saves before any other processing.
@@ -26545,6 +26649,15 @@ setInitialCollapseState();
       // Restore user-drawn barriers (always call to clear orphaned layers from undo/redo)
       if (window._setUserBarriers) {
         window._setUserBarriers(data.userBarriers || []);
+      }
+
+      // Restore annotations (drawing set tool)
+      if (typeof annotations !== 'undefined' && typeof annotationLayer !== 'undefined') {
+        annotations.length = 0;
+        if (Array.isArray(data.annotations)) {
+          data.annotations.forEach(function(a) { annotations.push(Object.assign({}, a)); });
+        }
+        if (typeof renderAnnotationLayer === 'function') renderAnnotationLayer();
       }
 
       // Restore ground absorption zones (always call to clear orphaned layers from undo/redo)
@@ -27667,6 +27780,16 @@ setInitialCollapseState();
         contours: false, sourceElevations: {}, receiverElevations: {}
       };
 
+      // Annotations (drawing set tool)
+      if (typeof annotations !== 'undefined' && annotations.length) {
+        data.annotations = annotations.map(function(ann) {
+          return { id:ann.id, type:ann.type, name:ann.name, color:ann.color, weight:ann.weight,
+                   fill:ann.fill, fillOpacity:ann.fillOpacity,
+                   vertices:ann.vertices, center:ann.center, radius:ann.radius,
+                   text:ann.text, fontSize:ann.fontSize };
+        });
+      }
+
       // Barriers, ground zones, custom buildings
       var barriers = window._getUserBarriers ? window._getUserBarriers() : [];
       if (barriers.length) {
@@ -28534,6 +28657,7 @@ if (window.pdfjsLib) {
       if (nswZoningOverlay && map.hasLayer(nswZoningOverlay)) { nswZoningOverlay.bringToFront(); }
       if (zoneOutlineLayer && map.hasLayer(zoneOutlineLayer)) { zoneOutlineLayer.bringToFront(); }
       if (subzoneFeatureLayer && map.hasLayer(subzoneFeatureLayer)) { subzoneFeatureLayer.bringToFront(); }
+      if (typeof annotationLayer !== 'undefined' && map.hasLayer(annotationLayer)) { annotationLayer.bringToFront(); }
     }
 
     var markers = {};   /* key -> L.marker  */
@@ -33931,6 +34055,272 @@ if (window.pdfjsLib) {
       });
     }
     // ─── End ruler ─────────────────────────────────────────────────────────────
+
+    // ─── Annotations (drawing set tool) ─────────────────────────────────────
+    var annotations = [];
+    var annotationLayer = L.featureGroup().addTo(map); // featureGroup required for L.EditToolbar.Edit
+    var _annStyle = { color: '#e11d48', weight: 2 };
+    var _annLineHandler   = null;
+    var _annRectHandler   = null;
+    var _annCircleHandler = null;
+    // ─── End annotation declarations ────────────────────────────────────────
+
+    function renderAnnotationLayer() {
+      annotationLayer.clearLayers();
+      annotations.forEach(function(ann) {
+        var style = {
+          color: ann.color || '#e11d48',
+          weight: ann.weight || 2,
+          fill: !!ann.fill,
+          fillOpacity: ann.fillOpacity || 0,
+          fillColor: ann.color || '#e11d48',
+          opacity: 1,
+          interactive: true
+        };
+        var layer;
+        if (ann.type === 'line') {
+          layer = L.polyline(ann.vertices, style);
+        } else if (ann.type === 'rect') {
+          layer = L.rectangle([ann.vertices[0], ann.vertices[1]], style);
+        } else if (ann.type === 'circle') {
+          layer = L.circle(ann.center, Object.assign({ radius: ann.radius }, style));
+        } else if (ann.type === 'text') {
+          var fs = ann.fontSize || 14;
+          layer = L.marker(ann.center, {
+            icon: L.divIcon({
+              className: '',
+              html: '<div style="white-space:nowrap;font-size:' + fs + 'px;font-weight:600;' +
+                    'color:' + (ann.color || '#e11d48') + ';' +
+                    'text-shadow:0 0 4px rgba(0,0,0,0.85),0 0 2px rgba(0,0,0,0.9);' +
+                    'pointer-events:none;line-height:1.2;">' +
+                    escapeHTML(ann.text || '') + '</div>',
+              iconAnchor: [0, Math.round(fs / 2)]
+            }),
+            draggable: false
+          });
+        }
+        if (layer) {
+          layer._annId = ann.id;
+          annotationLayer.addLayer(layer);
+        }
+      });
+      annotationLayer.bringToFront();
+      _annRefreshPanel();
+    }
+
+    function _annRefreshPanel() {
+      var listSec = document.getElementById('annListSection');
+      var listBody = document.getElementById('annListBody');
+      if (!listSec || !listBody) return;
+      if (!annotations.length) { listSec.style.display = 'none'; return; }
+      listSec.style.display = '';
+      var TYPE_LABEL = { line: 'Line', rect: 'Rectangle', circle: 'Circle', text: 'Text' };
+      listBody.innerHTML = annotations.map(function(ann, i) {
+        var swatchStyle = ann.type !== 'text'
+          ? 'width:12px;height:3px;background:' + (ann.color || '#e11d48') + ';border-radius:1px;display:inline-block;vertical-align:middle;margin-right:5px;'
+          : 'width:10px;height:10px;background:' + (ann.color || '#e11d48') + ';border-radius:50%;display:inline-block;vertical-align:middle;margin-right:5px;';
+        return '<div style="display:flex;align-items:center;gap:4px;padding:3px 4px;border-radius:3px;">' +
+          '<span style="' + swatchStyle + '"></span>' +
+          '<span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML(ann.name || TYPE_LABEL[ann.type] || 'Annotation') + '</span>' +
+          '<span style="font-size:9px;color:#6b7280;margin-right:4px;">' + (TYPE_LABEL[ann.type] || '') + '</span>' +
+          '<button onclick="_annDelete(' + i + ')" title="Delete" style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:13px;padding:1px 3px;line-height:1;" onmouseenter="this.style.color=\'#ef4444\'" onmouseleave="this.style.color=\'#6b7280\'">&#x2715;</button>' +
+          '</div>';
+      }).join('');
+    }
+
+    function _addAnnotation(ann) {
+      if (!ann.name) ann.name = 'Annotation ' + (annotations.length + 1);
+      annotations.push(ann);
+      renderAnnotationLayer();
+      if (typeof _renderObjectList === 'function') _renderObjectList();
+      if (typeof window._undoPushState === 'function') window._undoPushState('Add annotation ' + ann.name);
+      if (typeof setUnsaved === 'function') setUnsaved();
+    }
+    window._addAnnotation = _addAnnotation;
+
+    function _annDelete(idx) {
+      if (idx < 0 || idx >= annotations.length) return;
+      var name = annotations[idx].name;
+      annotations.splice(idx, 1);
+      renderAnnotationLayer();
+      if (typeof _renderObjectList === 'function') _renderObjectList();
+      if (typeof window._undoPushState === 'function') window._undoPushState('Delete annotation ' + name);
+      if (typeof setUnsaved === 'function') setUnsaved();
+    }
+    window._annDelete = _annDelete;
+
+    function _annEdit(idx) {
+      var ann = annotations[idx];
+      if (!ann) return;
+      var targetLayer = null;
+      annotationLayer.eachLayer(function(l) { if (l._annId === ann.id) targetLayer = l; });
+
+      if (ann.type === 'text') {
+        var newTxt = prompt('Edit label text:', ann.text || '');
+        if (newTxt !== null) {
+          ann.text = newTxt;
+          renderAnnotationLayer();
+          if (typeof _renderObjectList === 'function') _renderObjectList();
+          if (typeof setUnsaved === 'function') setUnsaved();
+        }
+        return;
+      }
+      if (!targetLayer) return;
+
+      // Temporarily remove from annotationLayer, add to a temporary featureGroup for editing
+      annotationLayer.removeLayer(targetLayer);
+      var editFG = L.featureGroup([targetLayer]).addTo(map);
+      var editTool = new L.EditToolbar.Edit(map, { featureGroup: editFG });
+      editTool.enable();
+
+      if (typeof setPanelModeBanner === 'function') {
+        setPanelModeBanner('Editing annotation — drag handles then click Save', function() {
+          try { editTool.revertLayers(); editTool.disable(); } catch(e2) {}
+          map.removeLayer(editFG);
+          if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
+          renderAnnotationLayer();
+        });
+      }
+
+      function _saveEdit() {
+        try { editTool.save(); editTool.disable(); } catch(e2) {}
+        map.removeLayer(editFG);
+        if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
+        // Extract updated geometry from the edited layer
+        if (ann.type === 'line') {
+          ann.vertices = targetLayer.getLatLngs().map(function(ll) { return [ll.lat, ll.lng]; });
+        } else if (ann.type === 'rect') {
+          var b = targetLayer.getBounds();
+          ann.vertices = [[b.getSouth(), b.getWest()], [b.getNorth(), b.getEast()]];
+        } else if (ann.type === 'circle') {
+          ann.center = [targetLayer.getLatLng().lat, targetLayer.getLatLng().lng];
+          ann.radius = targetLayer.getRadius();
+        }
+        renderAnnotationLayer();
+        if (typeof _renderObjectList === 'function') _renderObjectList();
+        if (typeof setUnsaved === 'function') setUnsaved();
+        map.off('draw:editstop', _saveEdit);
+      }
+      map.once('draw:editstop', _saveEdit);
+    }
+    window._annEdit = _annEdit;
+
+    function _annObjMenu(idx, btn) {
+      var ann = annotations[idx];
+      if (!ann) return;
+      var items = [
+        { id: 'edit', label: 'Edit / move', icon: '✎', action: function() { _annEdit(idx); } },
+        { id: 'rename', label: 'Rename', icon: '✏', action: function() {
+          var n = prompt('Annotation name:', ann.name || '');
+          if (n !== null) { ann.name = n; renderAnnotationLayer(); if (typeof _renderObjectList === 'function') _renderObjectList(); if (typeof setUnsaved === 'function') setUnsaved(); }
+        }},
+        { id: 'color', label: 'Change colour', icon: '🎨', action: function() {
+          var inp = document.createElement('input'); inp.type = 'color'; inp.value = ann.color || '#e11d48';
+          inp.oninput = function() { ann.color = inp.value; renderAnnotationLayer(); if (typeof _renderObjectList === 'function') _renderObjectList(); if (typeof setUnsaved === 'function') setUnsaved(); };
+          inp.click();
+        }},
+        'sep',
+        { id: 'del', label: 'Delete', icon: '🗑', cls: 'ctx-danger', action: function() { _annDelete(idx); } }
+      ];
+      var r = btn.getBoundingClientRect();
+      if (typeof _showMapCtxMenu === 'function') _showMapCtxMenu(Math.round(r.left), Math.round(r.bottom + 4), items);
+    }
+    window._annObjMenu = _annObjMenu;
+
+    function _annPickColor(swatchEl) {
+      _annStyle.color = swatchEl.getAttribute('data-color');
+      document.querySelectorAll('.ann-color-swatch').forEach(function(s) { s.classList.remove('selected'); });
+      swatchEl.classList.add('selected');
+    }
+    window._annPickColor = _annPickColor;
+
+    function _annPickCustomColor(val) {
+      _annStyle.color = val;
+      document.querySelectorAll('.ann-color-swatch').forEach(function(s) { s.classList.remove('selected'); });
+    }
+    window._annPickCustomColor = _annPickCustomColor;
+
+    function _annPickWeight(w, btn) {
+      _annStyle.weight = w;
+      var btns = document.querySelectorAll('#annWeightBtns button');
+      btns.forEach(function(b) {
+        b.style.borderColor = 'rgba(255,255,255,0.15)';
+        b.style.background  = 'rgba(255,255,255,0.05)';
+        b.style.color       = '#e2e8f0';
+      });
+      btn.style.borderColor = '#4a90d9';
+      btn.style.background  = 'rgba(74,144,217,0.25)';
+      btn.style.color       = '#93c5fd';
+    }
+    window._annPickWeight = _annPickWeight;
+
+    function _annStartDraw(type) {
+      if (typeof _drawingActive !== 'undefined' && _drawingActive) return;
+      _annLineHandler = _annRectHandler = _annCircleHandler = null;
+      ['annDrawLineBtn','annDrawRectBtn','annDrawCircleBtn','annDrawTextBtn'].forEach(function(id) {
+        var b = document.getElementById(id); if (b) b.classList.remove('active');
+      });
+      var activeBtn = document.getElementById({ line:'annDrawLineBtn', rect:'annDrawRectBtn', circle:'annDrawCircleBtn', text:'annDrawTextBtn' }[type]);
+      if (activeBtn) activeBtn.classList.add('active');
+      var shapeOpts = { color: _annStyle.color, weight: _annStyle.weight, opacity: 1, fill: type !== 'line', fillOpacity: type !== 'line' ? 0.15 : 0, fillColor: _annStyle.color };
+
+      if (type === 'text') {
+        _drawingActive = true;
+        if (typeof setPanelModeBanner === 'function') {
+          setPanelModeBanner('Text label — click map to place', function() {
+            _drawingActive = false;
+            if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
+            if (activeBtn) activeBtn.classList.remove('active');
+          });
+        }
+        map.once('click', function(e) {
+          _drawingActive = false;
+          if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
+          if (activeBtn) activeBtn.classList.remove('active');
+          var txt = prompt('Label text:');
+          if (!txt) return;
+          _addAnnotation({
+            id: 'ann_' + Date.now(), type: 'text',
+            center: [e.latlng.lat, e.latlng.lng],
+            text: txt, fontSize: 14,
+            color: _annStyle.color, weight: _annStyle.weight,
+            fill: false, fillOpacity: 0,
+            vertices: null, radius: null,
+            name: null
+          });
+        });
+        return;
+      }
+
+      _drawingActive = true;
+      var handler;
+      if (type === 'line') {
+        handler = new L.Draw.Polyline(map, { shapeOptions: shapeOpts, metric: true });
+        _annLineHandler = handler;
+      } else if (type === 'rect') {
+        handler = new L.Draw.Rectangle(map, { shapeOptions: shapeOpts });
+        _annRectHandler = handler;
+      } else if (type === 'circle') {
+        handler = new L.Draw.Circle(map, { shapeOptions: shapeOpts, metric: true });
+        _annCircleHandler = handler;
+      }
+      handler.enable();
+      if (typeof setPanelModeBanner === 'function') {
+        var bannerMsg = type === 'line' ? 'Drawing line — click points, double-click to finish'
+                      : type === 'rect' ? 'Drawing rectangle — click and drag'
+                      : 'Drawing circle — click centre, drag to set radius';
+        setPanelModeBanner(bannerMsg, function() {
+          try { handler.disable(); } catch(e) {}
+          _annLineHandler = _annRectHandler = _annCircleHandler = null;
+          _drawingActive = false;
+          if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
+          if (activeBtn) activeBtn.classList.remove('active');
+        });
+      }
+    }
+    window._annStartDraw = _annStartDraw;
+
+    // ─── Annotation CREATED handler ──────────────────────────────────────────
 
     var userBarriers = [];
     var barrierLayer = L.layerGroup().addTo(map);
@@ -39579,6 +39969,65 @@ if (window.pdfjsLib) {
       }
     });
 
+    // ─── Annotation draw CREATED handler ─────────────────────────────────────
+    map.on(L.Draw.Event.CREATED, function(e) {
+      var isAnnLine = (e.layerType === 'polyline')   && _annLineHandler;
+      var isAnnRect = (e.layerType === 'rectangle')  && _annRectHandler;
+      var isAnnCirc = (e.layerType === 'circle')     && _annCircleHandler;
+      if (!isAnnLine && !isAnnRect && !isAnnCirc) return;
+      _annLineHandler = _annRectHandler = _annCircleHandler = null;
+      _drawingActive = false;
+      if (typeof clearPanelModeBanner === 'function') clearPanelModeBanner();
+      ['annDrawLineBtn','annDrawRectBtn','annDrawCircleBtn'].forEach(function(id) {
+        var b = document.getElementById(id); if (b) b.classList.remove('active');
+      });
+
+      var ann = {
+        id: 'ann_' + Date.now(),
+        color: _annStyle.color, weight: _annStyle.weight,
+        fill: e.layerType !== 'polyline',
+        fillOpacity: e.layerType !== 'polyline' ? 0.15 : 0,
+        name: null, type: null,
+        vertices: null, center: null, radius: null, text: null, fontSize: null
+      };
+      if (e.layerType === 'polyline') {
+        ann.type = 'line';
+        ann.vertices = e.layer.getLatLngs().map(function(ll) { return [ll.lat, ll.lng]; });
+      } else if (e.layerType === 'rectangle') {
+        ann.type = 'rect';
+        var rb = e.layer.getBounds();
+        ann.vertices = [[rb.getSouth(), rb.getWest()], [rb.getNorth(), rb.getEast()]];
+      } else if (e.layerType === 'circle') {
+        ann.type = 'circle';
+        ann.center = [e.layer.getLatLng().lat, e.layer.getLatLng().lng];
+        ann.radius = e.layer.getRadius();
+      }
+
+      // Optional name dialog
+      var centre = (e.layer.getBounds ? e.layer.getBounds().getCenter() : e.layer.getLatLng());
+      var nameHtml = '<div style="min-width:190px;font-size:13px;">' +
+        '<b>Name this annotation</b>' +
+        '<div style="margin:6px 0;"><input id="annNameInp" type="text" placeholder="Optional label" ' +
+        'style="width:100%;box-sizing:border-box;padding:4px 6px;font-size:12px;border-radius:4px;border:1px solid #ccc;"></div>' +
+        '<div style="display:flex;gap:6px;">' +
+        '<button id="annNameOk" style="flex:1;font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #4a90d9;background:#2563eb;color:#fff;cursor:pointer;">Add</button> ' +
+        '<button id="annNameCancel" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #ccc;cursor:pointer;color:#555;">Cancel</button>' +
+        '</div></div>';
+      L.popup({ closeOnClick: false, maxWidth: 260 }).setLatLng(centre).setContent(nameHtml).openOn(map);
+      setTimeout(function() {
+        var okBtn  = document.getElementById('annNameOk');
+        var clBtn  = document.getElementById('annNameCancel');
+        var nameInp = document.getElementById('annNameInp');
+        if (nameInp) { nameInp.focus(); nameInp.onkeydown = function(ev) { if (ev.key === 'Enter') { if (okBtn) okBtn.onclick(); } }; }
+        if (okBtn) okBtn.onclick = function() {
+          ann.name = (nameInp ? nameInp.value.trim() : '') || ('Annotation ' + (annotations.length + 1));
+          map.closePopup();
+          _addAnnotation(ann);
+        };
+        if (clBtn) clBtn.onclick = function() { map.closePopup(); };
+      }, 50);
+    });
+
     // Window exports for save/load + external access
     window.openCortnPanel = openCortnPanel;
     window._getCortnRoads = function() { return cortnRoads; };
@@ -43126,6 +43575,29 @@ if (window.pdfjsLib) {
         html += '</div>';
       }
 
+      // Annotations group
+      if (typeof annotations !== 'undefined' && annotations.length > 0) {
+        var ANN_TYPE_LABEL = { line: 'Line', rect: 'Rectangle', circle: 'Circle', text: 'Text label' };
+        html += '<div style="margin-bottom:10px;">';
+        html += '<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Annotations</div>';
+        annotations.forEach(function(ann, i) {
+          var typeLabel = ANN_TYPE_LABEL[ann.type] || 'Annotation';
+          var swatchStyle = ann.type !== 'text'
+            ? 'width:14px;height:3px;background:' + (ann.color || '#e11d48') + ';border-radius:1px;display:inline-block;flex-shrink:0;'
+            : 'width:10px;height:10px;background:' + (ann.color || '#e11d48') + ';border-radius:50%;display:inline-block;flex-shrink:0;';
+          html += '<div class="obj-row" data-obj-type="annotation" data-obj-idx="' + i + '" style="display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:4px;cursor:pointer;">';
+          html += '<span style="' + swatchStyle + '"></span>';
+          html += '<span style="font-size:10px;font-weight:700;color:#6b7280;flex-shrink:0;min-width:20px;">A' + (i + 1) + '</span>';
+          html += '<span style="flex:1;overflow:hidden;min-width:0;">';
+          html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">' + escapeHTML(ann.name || typeLabel) + '</div>';
+          html += '<div style="font-size:10px;color:#9ca3af;">' + typeLabel + '</div>';
+          html += '</span>';
+          html += '<button class="obj-menu-btn" onclick="event.stopPropagation();_annObjMenu(' + i + ',this)" style="background:none;border:none;cursor:pointer;font-size:16px;color:#9ca3af;padding:0 3px;line-height:1;flex-shrink:0;" title="Options">⋮</button>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+
       el.innerHTML = html;
 
       // Attach hover and click handlers to rows
@@ -43255,6 +43727,8 @@ if (window.pdfjsLib) {
         gz._polygon.setStyle({ weight: 4, fillOpacity: 0.55 });
         setTimeout(function() { if (gz._polygon) gz._polygon.setStyle({ color: _gzBorderColor(gz.g), weight: 1.5, dashArray: '6 4', fillColor: _gzFillColor(gz.g), fillOpacity: 0.25 }); }, 1000);
         if (typeof openGroundZonePanel === 'function') openGroundZonePanel(gz.id, Math.round(window.innerWidth / 2), Math.round(window.innerHeight / 2));
+      } else if (type === 'annotation') {
+        if (typeof _annEdit === 'function') _annEdit(idx);
       }
     }
 
