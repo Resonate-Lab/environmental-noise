@@ -31,12 +31,13 @@
     launcher.type = 'button';
     launcher.setAttribute('aria-label', 'Open Help Assistant');
     launcher.innerHTML =
-      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" ' +
-      'stroke="#1a2028" stroke-width="2" aria-hidden="true">' +
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" ' +
+      'stroke="currentColor" stroke-width="2" aria-hidden="true">' +
       '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' +
       '</svg>' +
-      '<span class="ha-launcher-tip">Help Assistant</span>';
-    document.body.appendChild(launcher);
+      '<span class="rhs-icon-label">Help</span>';
+    var strip = document.getElementById('rhsIconStrip');
+    if (strip) { strip.appendChild(launcher); } else { document.body.appendChild(launcher); }
 
     /* Panel */
     var panel = document.createElement('div');

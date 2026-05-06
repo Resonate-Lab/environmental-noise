@@ -4,57 +4,38 @@
    system font stack). z-index 9999 = same tier as #helpFloatPanel.
    ══════════════════════════════════════════════════════════════════════ */
 
-/* ── Launcher button ──────────────────────────────────────────────────── */
+/* ── Launcher button — sits at bottom of #rhsIconStrip ───────────────── */
 #ha-launcher {
-  position: fixed;
-  bottom: 64px;
-  right: 16px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgb(242,203,0);
-  border: none;
-  cursor: pointer;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 12px rgba(0,0,0,.25);
-  z-index: 9999;
-  transition: background 0.15s, transform 0.15s;
+  width: 60px;
+  height: 46px;
+  border-radius: 6px;
+  background: rgba(242,203,0,0.12);
+  color: rgb(242,203,0);
+  border: none;
+  cursor: pointer;
+  gap: 3px;
+  padding: 4px 2px;
+  margin-top: auto;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
   pointer-events: all;
 }
 #ha-launcher:hover {
-  background: rgb(218,182,0);
-  transform: scale(1.07);
+  background: rgba(242,203,0,0.22);
 }
 #ha-launcher svg {
   flex-shrink: 0;
-}
-#ha-launcher .ha-launcher-tip {
-  position: absolute;
-  right: 48px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(26,32,44,.92);
-  color: #f3f4f6;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-  padding: 4px 8px;
-  border-radius: 5px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-#ha-launcher:hover .ha-launcher-tip {
-  opacity: 1;
 }
 
 /* ── Panel ────────────────────────────────────────────────────────────── */
 #ha-panel {
   position: fixed;
-  bottom: 112px;
-  right: 16px;
+  bottom: 60px;
+  right: calc(var(--rhs-strip-width, 76px) + 8px);
   width: 360px;
   height: 520px;
   z-index: 9999;
