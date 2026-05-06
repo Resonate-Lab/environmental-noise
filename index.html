@@ -8684,7 +8684,6 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   // Once _dismissOnboardingHint is called, _onboardingHintDismissed stays true
   // for the session so updateEmptyStates() never re-shows the guide.
   window._onboardingHintDismissed = false;
-  window._drawerAutoOpened = false;
   window._hideMapGuide = function() {
     var el = document.getElementById('map-guide-overlay');
     if (el) el.classList.add('guide-hidden');
@@ -22119,12 +22118,6 @@ function updateEmptyStates() {
   toggle('daySourceEmpty', document.getElementById('daySrcTable'),  !hasSource);
   toggle('predEmpty',      document.getElementById('predTableDay'), !hasPredictions);
 
-  // R7: auto-open drawer once on first predictions so results are visible
-  if (!window._drawerAutoOpened && hasPredictions) {
-    window._drawerAutoOpened = true;
-    if (typeof window._activateSection === 'function') window._activateSection('results');
-    if (typeof window._setDrawerOpen === 'function') window._setDrawerOpen(true, 'results');
-  }
 
   // Map guide: show if nothing placed, hide once anything is placed.
   // Once the user has dismissed the hint via any map action
@@ -27059,8 +27052,7 @@ setInitialCollapseState();
         // R3: loaded state is "saved" — clear unsaved flag (skip during undo/redo)
         if (typeof window._clearUnsaved === 'function' && !window._undoRestoring) window._clearUnsaved();
         // R7: reset auto-open flag so drawer opens again on first predictions
-        window._drawerAutoOpened = false;
-        if (!options.preserveScenarios && typeof window._clearScenarioBadge === 'function') window._clearScenarioBadge();
+              if (!options.preserveScenarios && typeof window._clearScenarioBadge === 'function') window._clearScenarioBadge();
       }, 800);
     }
 
