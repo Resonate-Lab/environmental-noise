@@ -131,6 +131,8 @@ input[type="number"]{width:100%;border:1px solid var(--border);border-radius:10p
   letter-spacing: 0.01em;
 }
 #prop-method-indicator.visible { display: block; }
+#prop-method-indicator { cursor: pointer; }
+#prop-method-indicator:hover { color: #3b82f6; text-decoration: underline; text-underline-offset: 2px; }
 /* ── R2: Active drawing mode banner ──────────────────────────────── */
 #mode-banner {
   display: none;
@@ -187,7 +189,9 @@ input[type="number"]{width:100%;border:1px solid var(--border);border-radius:10p
 #exportJsonBtn.unsaved { border-color: #c53030; }
 #exportJsonBtn.unsaved::after { content: ' ●'; color: #c53030; font-size: 10px; vertical-align: middle; }
 /* ── Open split button + Recent dropdown ─────────────────────────── */
-.open-split-wrap { position:relative; display:inline-flex; gap:4px; }
+.open-split-wrap { position:relative; display:inline-flex; gap:0; }
+#app-header-actions .open-split-wrap #importJsonBtn { border-radius:6px 0 0 6px; border-right:none !important; }
+#app-header-actions .open-split-wrap .open-chevron { border-radius:0 6px 6px 0; border-left:1px solid rgba(255,255,255,0.25) !important; }
 .open-chevron { padding:5px 8px !important; font-size:11px !important; }
 .recent-dropdown {
   display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:9999;
@@ -1463,6 +1467,10 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   opacity: 1;
 }
 #app-header .collapse-all-btn { font-size: 11px; padding: 4px 10px; margin: 0; }
+#scenarioBadge { display:inline-flex; align-items:center; gap:4px; background:#1e3a5f; color:#bfdbfe; border-radius:10px; padding:3px 6px 3px 9px; font-size:11px; font-weight:500; margin-left:4px; vertical-align:middle; white-space:nowrap; }
+#scenarioBadgeName { color:#e0f2fe; }
+#scenarioBadgeDismiss { background:none; border:none; color:#93c5fd; cursor:pointer; font-size:12px; padding:0; line-height:1; opacity:0.8; }
+#scenarioBadgeDismiss:hover { opacity:1; color:#fff; }
 
 /* GIS Export dropdown in the header */
 #app-header .header-dropdown {
@@ -2397,14 +2405,53 @@ body.panel-resizing #map-column {
 .panel-empty-state.show { display: block; }
 
 /* Map guide overlay: centred prompt when nothing is placed */
+/* North arrow + scale bar — combined control */
+.leaflet-map-indicators {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+  margin-right: 8px;
+}
+.leaflet-north-arrow {
+  cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(14,19,30,0.88);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.leaflet-north-arrow svg { display:block; }
+.leaflet-map-scale {
+  background: rgba(14,19,30,0.88);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-top: none;
+  color: #94a3b8;
+  font-size: 8px;
+  font-weight: 500;
+  font-family: system-ui, -apple-system, sans-serif;
+  letter-spacing: 0.02em;
+  padding: 1px 4px;
+  line-height: 1.2;
+  border-radius: 0 0 4px 4px;
+  white-space: nowrap;
+  text-align: center;
+}
 #map-guide-overlay {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: 12px;
+  left: 76px;
+  transform: none;
   z-index: 500;
   pointer-events: none;
-  text-align: center;
+  text-align: left;
   transition: opacity 0.4s ease;
 }
 #map-guide-overlay.guide-hidden {
@@ -2801,7 +2848,7 @@ body.panel-resizing #map-column {
 <div id="mode-banner" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <!-- R15: Propagation method indicator — top-right of map; click to open panel -->
-<div id="prop-method-indicator" role="status" aria-live="polite" title="Click to open Propagation method panel"></div>
+<div id="prop-method-indicator" role="status" aria-live="polite" title="Click to open Propagation method panel" onclick="toggleModellingPanel()"></div>
 
 <!-- R8: Background fetch loading indicator — appears during terrain/building/zone fetches -->
 <div id="bgFetchIndicator" role="status" aria-live="polite" aria-label="Loading data" style="display:none">
@@ -2841,9 +2888,9 @@ body.panel-resizing #map-column {
       <button class="pdf-btn open-chevron" id="openRecentBtn" type="button" title="Recent assessments">▾</button>
       <div class="recent-dropdown" id="recentDropdown"></div>
     </div>
-    <button class="pdf-btn" id="scenariosBtn" type="button" title="Save and compare named scenario snapshots">Scenarios</button>
+    <button class="pdf-btn" id="scenariosBtn" type="button" title="Save and compare named scenario snapshots">Scenarios</button><span id="scenarioBadge" style="display:none;" aria-live="polite"><span id="scenarioBadgeName"></span><button id="scenarioBadgeDismiss" type="button" title="Clear active scenario indicator">&#x2715;</button></span>
     <button class="pdf-btn" id="generateReportBtn" type="button" style="display:none">Generate Report</button>
-    <button class="pdf-btn toolbar-secondary" id="savePdfBtn" type="button" title="Export A4 criteria appendix PDF (SA only)" onclick="generatePDFAppendix(this)">PDF criteria</button>
+    <button class="pdf-btn toolbar-secondary" id="savePdfBtn" type="button" title="Export A4 criteria appendix PDF (SA only)" onclick="generatePDFAppendix(this)">PDF Criteria</button>
     <button class="pdf-btn toolbar-secondary" id="shareAssessmentBtn" type="button" title="Generate a read-only link to share this assessment with a client">Share Assessment</button>
     <button class="pdf-btn" id="toolbarOverflowBtn" type="button" aria-haspopup="true" aria-expanded="false" title="More tools">More ▾</button>
     <div id="toolbarOverflowMenu" class="toolbar-overflow-menu" role="menu" hidden></div>
@@ -2932,6 +2979,7 @@ body.panel-resizing #map-column {
               var open = b.style.display !== 'none';
               b.style.display = open ? 'none' : (bodyId === 'objectsPanelBody' ? 'block' : '');
               btn.innerHTML = open ? '\u25BC' : '\u25B2';
+              btn.setAttribute('aria-expanded', String(!open));
             }
           </script>
 
@@ -3344,11 +3392,6 @@ body.panel-resizing #map-column {
                   'Redo',
                   function() { if (typeof redo === 'function') redo(); },
                   'opacity:0.4;'
-                ));
-                g3.appendChild(_mkIconBtn('lhsSaveJpgBtn', 'Save map as JPEG (3× resolution)',
-                  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
-                  'Save JPG',
-                  function() { var s = document.getElementById('saveJpgPanelBtn'); if (s) s.click(); }
                 ));
                 strip.appendChild(g3);
                 inner.appendChild(strip);
@@ -4169,7 +4212,7 @@ body.panel-resizing #map-column {
           <h2 style="margin:0;">Planning &amp; Design Code &#x2014; Interface between Land Uses</h2>
           <div style="display:flex;gap:5px;align-items:center;">
             <button class="crit-refresh-btn" onclick="event.stopPropagation();(function(){showToast('Refreshing provisions\u2026',1500);_pdcProvisions.forEach(function(p){if(!p.manual)p.relevance='';});updatePDCProvisions();})()" title="Re-scan source names and PDF for provision relevance">&#x21BB;</button>
-            <button class="collapse-btn" id="pdcToggleBtn" title="Toggle section">&#x25B2;</button>
+            <button class="collapse-btn" id="pdcToggleBtn" title="Toggle section" aria-expanded="true">&#x25B2;</button>
           </div>
         </div>
         <div id="pdcBody">
@@ -4199,7 +4242,7 @@ body.panel-resizing #map-column {
           <h2 style="margin:0;">Receivers &amp; criteria</h2>
           <div style="display:flex;gap:5px;align-items:center;">
             <button class="crit-refresh-btn" onclick="event.stopPropagation();refreshZonesAndCriteria()" title="Refresh all: addresses, coordinates, ASL, zones and criteria for all placed markers">&#x21BB;</button>
-            <button class="collapse-btn" id="critToggleBtn" title="Toggle section">&#x25B2;</button>
+            <button class="collapse-btn" id="critToggleBtn" title="Toggle section" aria-expanded="true">&#x25B2;</button>
           </div>
         </div>
         <div id="critBody">
@@ -4674,7 +4717,7 @@ body.panel-resizing #map-column {
           <h2 style="margin:0;">MBS 010</h2>
           <div style="display:flex;gap:5px;align-items:center;">
             <button class="crit-refresh-btn" id="mbs010RefreshBtn" onclick="event.stopPropagation();refreshMBS010()" title="Re-query SAPPA for MBS 010 data">&#x21BB;</button>
-            <button class="collapse-btn" id="mbs010ToggleColBtn" title="Toggle section">&#x25B2;</button>
+            <button class="collapse-btn" id="mbs010ToggleColBtn" title="Toggle section" aria-expanded="true">&#x25B2;</button>
           </div>
         </div>
         <div id="mbs010Body">
@@ -5188,7 +5231,7 @@ body.panel-resizing #map-column {
   <div class="card" id="recommendationsCard" style="margin-top:14px;margin-bottom:12px;" data-section="treatments">
     <div class="card-header" onclick="toggleCardSection('recommendationsBody','recommendationsCollapseBtn')">
       <h2 style="margin:0;">Recommended treatments <span style="font-size:11px;color:var(--muted);font-weight:normal;">(indicative)</span></h2>
-      <button class="collapse-btn" id="recommendationsCollapseBtn" title="Expand/collapse">&#9650;</button>
+      <button class="collapse-btn" id="recommendationsCollapseBtn" title="Expand/collapse" aria-expanded="true">&#9650;</button>
     </div>
     <div id="recommendationsBody"></div>
   </div>
@@ -8331,6 +8374,19 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
 
     actionRow.appendChild(gisDropdown);
 
+    // Save JPG header button — triggers the existing left-toolbar panel
+    var saveJpgHeaderBtn = document.createElement('button');
+    saveJpgHeaderBtn.type = 'button';
+    saveJpgHeaderBtn.className = 'pdf-btn';
+    saveJpgHeaderBtn.id = 'saveJpgHeaderBtn';
+    saveJpgHeaderBtn.textContent = 'Save JPG';
+    saveJpgHeaderBtn.title = 'Export map as JPEG at 3\xd7 resolution';
+    saveJpgHeaderBtn.addEventListener('click', function() {
+      var s = document.getElementById('saveJpgPanelBtn');
+      if (s) s.click();
+    });
+    actionRow.insertBefore(saveJpgHeaderBtn, gisDropdown);
+
     // Methodology must be last — re-append it after GIS Export so it
     // always sits at the end of the row regardless of static HTML order.
     var methTopBtn = document.getElementById('methodologyTopBtn');
@@ -8443,7 +8499,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   rhsIconStrip.appendChild(_mkRhsBtn('rhsSetupBtn',      'Setup',      SVG_SETUP,      'Setup'));
   rhsIconStrip.appendChild(_mkRhsBtn('rhsCriteriaBtn',   'Criteria',   SVG_CRITERIA,   'Criteria'));
   rhsIconStrip.appendChild(_mkRhsBtn('rhsResultsBtn',    'Results',    SVG_RESULTS,    'Results'));
-  rhsIconStrip.appendChild(_mkRhsBtn('rhsTreatmentsBtn', 'Treatments', SVG_TREATMENTS, 'Trmts'));
+  rhsIconStrip.appendChild(_mkRhsBtn('rhsTreatmentsBtn', 'Treatments', SVG_TREATMENTS, 'Treat.'));
 
   // Create slide-out drawer panel
   var drawerPanel = document.createElement('div');
@@ -8598,6 +8654,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   // Once _dismissOnboardingHint is called, _onboardingHintDismissed stays true
   // for the session so updateEmptyStates() never re-shows the guide.
   window._onboardingHintDismissed = false;
+  window._drawerAutoOpened = false;
   window._hideMapGuide = function() {
     var el = document.getElementById('map-guide-overlay');
     if (el) el.classList.add('guide-hidden');
@@ -15370,12 +15427,12 @@ window._pdcOnEdit = function(idx, text) {
   if (relCell) relCell.className = isRelevant ? 'pdc-rel-cell pdc-relevant-border' : 'pdc-rel-cell';
 };
 /* ═══════════════════════════════════════════════════════════════════════════
-   generatePDFAppendix() — A4 PDF criteria appendix for acoustic reports
+   generatePDFAppendix() — A4 PDF Criteria appendix for acoustic reports
    Uses the Save JPG canvas-rendering pipeline for the zone map (handles
    CORS/ESRI tiles correctly) and html2canvas screenshots for data tables.
    ═══════════════════════════════════════════════════════════════════════════ */
 async function generatePDFAppendix(btn) {
-  // SA-only notice — PDF criteria export only supports SA criteria at present.
+  // SA-only notice — PDF Criteria export only supports SA criteria at present.
   var _saConfirmed = await new Promise(function(resolve) {
     var overlay = document.createElement('div');
     overlay.className = 'rn-overlay';
@@ -16841,7 +16898,7 @@ async function generatePDFAppendix(btn) {
     console.error('generatePDFAppendix error:', e);
     alert('PDF appendix export failed at [' + (_pdfLabel || 'unknown') + ']: ' + e.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = origText || 'PDF criteria'; }
+    if (btn) { btn.disabled = false; btn.textContent = origText || 'PDF Criteria'; }
   }
 }
 
@@ -22032,6 +22089,13 @@ function updateEmptyStates() {
   toggle('daySourceEmpty', document.getElementById('daySrcTable'),  !hasSource);
   toggle('predEmpty',      document.getElementById('predTableDay'), !hasPredictions);
 
+  // R7: auto-open drawer once on first predictions so results are visible
+  if (!window._drawerAutoOpened && hasPredictions) {
+    window._drawerAutoOpened = true;
+    if (typeof window._activateSection === 'function') window._activateSection('results');
+    if (typeof window._setDrawerOpen === 'function') window._setDrawerOpen(true, 'results');
+  }
+
   // Map guide: show if nothing placed, hide once anything is placed.
   // Once the user has dismissed the hint via any map action
   // (_dismissOnboardingHint), keep it hidden for the rest of the session.
@@ -26964,6 +27028,9 @@ setInitialCollapseState();
         }
         // R3: loaded state is "saved" — clear unsaved flag (skip during undo/redo)
         if (typeof window._clearUnsaved === 'function' && !window._undoRestoring) window._clearUnsaved();
+        // R7: reset auto-open flag so drawer opens again on first predictions
+        window._drawerAutoOpened = false;
+        if (typeof window._clearScenarioBadge === 'function') window._clearScenarioBadge();
       }, 800);
     }
 
@@ -26986,6 +27053,26 @@ setInitialCollapseState();
    ══════════════════════════════════════════════════════════════ */
 (function() {
   'use strict';
+
+  // R6: scenario badge helpers — shared with loadAssessment via window
+  function _showScenarioBadge(name) {
+    var badge = document.getElementById('scenarioBadge');
+    var nameEl = document.getElementById('scenarioBadgeName');
+    if (!badge || !nameEl) return;
+    nameEl.textContent = name.length > 20 ? name.slice(0, 19) + '…' : name;
+    badge.style.display = 'inline-flex';
+  }
+  function _clearScenarioBadge() {
+    var badge = document.getElementById('scenarioBadge');
+    if (badge) badge.style.display = 'none';
+  }
+  window._showScenarioBadge = _showScenarioBadge;
+  window._clearScenarioBadge = _clearScenarioBadge;
+  // Wire dismiss button
+  document.addEventListener('DOMContentLoaded', function() {
+    var dismissBtn = document.getElementById('scenarioBadgeDismiss');
+    if (dismissBtn) dismissBtn.addEventListener('click', _clearScenarioBadge);
+  });
 
   var _scenModalEl  = null;   // backdrop DOM node while modal is open
   var _scenEscHandler   = null;
@@ -27034,6 +27121,7 @@ setInitialCollapseState();
     });
 
     renderScenariosModal();
+    _showScenarioBadge(name);
     // Must NOT push to undo stack
   }
 
@@ -27076,6 +27164,7 @@ setInitialCollapseState();
     if (typeof showToast === 'function') {
       showToast('Restored \u201c' + scenario.name + '\u201d \u2014 press Ctrl+Z to undo', 5000);
     }
+    _showScenarioBadge(scenario.name);
   }
 
   function updateScenario(id) {
@@ -28639,8 +28728,8 @@ if (window.pdfjsLib) {
           }
           pdf.save(pdfName + '.pdf');
         } catch (e) {
-          console.error('PDF criteria error:', e, e.stack);
-          alert('PDF criteria export failed: ' + e.message);
+          console.error('PDF Criteria error:', e, e.stack);
+          alert('PDF Criteria export failed: ' + e.message);
         } finally {
           critBtn.disabled = false;
           critBtn.textContent = 'PDF Criteria';
@@ -28720,6 +28809,49 @@ if (window.pdfjsLib) {
     });
     new StatusRowControl().addTo(map);
     L.control.zoom({ position: 'topleft' }).addTo(map);
+
+    // North arrow + scale bar — single control, side by side, top-right
+    var MapIndicatorsControl = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd: function(m) {
+        var wrap = L.DomUtil.create('div', 'leaflet-map-indicators');
+        // Scale bar first (left), north arrow second (right)
+        var scaleDiv = L.DomUtil.create('div', 'leaflet-map-scale', wrap);
+        scaleDiv.setAttribute('aria-label', 'Scale');
+        function _updateScale() {
+          var y = m.getSize().y / 2;
+          var p1 = m.containerPointToLatLng([0, y]);
+          var p2 = m.containerPointToLatLng([80, y]);
+          var metres = p1.distanceTo(p2);
+          var label, pixels;
+          if (metres >= 1000) {
+            var km = metres / 1000;
+            var nice = km >= 100 ? Math.round(km / 50) * 50 : km >= 10 ? Math.round(km / 5) * 5 : Math.round(km);
+            label = nice + ' km';
+            pixels = Math.round(80 * nice * 1000 / metres);
+          } else {
+            var nice = metres >= 100 ? Math.round(metres / 50) * 50 : metres >= 10 ? Math.round(metres / 5) * 5 : Math.round(metres);
+            label = nice + ' m';
+            pixels = Math.round(80 * nice / metres);
+          }
+          scaleDiv.style.width = pixels + 'px';
+          scaleDiv.textContent = label;
+        }
+        m.on('zoomend moveend', _updateScale);
+        setTimeout(_updateScale, 100);
+        // North arrow — arrowhead only, no stem, no label
+        var arrow = L.DomUtil.create('div', 'leaflet-north-arrow', wrap);
+        arrow.title = 'North';
+        arrow.setAttribute('aria-label', 'North indicator');
+        arrow.innerHTML =
+          '<svg width="14" height="12" viewBox="0 0 14 12" xmlns="http://www.w3.org/2000/svg">' +
+            '<polygon points="7,0 14,12 7,8 0,12" fill="#94a3b8"/>' +
+          '</svg>';
+        L.DomEvent.disableClickPropagation(wrap);
+        return wrap;
+      }
+    });
+    new MapIndicatorsControl().addTo(map);
 
     var streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
@@ -29870,6 +30002,7 @@ if (window.pdfjsLib) {
               sub3.style.color = '#dc2626';
             }
           }
+          if (typeof showToast === 'function') showToast('Zone detection failed — SA criteria unavailable. Check your internet connection.', 5000);
         });
     }
     /* ==== MBS 010 Overlay Queries (source site only) ==== */
@@ -30793,6 +30926,7 @@ if (window.pdfjsLib) {
               sub3.style.color = '#dc2626';
             }
           }
+          if (typeof showToast === 'function') showToast('Zone detection failed — VIC criteria unavailable. Check your internet connection.', 5000);
         });
     }
     /* ==== End VicPlan Zoning Integration ==== */
@@ -30931,6 +31065,7 @@ if (window.pdfjsLib) {
               sub3.style.color = '#dc2626';
             }
           }
+          if (typeof showToast === 'function') showToast('Zone detection failed — NSW criteria unavailable. Check your internet connection.', 5000);
         });
     }
     /* ==== End NSW ePlanning Zoning Integration ==== */
@@ -32540,6 +32675,7 @@ if (window.pdfjsLib) {
         if (window._clearNoiseData) window._clearNoiseData();
         setMode('place-site'); /* guide user to set site location first */
         if (typeof window._undoPushState === 'function') window._undoPushState('Clear all');
+        if (typeof window._clearScenarioBadge === 'function') window._clearScenarioBadge();
       });
     }
     /* ═══ OSM Building Footprints ═══ */
