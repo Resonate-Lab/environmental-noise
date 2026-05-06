@@ -11911,7 +11911,7 @@ function calcCortnRoadAtReceiver(road, prefix, receiverIdx) {
   clone.distFromKerb_m = perpDist;
   // Auto-computed angle is a lower bound: it can only reduce the panel value,
   // never raise it. Honours manual entries smaller than the computed angle.
-  if (angle > 0 && Number.isFinite(angle)) clone.angleOfView_deg = Math.min(cr.angleOfView_deg || 180, angle);
+  if (angle > 0 && Number.isFinite(angle)) clone.angleOfView_deg = Math.min(road.angleOfView_deg || 180, angle);
   clone.receiverHeight_m = recvH;
 
   var result = calcCortnRoadPeriod(clone, prefix);
@@ -24144,10 +24144,20 @@ function renderContributions() {
     var activeBs = (typeof buildingSources !== 'undefined') ? buildingSources.filter(function(bs) {
       if (!bs.vertices || bs.vertices.length < 3) return false;
       if (bs.activeInPeriod && bs.activeInPeriod[period] === false) return false;
-      return bs.interiorLp && bs.interiorLp[period] && Number.isFinite(bs.interiorLp[period].broadband);
+      return bs.interiorLp && bs.interiorLp[period] && (
+        Number.isFinite(bs.interiorLp[period].broadband) ||
+        (bs.interiorLp[period].octave && Object.values(bs.interiorLp[period].octave).some(function(v){ return Number.isFinite(v); }))
+      );
     }) : [];
 
-    if (activePins.length === 0 && activeLs.length === 0 && activeAs.length === 0 && activeBs.length === 0) return; // skip period table
+    var activeCr = (typeof cortnRoads !== 'undefined') ? cortnRoads.filter(function(cr) {
+      if (!cr.vertices || cr.vertices.length < 2) return false;
+      var prefix = { day: 'd', eve: 'e', night: 'n' }[period];
+      var mvmt = cr.movements && prefix && cr.movements[prefix];
+      return mvmt && (Number.isFinite(mvmt.Q) || Number.isFinite(mvmt.aadt));
+    }) : [];
+
+    if (activePins.length === 0 && activeLs.length === 0 && activeAs.length === 0 && activeBs.length === 0 && activeCr.length === 0) return; // skip period table
     anyTable = true;
 
     var sectionDiv = document.createElement('div');
@@ -24172,7 +24182,8 @@ function renderContributions() {
     ['r1','r2','r3','r4'].forEach(function(rid, ri) {
       var d0 = getDistanceForSourceReceiver(0, ri);
       var distEl = document.getElementById('dist_r' + (ri + 1));
-      var hasRecv = Number.isFinite(d0) && d0 > 0;
+      var recLL = allLL[rid];
+      var hasRecv = (Number.isFinite(d0) && d0 > 0) || (recLL && recLL.lat != null);
       if (!hasRecv && distEl) {
         var dv = Number(distEl.value);
         hasRecv = Number.isFinite(dv) && dv > 0;
@@ -24181,7 +24192,6 @@ function renderContributions() {
 
       var nameInput = document.getElementById('recvName' + (ri + 1));
       var recvLabel = nameInput && nameInput.value.trim() ? nameInput.value.trim() : ('Receiver ' + (ri + 1));
-      var recLL = allLL[rid];
 
       var recvHdr = document.createElement('tr');
       recvHdr.className = 'contrib-recv-hdr';
@@ -24354,6 +24364,32 @@ function renderContributions() {
             });
           })(bs, capturedRi);
         });
+      })(ri, recLL);
+
+      // CoRTN road rows
+      (function(capturedRi, capturedRecLL) {
+        var crPrefix = { day: 'd', eve: 'e', night: 'n' }[period];
+        if (crPrefix && typeof cortnRoads !== 'undefined' && typeof calcCortnRoadAtReceiver === 'function') {
+          activeCr.forEach(function(cr) {
+            var crResult = calcCortnRoadAtReceiver(cr, crPrefix, capturedRi);
+            var crLpRaw = crResult && Number.isFinite(crResult.laeq) ? crResult.laeq : NaN;
+            var closestD = capturedRecLL ? _lsClosestDistM(cr.vertices, capturedRecLL.lat, capturedRecLL.lng) : Infinity;
+            var distStr = (Number.isFinite(closestD) && closestD < Infinity) ? String(Math.round(closestD)) : '\u2014';
+            var lpStr = Number.isFinite(crLpRaw) ? String(Math.round(crLpRaw)) : '\u2014';
+            if (Number.isFinite(crLpRaw)) rawContributions.push(crLpRaw);
+            var crMvmt = cr.movements && cr.movements[crPrefix];
+            var aadt = crMvmt && Number.isFinite(crMvmt.aadt) ? crMvmt.aadt : null;
+            var aadtStr = aadt !== null ? aadt.toLocaleString() + '\u202fvpd' : '\u2014';
+            var crDisplayName = escapeHTML(cr.name || 'Road');
+            var crTr = document.createElement('tr');
+            crTr.innerHTML = '<td style="padding-left:16px;font-size:12px;">' + crDisplayName + '</td>' +
+              '<td style="font-size:12px;color:#555;">CoRTN</td>' +
+              '<td class="num" style="font-size:12px;">' + aadtStr + '</td>' +
+              '<td class="num" style="font-size:12px;">' + distStr + '</td>' +
+              '<td class="num" style="font-size:12px;">' + lpStr + '</td>';
+            tbody.appendChild(crTr);
+          });
+        }
       })(ri, recLL);
 
       var totalTr = document.createElement('tr');
