@@ -2470,6 +2470,7 @@ body.panel-resizing #map-column {
   color: #94a3b8 !important;
 }
 #map-guide-overlay {
+  display: none !important;
   position: absolute;
   top: 12px;
   left: 76px;
@@ -3478,10 +3479,6 @@ body.panel-resizing #map-column {
                 setTimeout(function() {
                   if (typeof window.openSearchPopover === 'function') {
                     window.openSearchPopover();
-                  }
-                  // Guide overlay is redundant — search is already open
-                  if (typeof window._hideMapGuide === 'function') {
-                    window._hideMapGuide();
                   }
                 }, 250);
               }
@@ -8668,6 +8665,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   // preference only.
   var mapGuide = document.createElement('div');
   mapGuide.id = 'map-guide-overlay';
+  mapGuide.classList.add('guide-hidden');
   mapGuide.innerHTML =
     '<div class="map-guide-text">' +
       '<button type="button" class="map-guide-close" aria-label="Dismiss hint" title="Dismiss">\u00d7</button>' +
