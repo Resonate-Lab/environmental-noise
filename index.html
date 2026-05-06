@@ -11909,7 +11909,9 @@ function calcCortnRoadAtReceiver(road, prefix, receiverIdx) {
   // object is not modified during the calc.
   var clone = Object.assign({}, road);
   clone.distFromKerb_m = perpDist;
-  if (angle > 0 && Number.isFinite(angle)) clone.angleOfView_deg = angle;
+  // Auto-computed angle is a lower bound: it can only reduce the panel value,
+  // never raise it. Honours manual entries smaller than the computed angle.
+  if (angle > 0 && Number.isFinite(angle)) clone.angleOfView_deg = Math.min(cr.angleOfView_deg || 180, angle);
   clone.receiverHeight_m = recvH;
 
   var result = calcCortnRoadPeriod(clone, prefix);
@@ -39981,6 +39983,7 @@ if (window.pdfjsLib) {
           '<div style="' + rowStyle + '"><span style="' + labelStyle + '">Ground absorption (0–1)</span><input type="number" id="crPanelGroundAbsorption" value="' + cr.groundAbsorption + '" step="0.1" min="0" max="1" style="' + inputStyle + '"></div>' +
           '<div style="' + rowStyle + '"><span style="' + labelStyle + '">Mean prop. height (m)</span><input type="number" id="crPanelMeanPropHeight" value="' + cr.meanPropHeight_m + '" step="0.1" min="0" style="' + inputStyle + '"></div>' +
           '<div style="' + rowStyle + '"><span style="' + labelStyle + '">Angle of view (°)</span><input type="number" id="crPanelAngleOfView" value="' + cr.angleOfView_deg + '" step="1" min="0" max="360" style="' + inputStyle + '"></div>' +
+          (cr.vertices && cr.vertices.length > 2 ? '<div style="font-size:10px;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:4px;padding:3px 7px;margin-bottom:4px;">⚠ Curved road: per-receiver angle is auto-computed from endpoints only and used as an upper bound. For roads that wrap around the site, verify angle of view manually.</div>' : '') +
           '<div style="' + rowStyle + '"><span style="' + labelStyle + '">Reflection angle (°)</span><input type="number" id="crPanelReflectionAngle" value="' + cr.reflectionAngle_deg + '" step="1" min="0" max="360" style="' + inputStyle + '"></div>' +
 
           // BARRIER (Phase 3 — CoRTN Charts 9/9a)
