@@ -2436,6 +2436,25 @@ body.panel-resizing #map-column {
   white-space: nowrap;
   text-align: center;
 }
+/* Leaflet zoom controls — dark styled */
+.leaflet-bar {
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35) !important;
+  border-radius: 6px !important;
+}
+.leaflet-bar a {
+  background: #1e2430 !important;
+  color: #94a3b8 !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+  width: 28px !important;
+  height: 28px !important;
+  line-height: 28px !important;
+  font-size: 16px !important;
+}
+.leaflet-bar a:first-child { border-radius: 6px 6px 0 0 !important; }
+.leaflet-bar a:last-child  { border-radius: 0 0 6px 6px !important; border-bottom: none !important; }
+.leaflet-bar a:hover { background: #2d3748 !important; color: #e2e8f0 !important; }
+.leaflet-bar a.leaflet-disabled { background: #1e2430 !important; color: #4b5563 !important; opacity: 0.5 !important; }
 /* Leaflet attribution — dark styled, compact */
 .leaflet-control-attribution {
   background: #1e2430 !important;
@@ -3454,6 +3473,16 @@ body.panel-resizing #map-column {
                 }
 
                 setTimeout(nudgeMap, 200);   // initial layout settle
+                // Open search bar by default on load
+                setTimeout(function() {
+                  if (typeof window.openSearchPopover === 'function') {
+                    window.openSearchPopover();
+                  }
+                  // Guide overlay is redundant — search is already open
+                  if (typeof window._hideMapGuide === 'function') {
+                    window._hideMapGuide();
+                  }
+                }, 250);
               }
               if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', boot);
