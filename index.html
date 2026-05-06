@@ -1468,10 +1468,7 @@ body.drawer-layout .sheet { border: none; border-radius: 0; box-shadow: none; pa
   opacity: 1;
 }
 #app-header .collapse-all-btn { font-size: 11px; padding: 4px 10px; margin: 0; }
-#scenarioBadge { display:inline-flex; align-items:center; gap:4px; background:#1e3a5f; color:#bfdbfe; border-radius:10px; padding:3px 6px 3px 9px; font-size:11px; font-weight:500; margin-left:4px; vertical-align:middle; white-space:nowrap; }
-#scenarioBadgeName { color:#e0f2fe; }
-#scenarioBadgeDismiss { background:none; border:none; color:#93c5fd; cursor:pointer; font-size:12px; padding:0; line-height:1; opacity:0.8; }
-#scenarioBadgeDismiss:hover { opacity:1; color:#fff; }
+#scenarioBadgeName { color: rgba(255,255,255,0.5); font-weight: 400; margin-left: 4px; }
 
 /* GIS Export dropdown in the header */
 #app-header .header-dropdown {
@@ -2914,7 +2911,7 @@ body.panel-resizing #map-column {
       <button class="pdf-btn open-chevron" id="openRecentBtn" type="button" title="Recent assessments">▾</button>
       <div class="recent-dropdown" id="recentDropdown"></div>
     </div>
-    <button class="pdf-btn" id="scenariosBtn" type="button" title="Save and compare named scenario snapshots">Scenarios</button><span id="scenarioBadge" style="display:none;" aria-live="polite"><span id="scenarioBadgeName"></span><button id="scenarioBadgeDismiss" type="button" title="Clear active scenario indicator">&#x2715;</button></span>
+    <button class="pdf-btn" id="scenariosBtn" type="button" title="Save and compare named scenario snapshots">Scenarios<span id="scenarioBadgeName" aria-live="polite"></span></button>
     <button class="pdf-btn" id="generateReportBtn" type="button" style="display:none">Generate Report</button>
     <button class="pdf-btn toolbar-secondary" id="savePdfBtn" type="button" title="Export A4 criteria appendix PDF (SA only)" onclick="generatePDFAppendix(this)">PDF Criteria</button>
     <button class="pdf-btn toolbar-secondary" id="shareAssessmentBtn" type="button" title="Generate a read-only link to share this assessment with a client">Share Assessment</button>
@@ -27063,7 +27060,7 @@ setInitialCollapseState();
         if (typeof window._clearUnsaved === 'function' && !window._undoRestoring) window._clearUnsaved();
         // R7: reset auto-open flag so drawer opens again on first predictions
         window._drawerAutoOpened = false;
-        if (typeof window._clearScenarioBadge === 'function') window._clearScenarioBadge();
+        if (!options.preserveScenarios && typeof window._clearScenarioBadge === 'function') window._clearScenarioBadge();
       }, 800);
     }
 
@@ -27089,23 +27086,16 @@ setInitialCollapseState();
 
   // R6: scenario badge helpers — shared with loadAssessment via window
   function _showScenarioBadge(name) {
-    var badge = document.getElementById('scenarioBadge');
     var nameEl = document.getElementById('scenarioBadgeName');
-    if (!badge || !nameEl) return;
-    nameEl.textContent = name.length > 20 ? name.slice(0, 19) + '…' : name;
-    badge.style.display = 'inline-flex';
+    if (!nameEl) return;
+    nameEl.textContent = '· ' + (name.length > 22 ? name.slice(0, 21) + '…' : name);
   }
   function _clearScenarioBadge() {
-    var badge = document.getElementById('scenarioBadge');
-    if (badge) badge.style.display = 'none';
+    var nameEl = document.getElementById('scenarioBadgeName');
+    if (nameEl) nameEl.textContent = '';
   }
   window._showScenarioBadge = _showScenarioBadge;
   window._clearScenarioBadge = _clearScenarioBadge;
-  // Wire dismiss button
-  document.addEventListener('DOMContentLoaded', function() {
-    var dismissBtn = document.getElementById('scenarioBadgeDismiss');
-    if (dismissBtn) dismissBtn.addEventListener('click', _clearScenarioBadge);
-  });
 
   var _scenModalEl  = null;   // backdrop DOM node while modal is open
   var _scenEscHandler   = null;
