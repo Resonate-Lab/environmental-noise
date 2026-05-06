@@ -9,7 +9,7 @@ http.createServer((req, res) => {
   fs.readFile(fp, (e, d) => {
     if (e) { res.writeHead(404); res.end('Not found'); return; }
     const ext = path.extname(fp).slice(1);
-    const ct = { html: 'text/html', js: 'application/javascript', css: 'text/css', json: 'application/json' }[ext] || 'text/plain';
+    const ct = { html: 'text/html', js: 'application/javascript', css: 'text/css', json: 'application/json', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' }[ext] || 'text/plain';
     res.writeHead(200, { 'Content-Type': ct, 'Cache-Control': 'no-cache, no-store, must-revalidate' });
     res.end(d);
   });
