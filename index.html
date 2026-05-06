@@ -45303,8 +45303,8 @@ if (window.pdfjsLib) {
       return Object.keys(seen);
     }
 
-    /* Slow path: use Leaflet layer bboxes (before cache is ready) */
-    if (!_zonesLayer) return [];
+    /* Slow path: use Leaflet layer bboxes (before cache is ready, GeoJSON only) */
+    if (!_zonesLayer || typeof _zonesLayer.eachLayer !== 'function') return [];
     var seen2 = {};
     _zonesLayer.eachLayer(function(lyr) {
       try {
@@ -45334,8 +45334,45 @@ if (window.pdfjsLib) {
     _legendRefreshTimer = setTimeout(refreshZonesLegendNow, 150);
   }
 
-  /* ── Zones GeoJSON layer (reuses _zoneCache so data is only fetched once) ── */
+  /* ── Zones layer: SAPPA tile service (cadastral-precise) with GeoJSON fallback ── */
   function loadZonesLayer(callback) {
+    // Warm the cache for legend zone-name detection (fast path).
+    _ensureZoneCache().catch(function() {});
+
+    // Try SAPPA MapServer tile layer first — cadastral-precise, matches SAPPA exactly.
+    var SAPPA_TILES = 'https://location.sa.gov.au/server6/rest/services/ePlanning/CurrentZones/MapServer';
+    if (typeof L.esri !== 'undefined' && typeof L.esri.tiledMapLayer === 'function') {
+      try {
+        var tileLayer = L.esri.tiledMapLayer({
+          url: SAPPA_TILES,
+          opacity: 0.5,
+          maxZoom: 22,
+          maxNativeZoom: 19
+        });
+        // On first tile error (e.g. auth-restricted) swap to GeoJSON fallback.
+        var _probed = false;
+        tileLayer.once('tileerror', function() {
+          if (_probed) return;
+          _probed = true;
+          console.warn('[PlanSA] Tile layer unavailable, falling back to local GeoJSON');
+          var m = window._map;
+          if (m && m.hasLayer(tileLayer)) m.removeLayer(tileLayer);
+          _loadZonesGeoJSON(function(layer) {
+            if (layer) { addLayerToMap(layer); }
+          });
+        });
+        tileLayer.once('tileload', function() { _probed = true; });
+        callback(tileLayer);
+        return;
+      } catch(e) {
+        console.warn('[PlanSA] tiledMapLayer init error, falling back:', e);
+      }
+    }
+    _loadZonesGeoJSON(callback);
+  }
+
+  /* GeoJSON fallback (generalised boundaries, used when tile service is unavailable) */
+  function _loadZonesGeoJSON(callback) {
     _ensureZoneCache()
       .then(function(cache) {
         var features = cache.map(function(entry) { return entry.feature; });
@@ -45349,8 +45386,7 @@ if (window.pdfjsLib) {
             var dateStr  = _metadataDate ? ' (' + _metadataDate + ')' : '';
             lyr.bindPopup(
               '<b>' + escHtml(zoneName) + '</b>' +
-              '<br><small style="color:#666;">Auto-detected from PlanSA open data' + dateStr +
-              ' \u2014 verify on <a href="https://sappa.plan.sa.gov.au/" target="_blank" rel="noopener">SAPPA \u2197</a> for authoritative zoning.</small>'
+              '<br><small style="color:#666;">PlanSA open data (generalised — verify on <a href="https://sappa.plan.sa.gov.au/" target="_blank" rel="noopener">SAPPA ↗</a>)</small>'
             );
           },
         });
