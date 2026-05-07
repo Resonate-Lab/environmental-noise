@@ -12183,6 +12183,7 @@ function rebuildConstructionGrouped() {
   if (customEntries.length > 0) grouped['Custom Materials']   = customEntries;
   CONSTRUCTION_LIBRARY_GROUPED = grouped;
   window.CONSTRUCTION_LIBRARY_GROUPED = CONSTRUCTION_LIBRARY_GROUPED;
+  if (window._bsRefreshConstructionSelects) window._bsRefreshConstructionSelects();
 }
 rebuildConstructionGrouped();
 var _asIdCtr = 0;
@@ -37930,6 +37931,17 @@ if (window.pdfjsLib) {
       _bsPanel = null; _bsPanelId = null;
     }
     window.closeBsPanel = closeBsPanel;
+
+    // Refresh construction dropdowns in the open panel (called after rebuildConstructionGrouped).
+    function _bsRefreshConstructionSelects() {
+      if (!_bsPanel) return;
+      _bsPanel.querySelectorAll('#bsDefWallSel, #bsRoofSel, .bs-wall-cons-sel').forEach(function(sel) {
+        var cur = sel.value;
+        sel.innerHTML = _bsConsOptions(cur);
+        sel.value = cur;
+      });
+    }
+    window._bsRefreshConstructionSelects = _bsRefreshConstructionSelects;
 
     function _bsConsOptions(selectedName) {
       var opts = '<option value="">— Custom / manual —</option>';
