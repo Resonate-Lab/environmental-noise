@@ -3631,7 +3631,7 @@ body.panel-resizing #map-column {
               <!-- Card 2: Reflections -->
               <section class="modelling-card" id="mc-reflections">
                 <h3>Reflections</h3>
-                <p class="card-hint">Specular reflections from building façades and vertical surfaces. Per-surface reflection coefficient ρ is configured per building in the building edit panel.</p>
+                <p class="card-hint">Specular reflections from building facades and vertical surfaces. Per-surface reflection coefficient ρ is configured per building in the building edit panel.</p>
                 <button class="mp-btn" id="reflectionsBtn" title="Apply ISO 9613-2:1996 §7.5 image source facade reflections to receiver predictions and noise map (F)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><line x1="12" y1="3" x2="12" y2="21"/><path d="M5 7l7 5-7 5"/><path d="M19 7l-7 5 7 5"/></svg> Reflections<span class="mp-kbd">F</span></button>
                 <span id="reflectionsBuildingWarning" style="display:none;font-size:10px;color:#fbbf24;padding:2px 8px;white-space:normal;line-height:1.4;">&#9888; Enable Buildings layer to apply reflections to noise map</span>
               </section>
@@ -12140,6 +12140,7 @@ var buildingSources = [];
 var _bsIdCtr = 0;
 var _bsPanel = null, _bsPanelId = null, _bsDrawHandler = null, _drawingBuildingSource = false;
 var _bsFacadeHighlight = null;
+var _bsFacadeModal = null, _bsFmEscHandler = null, _bsFacadeActiveWallIdx = null, _bsFmRefreshFn = null, _bsFmDragCleanup = null;
 
 var BS_OCTAVE_BANDS = [63, 125, 250, 500, 1000, 2000, 4000, 8000];
 var BS_A_WEIGHTS    = [-26.2, -16.1, -8.6, -3.2, 0.0, 1.2, 1.0, -1.1];
@@ -37224,7 +37225,7 @@ if (window.pdfjsLib) {
     function _bsCalcOneFacade(lpBB, lpOct, cons, area, overr, hemCorrection) {
       if (area <= 0) return null;
       // -6 dB diffuse-field-SPL to radiated intensity-per-area constant (Strutt/Bies-Hansen/VDI 3760).
-      // Applied identically to façades and roof under the reverberant interior Lp input convention.
+      // Applied identically to facades and roof under the reverberant interior Lp input convention.
       if (!Number.isFinite(hemCorrection)) hemCorrection = -6;
       var lw;
       if (lpOct && cons && cons.octaveR) {
@@ -37924,6 +37925,7 @@ if (window.pdfjsLib) {
     }
 
     function closeBsPanel() {
+      if (window._bsCloseFacadeModal) window._bsCloseFacadeModal();
       _bsClearFacadeHighlight();
       if (_bsPanelDragCleanup) { _bsPanelDragCleanup(); _bsPanelDragCleanup = null; }
       var ex = document.getElementById('bsFloatPanel');
@@ -38011,20 +38013,35 @@ if (window.pdfjsLib) {
       return linSum > 0 ? -10 * Math.log10(linSum) : cons.rw;
     }
 
-    /** SVG face diagram of a wall showing element rectangles at their x/y positions. */
-    function _bsWallFaceSVG(wallLen, wallHt, cons, elements) {
-      var W = 260, H = 80;
+    /** SVG face diagram of a wall showing element rectangles at their x/y positions.
+     *  svgW/svgH optional: omit for default 260×80, pass (120,30) for mini thumbnail (no labels),
+     *  pass (660) for large modal (H calculated from aspect ratio). */
+    function _bsWallFaceSVG(wallLen, wallHt, cons, elements, svgW, svgH) {
+      var mini = (svgW && svgH && svgH <= 32);
+      var W = svgW || 260;
+      var ML, MB, MR, MT;
+      if (mini)       { ML = 2;  MB = 2;  MR = 2;  MT = 2; }
+      else if (svgW)  { ML = 50; MB = 24; MR = 12; MT = 8; }
+      else            { ML = 46; MB = 16; MR = 8;  MT = 4; }
+      var H;
+      if (svgH) {
+        H = svgH;
+      } else if (svgW && Number.isFinite(wallLen) && wallLen > 0) {
+        var innerH = Math.max(60, Math.min(200, Math.round((W - ML - MR) * wallHt / wallLen)));
+        H = innerH + MT + MB;
+      } else {
+        H = 80;
+      }
       if (!Number.isFinite(wallLen) || wallLen <= 0 || !Number.isFinite(wallHt) || wallHt <= 0) {
         return '<svg width="' + W + '" height="' + H + '" style="display:block;"><text x="8" y="20" font-size="11" fill="#9ca3af">No dimensions</text></svg>';
       }
-      var ML = 46, MB = 16, MR = 8, MT = 4; // left wide enough for "9999.9m" height label
       var scaleX = (W - ML - MR) / wallLen, scaleY = (H - MT - MB) / wallHt;
       var sc = Math.min(scaleX, scaleY);
-      var svgW = Math.round(wallLen * sc), svgH = Math.max(Math.round(wallHt * sc), 2);
+      var svgDrawW = Math.round(wallLen * sc), svgDrawH = Math.max(Math.round(wallHt * sc), 2);
       var offX = ML, offY = MT;
       var EL_COLORS = ['#60a5fa','#34d399','#fbbf24','#f87171','#a78bfa','#fb923c'];
       var svg = '<svg width="' + W + '" height="' + H + '" style="display:block;border:1px solid #e9d5ff;border-radius:3px;background:#f5f3ff;">';
-      svg += '<rect x="' + offX + '" y="' + offY + '" width="' + svgW + '" height="' + svgH + '" fill="rgba(140,80,180,0.15)" stroke="#8b5cf6" stroke-width="1.5"/>';
+      svg += '<rect x="' + offX + '" y="' + offY + '" width="' + svgDrawW + '" height="' + svgDrawH + '" fill="rgba(140,80,180,0.15)" stroke="#8b5cf6" stroke-width="1.5"/>';
       if (elements && elements.length > 0) {
         elements.forEach(function(el, ei) {
           var elW = Number.isFinite(el.width) && el.width > 0 ? el.width : (Number.isFinite(el.area) && wallHt > 0 ? Math.sqrt(el.area) : 0);
@@ -38036,11 +38053,13 @@ if (window.pdfjsLib) {
           var pw = elW * sc, ph = elH * sc;
           var col = EL_COLORS[ei % EL_COLORS.length];
           svg += '<rect x="' + px.toFixed(1) + '" y="' + py.toFixed(1) + '" width="' + pw.toFixed(1) + '" height="' + ph.toFixed(1) + '" fill="' + col + '" fill-opacity="0.65" stroke="' + col + '" stroke-width="1"/>';
-          svg += '<text x="' + (px + pw / 2).toFixed(1) + '" y="' + (py + ph / 2 + 4).toFixed(1) + '" text-anchor="middle" font-size="9" fill="#1f2937">' + (ei + 1) + '</text>';
+          if (!mini) svg += '<text x="' + (px + pw / 2).toFixed(1) + '" y="' + (py + ph / 2 + 4).toFixed(1) + '" text-anchor="middle" font-size="9" fill="#1f2937">' + (ei + 1) + '</text>';
         });
       }
-      svg += '<text x="' + (offX + svgW / 2) + '" y="' + (H - 3) + '" text-anchor="middle" font-size="10" fill="#6b7280">' + wallLen.toFixed(1) + 'm</text>';
-      svg += '<text x="' + (offX - 4) + '" y="' + (offY + svgH / 2) + '" text-anchor="end" dominant-baseline="middle" font-size="10" fill="#6b7280">' + wallHt.toFixed(1) + 'm</text>';
+      if (!mini) {
+        svg += '<text x="' + (offX + svgDrawW / 2) + '" y="' + (H - 3) + '" text-anchor="middle" font-size="10" fill="#6b7280">' + wallLen.toFixed(1) + 'm</text>';
+        svg += '<text x="' + (offX - 4) + '" y="' + (offY + svgDrawH / 2) + '" text-anchor="end" dominant-baseline="middle" font-size="10" fill="#6b7280">' + wallHt.toFixed(1) + 'm</text>';
+      }
       svg += '</svg>';
       return svg;
     }
@@ -38071,7 +38090,7 @@ if (window.pdfjsLib) {
       return h;
     }
 
-    /** Single wall detail row (collapsible). */
+    /** Single wall row: header + 120\u00d730 mini thumbnail (click opens modal). */
     function _bsWallDetailHTML(bs, wallIdx, dir, len) {
       var overr = bs.facadeOverrides && bs.facadeOverrides[wallIdx];
       var cons = overr || bs.defaultConstruction;
@@ -38079,41 +38098,22 @@ if (window.pdfjsLib) {
       var elements = overr ? (overr.elements || []) : [];
       var effRw = _bsEffectiveRw(cons, elements, len, wallHt);
       var hasOverride = !!overr;
-      var h = '<div class="bs-wall-row" data-wall="' + wallIdx + '" style="border:1px solid ' + (hasOverride ? '#c4b5fd' : '#e5e7eb') + ';border-radius:5px;margin-bottom:5px;overflow:hidden;">';
-      // Header
-      h += '<div class="bs-wall-header" data-wall="' + wallIdx + '" style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;cursor:pointer;background:' + (hasOverride ? '#f5f3ff' : '#f9fafb') + ';">';
+      var rowBg = hasOverride ? '#f5f3ff' : '#f9fafb';
+      var rowBorder = hasOverride ? '#c4b5fd' : '#e5e7eb';
+      var h = '<div class="bs-wall-row" data-wall="' + wallIdx + '" style="border:1px solid ' + rowBorder + ';border-radius:5px;margin-bottom:5px;overflow:hidden;">';
+      // Header (single click opens modal)
+      h += '<div class="bs-wall-header" data-wall="' + wallIdx + '" style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;cursor:pointer;background:' + rowBg + ';">';
       h += '<span style="font-size:11px;font-weight:600;">Wall ' + (wallIdx + 1) + ' <span style="font-weight:400;color:#6b7280;">(' + dir + ', ' + len.toFixed(0) + '\u00a0m)</span>';
       if (hasOverride) h += ' <span style="font-size:10px;background:#ede9fe;color:#6d28d9;padding:1px 4px;border-radius:3px;">custom</span>';
       h += '</span>';
       h += '<div style="display:flex;align-items:center;gap:6px;">';
-      if (Number.isFinite(effRw)) h += '<span style="font-size:10px;color:#6b7280;">Rw\u00a0' + effRw.toFixed(0) + '\u00a0dB</span>';
-      h += '<span class="bs-wall-chevron" style="font-size:10px;color:#9ca3af;">\u25bc</span>';
+      if (Number.isFinite(effRw)) h += '<span class="bs-wall-rw-badge" data-wall="' + wallIdx + '" style="font-size:10px;color:#6b7280;">Rw\u00a0' + effRw.toFixed(0) + '\u00a0dB</span>';
+      h += '<span style="font-size:10px;color:#9ca3af;">\u25b6</span>';
       h += '</div></div>';
-      // Detail (initially collapsed)
-      h += '<div class="bs-wall-detail" data-wall="' + wallIdx + '" style="padding:8px;display:none;">';
-      // Height override
-      h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">';
-      h += '<span style="font-size:11px;color:#6b7280;white-space:nowrap;">Ht override (m):</span>';
-      h += '<input type="number" class="bs-wall-ht" data-wall="' + wallIdx + '" value="' + (overr && Number.isFinite(overr.heightOverride) ? overr.heightOverride : '') + '" placeholder="' + wallHt + '" step="0.1" min="0.1" style="width:64px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:3px;">';
+      // Mini thumbnail (always visible, shows openings at a glance)
+      h += '<div class="bs-wall-svg" data-wall="' + wallIdx + '" style="padding:2px 4px 3px;background:' + rowBg + ';cursor:pointer;" data-wall-hdr="' + wallIdx + '">';
+      h += _bsWallFaceSVG(len, wallHt, cons, elements, 120, 30);
       h += '</div>';
-      // Construction select
-      h += '<select class="bs-wall-cons-sel" data-wall="' + wallIdx + '" style="width:100%;padding:3px 5px;border:1px solid #ddd;border-radius:4px;font-size:11px;margin-bottom:4px;">';
-      if (!hasOverride) h += '<option value="">(Default construction)</option>';
-      h += _bsConsOptions(cons.name || '');
-      h += '</select>';
-      // SVG diagram
-      h += '<div class="bs-wall-svg" data-wall="' + wallIdx + '" style="margin:5px 0;">' + _bsWallFaceSVG(len, wallHt, cons, elements) + '</div>';
-      // Composite Rw
-      h += '<div class="bs-wall-rw" data-wall="' + wallIdx + '">' + _bsCompositeRwHTML(cons, elements, len, wallHt) + '</div>';
-      // Elements list
-      h += '<div class="bs-elements-list" data-wall="' + wallIdx + '" style="margin-top:6px;">';
-      elements.forEach(function(el, ei) { h += _bsElementRow(wallIdx, ei, el); });
-      h += '</div>';
-      h += '<button class="bs-add-element" data-wall="' + wallIdx + '" style="font-size:10px;padding:1px 7px;cursor:pointer;background:#ede9fe;border:1px solid #c4b5fd;border-radius:3px;color:#6d28d9;margin-top:3px;">+ Add opening</button>';
-      if (hasOverride) {
-        h += ' <button class="bs-del-override" data-wall="' + wallIdx + '" style="font-size:10px;padding:1px 7px;cursor:pointer;background:#fee2e2;border:1px solid #fca5a5;border-radius:3px;color:#b91c1c;margin-top:3px;">Remove override</button>';
-      }
-      h += '</div>'; // end detail
       h += '</div>'; // end wall-row
       return h;
     }
@@ -38129,6 +38129,38 @@ if (window.pdfjsLib) {
         h += _bsWallDetailHTML(bs, i, dir, len);
       }
       return h;
+    }
+
+    /** Small plan-view SVG of the building footprint with the active wall highlighted. */
+    function _bsBuildingPlanSVG(bs, wallIdx) {
+      var W = 100, H = 78, PAD = 8;
+      var verts = bs.vertices;
+      if (!verts || verts.length < 3) return '';
+      var lats = verts.map(function(v){return v[0];}), lngs = verts.map(function(v){return v[1];});
+      var minLat = Math.min.apply(null,lats), maxLat = Math.max.apply(null,lats);
+      var minLng = Math.min.apply(null,lngs), maxLng = Math.max.apply(null,lngs);
+      var latR = maxLat - minLat || 1e-5, lngR = maxLng - minLng || 1e-5;
+      var drawW = W - 2*PAD, drawH = H - 2*PAD;
+      var sc = Math.min(drawW/lngR, drawH/latR);
+      var usedW = lngR*sc, usedH = latR*sc;
+      var ox = PAD + (drawW-usedW)/2, oy = PAD + (drawH-usedH)/2;
+      function px(lat,lng){return {x: ox+(lng-minLng)*sc, y: oy+(maxLat-lat)*sc};}
+      var n = verts.length;
+      var pts = verts.map(function(v){return px(v[0],v[1]);});
+      var polyPts = pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');
+      var svg = '<svg width="'+W+'" height="'+H+'" style="display:block;flex-shrink:0;border-radius:4px;border:1px solid #e5e7eb;background:#f9fafb;">';
+      svg += '<polygon points="'+polyPts+'" fill="rgba(139,92,246,0.1)" stroke="#8b5cf6" stroke-width="1.2"/>';
+      for (var i=0;i<n;i++) {
+        var p1=pts[i],p2=pts[(i+1)%n];
+        if (i===wallIdx) svg += '<line x1="'+p1.x.toFixed(1)+'" y1="'+p1.y.toFixed(1)+'" x2="'+p2.x.toFixed(1)+'" y2="'+p2.y.toFixed(1)+'" stroke="#f59e0b" stroke-width="3.5" stroke-linecap="round"/>';
+      }
+      // North arrow (top-right)
+      var ax=W-11,ay=11;
+      svg += '<line x1="'+ax+'" y1="'+( ay+7)+'" x2="'+ax+'" y2="'+( ay-5)+'" stroke="#374151" stroke-width="1.5"/>';
+      svg += '<polygon points="'+ax+','+(ay-8)+' '+(ax-3)+','+(ay-2)+' '+(ax+3)+','+(ay-2)+'" fill="#374151"/>';
+      svg += '<text x="'+ax+'" y="'+(ay+17)+'" text-anchor="middle" font-size="8" font-weight="600" fill="#374151">N</text>';
+      svg += '</svg>';
+      return svg;
     }
 
     /** One roof element row (plan-view opening). */
@@ -38356,6 +38388,25 @@ if (window.pdfjsLib) {
       return h;
     }
 
+    /** Modal element row (wider inputs, matches 70/70/80/80/1fr/28px grid). */
+    function _bsFmElementRow(ei, el) {
+      var elW = Number.isFinite(el.width)  ? el.width  : '';
+      var elH = Number.isFinite(el.height) ? el.height : '';
+      var elX = Number.isFinite(el.x)      ? el.x      : '';
+      var elY = Number.isFinite(el.y)      ? el.y      : '';
+      var h = '<div class="bsfm-el-row" data-el="' + ei + '" style="display:grid;grid-template-columns:70px 70px 80px 80px 1fr 28px;gap:8px;align-items:center;margin-bottom:6px;padding:6px 4px;background:#f9fafb;border-radius:4px;border:1px solid #e5e7eb;">';
+      h += '<input type="number" class="bsfm-el-width"  data-el="' + ei + '" placeholder="W" value="' + elW + '" step="0.01" style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
+      h += '<input type="number" class="bsfm-el-height" data-el="' + ei + '" placeholder="H" value="' + elH + '" step="0.01" style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
+      h += '<input type="number" class="bsfm-el-x"      data-el="' + ei + '" placeholder="0" value="' + elX + '" step="0.1"  style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
+      h += '<input type="number" class="bsfm-el-y"      data-el="' + ei + '" placeholder="0" value="' + elY + '" step="0.1"  style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
+      h += '<select class="bsfm-el-sel" data-el="' + ei + '" style="width:100%;font-size:11px;padding:3px 4px;border:1px solid #ddd;border-radius:3px;">';
+      h += _bsConsOptions(el.construction ? el.construction.name : '');
+      h += '</select>';
+      h += '<button class="bsfm-del-el" data-el="' + ei + '" style="width:24px;height:24px;font-size:12px;cursor:pointer;background:#fee2e2;border:1px solid #fca5a5;border-radius:3px;color:#b91c1c;padding:0;">✕</button>';
+      h += '</div>';
+      return h;
+    }
+
     function _bsDerivedLwHTML(bs, derived) {
       if (!derived) derived = _bsCalcDerived(bs);
       if (!bs.vertices || bs.vertices.length < 3) return '<em style="color:#9ca3af;">Draw polygon first</em>';
@@ -38474,7 +38525,7 @@ if (window.pdfjsLib) {
         }
         return bs.facadeOverrides[wallIdx];
       }
-      /** Update wall SVG + Rw + derived for wallIdx. */
+      /** Update wall mini-SVG + Rw badge + derived for wallIdx, and modal SVG if open. */
       function _bsRefreshWallVisuals(wallIdx) {
         var v1 = bs.vertices[wallIdx], v2 = bs.vertices[(wallIdx + 1) % bs.vertices.length];
         var len = _bsSegLen(v1, v2);
@@ -38482,22 +38533,17 @@ if (window.pdfjsLib) {
         var cons = overr || bs.defaultConstruction;
         var wallHt = (overr && Number.isFinite(overr.heightOverride)) ? overr.heightOverride : (bs.height_m || 6);
         var elements = overr ? (overr.elements || []) : [];
+        // Mini thumbnail in panel
         var svgEl = panel.querySelector('.bs-wall-svg[data-wall="' + wallIdx + '"]');
-        if (svgEl) svgEl.innerHTML = _bsWallFaceSVG(len, wallHt, cons, elements);
-        var rwEl = panel.querySelector('.bs-wall-rw[data-wall="' + wallIdx + '"]');
-        if (rwEl) rwEl.innerHTML = _bsCompositeRwHTML(cons, elements, len, wallHt);
-        // Update header Rw badge
-        var hdr = panel.querySelector('.bs-wall-header[data-wall="' + wallIdx + '"]');
-        if (hdr) {
+        if (svgEl) svgEl.innerHTML = _bsWallFaceSVG(len, wallHt, cons, elements, 120, 30);
+        // Rw badge in header
+        var rwBadge = panel.querySelector('.bs-wall-rw-badge[data-wall="' + wallIdx + '"]');
+        if (rwBadge) {
           var effRw = _bsEffectiveRw(cons, elements, len, wallHt);
-          var badges = hdr.querySelectorAll('span');
-          // Find the Rw badge — the second-to-last span in the right group
-          var rightGroup = hdr.lastElementChild;
-          if (rightGroup) {
-            var rwSpan = rightGroup.querySelector('span:first-child');
-            if (rwSpan) rwSpan.textContent = Number.isFinite(effRw) ? 'Rw\u00a0' + effRw.toFixed(0) + '\u00a0dB' : '';
-          }
+          rwBadge.textContent = Number.isFinite(effRw) ? 'Rw ' + effRw.toFixed(0) + ' dB' : '';
         }
+        // Refresh modal if open for this wall
+        if (_bsFmRefreshFn && _bsFacadeActiveWallIdx === wallIdx) _bsFmRefreshFn();
         _bsRefreshDerived();
       }
       /** Re-render the elements list for a wall. */
@@ -38510,24 +38556,257 @@ if (window.pdfjsLib) {
         elements.forEach(function(el, ei) { html += _bsElementRow(wallIdx, ei, el); });
         elListEl.innerHTML = html;
       }
-      /** Re-render the full wall row (keeps detail open if it was). */
+      /** Re-render the full wall row. */
       function _bsRefreshWallRow(wallIdx) {
         var rowEl = panel.querySelector('.bs-wall-row[data-wall="' + wallIdx + '"]');
         if (!rowEl) return;
-        var wasOpen = rowEl.querySelector('.bs-wall-detail') && rowEl.querySelector('.bs-wall-detail').style.display !== 'none';
         var v1 = bs.vertices[wallIdx], v2 = bs.vertices[(wallIdx + 1) % bs.vertices.length];
         var len = _bsSegLen(v1, v2);
-        var dir = _bsCompassDir(_bsBearing(v1, v2));
+        var dir = _bsWallFacingDir(bs, wallIdx);
         var newHtml = _bsWallDetailHTML(bs, wallIdx, dir, len);
         var tmp = document.createElement('div');
         tmp.innerHTML = newHtml;
-        var newRow = tmp.firstChild;
-        if (wasOpen) {
-          var detailEl = newRow.querySelector('.bs-wall-detail');
-          if (detailEl) { detailEl.style.display = ''; var chevron = newRow.querySelector('.bs-wall-chevron'); if (chevron) chevron.textContent = '\u25b2'; }
-        }
-        rowEl.parentNode.replaceChild(newRow, rowEl);
+        rowEl.parentNode.replaceChild(tmp.firstChild, rowEl);
       }
+      /** Open the facade editor modal for a wall. */
+      function _bsOpenFacadeModal(wallIdx) {
+        _bsCloseFacadeModal();
+        _bsFacadeActiveWallIdx = wallIdx;
+        var n = bs.vertices.length;
+        var v1 = bs.vertices[wallIdx], v2 = bs.vertices[(wallIdx + 1) % n];
+        var len = _bsSegLen(v1, v2);
+        var dir = _bsWallFacingDir(bs, wallIdx);
+
+        // Highlight wall row in panel
+        if (_bsPanel) {
+          var rowEl2 = _bsPanel.querySelector('.bs-wall-row[data-wall="' + wallIdx + '"]');
+          if (rowEl2) rowEl2.style.background = '#ede9fe';
+        }
+        _bsHighlightFacade(bs, wallIdx);
+
+        // Internal refresh—re-renders large SVG and element list
+        function _bsFmRefresh() {
+          var overr2 = bs.facadeOverrides && bs.facadeOverrides[wallIdx];
+          var cons2 = overr2 || bs.defaultConstruction;
+          var wallHt2 = (overr2 && Number.isFinite(overr2.heightOverride)) ? overr2.heightOverride : (bs.height_m || 6);
+          var elements2 = overr2 ? (overr2.elements || []) : [];
+          var svgCont = document.getElementById('bsFacadeSvgLarge');
+          if (svgCont) svgCont.innerHTML = _bsWallFaceSVG(len, wallHt2, cons2, elements2, 660);
+          var elListEl = document.getElementById('bsFacadeElList');
+          if (elListEl) {
+            var html = '';
+            elements2.forEach(function(el, ei) { html += _bsFmElementRow(ei, el); });
+            elListEl.innerHTML = html;
+          }
+        }
+        _bsFmRefreshFn = _bsFmRefresh;
+
+        // Build modal
+        var overr = bs.facadeOverrides && bs.facadeOverrides[wallIdx];
+        var cons = overr || bs.defaultConstruction;
+        var wallHt = (overr && Number.isFinite(overr.heightOverride)) ? overr.heightOverride : (bs.height_m || 6);
+        var elements = overr ? (overr.elements || []) : [];
+
+        var mh = '<div id="bsFacadeModalOverlay" style="position:fixed;inset:0;z-index:10100;pointer-events:none;">';
+        mh += '<div id="bsFacadeModalInner" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);max-width:760px;width:95%;max-height:90vh;background:#fff;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,0.3);display:flex;flex-direction:column;pointer-events:all;">';
+        mh += '<div id="bsFacadeModalHdr" style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid #e5e7eb;flex-shrink:0;cursor:move;user-select:none;">';
+        mh += _bsBuildingPlanSVG(bs, wallIdx);
+        mh += '<div style="flex:1;min-width:0;">';
+        mh += '<div style="font-size:13px;font-weight:600;">Wall ' + (wallIdx + 1) + ' — ' + dir + ', ' + len.toFixed(1) + ' m</div>';
+        mh += '<div style="font-size:10px;color:#9ca3af;margin-top:1px;">Facade Editor · drag to move</div>';
+        mh += '</div>';
+        mh += '<button id="bsFacadeModalClose" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;padding:2px 8px;line-height:1;flex-shrink:0;">&times;</button>';
+        mh += '</div>';
+        mh += '<div id="bsFacadeModalBody" style="padding:14px 16px;overflow-y:auto;">';
+        mh += '<div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:12px;">';
+        mh += '<label style="font-size:12px;color:#374151;display:flex;flex-direction:column;gap:3px;flex:0 0 auto;">Wall height (m)';
+        mh += '<input type="number" id="bsFacadeHtInput" value="' + (overr && Number.isFinite(overr.heightOverride) ? overr.heightOverride : '') + '" placeholder="' + wallHt + '" step="0.1" min="0.1" style="width:80px;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:4px;"></label>';
+        mh += '<label style="font-size:12px;color:#374151;display:flex;flex-direction:column;gap:3px;flex:1 1 auto;">Construction';
+        mh += '<select id="bsFacadeConsSel" style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:4px;">';
+        if (!overr) mh += '<option value="">(Default construction)</option>';
+        mh += _bsConsOptions(cons.name || '');
+        mh += '</select></label></div>';
+        mh += '<div id="bsFacadeSvgLarge" style="margin-bottom:12px;">' + _bsWallFaceSVG(len, wallHt, cons, elements, 660) + '</div>';
+        mh += '<div style="display:grid;grid-template-columns:70px 70px 80px 80px 1fr 28px;gap:8px;padding:0 2px;margin-bottom:4px;">';
+        mh += '<div style="font-size:11px;font-weight:600;color:#374151;">W (m)<div style="font-size:9px;font-weight:400;color:#9ca3af;">width</div></div>';
+        mh += '<div style="font-size:11px;font-weight:600;color:#374151;">H (m)<div style="font-size:9px;font-weight:400;color:#9ca3af;">height</div></div>';
+        mh += '<div style="font-size:11px;font-weight:600;color:#374151;">X (m)<div style="font-size:9px;font-weight:400;color:#9ca3af;">offset from left</div></div>';
+        mh += '<div style="font-size:11px;font-weight:600;color:#374151;">Y (m)<div style="font-size:9px;font-weight:400;color:#9ca3af;">offset from floor</div></div>';
+        mh += '<div style="font-size:11px;font-weight:600;color:#374151;">Construction</div><div></div></div>';
+        mh += '<div id="bsFacadeElList">';
+        elements.forEach(function(el, ei) { mh += _bsFmElementRow(ei, el); });
+        mh += '</div>';
+        mh += '<button id="bsFacadeAddEl" style="font-size:11px;padding:4px 12px;cursor:pointer;background:#fff;border:1px solid #c4b5fd;border-radius:4px;color:#6d28d9;margin-top:4px;">+ Add opening</button>';
+        mh += '</div>';
+        mh += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-top:1px solid #e5e7eb;flex-shrink:0;"><div>';
+        if (overr) mh += '<button id="bsFacadeDelOverride" style="font-size:11px;padding:5px 12px;cursor:pointer;background:#fee2e2;border:1px solid #fca5a5;border-radius:4px;color:#b91c1c;">Remove override</button>';
+        mh += '</div><button id="bsFacadeCloseBtn" style="font-size:12px;padding:6px 20px;cursor:pointer;background:#7c3aed;border:none;border-radius:4px;color:#fff;">Close</button></div>';
+        mh += '</div></div>';
+
+        var wrapper = document.createElement('div');
+        wrapper.innerHTML = mh;
+        _bsFacadeModal = wrapper.firstChild;
+        document.body.appendChild(_bsFacadeModal);
+
+        // Draggable modal
+        var _fmInner = document.getElementById('bsFacadeModalInner');
+        var _fmHdr = document.getElementById('bsFacadeModalHdr');
+        var _fmDragging = false, _fmDragX = 0, _fmDragY = 0;
+        function _fmOnMouseDown(e) {
+          if (e.target.id === 'bsFacadeModalClose') return;
+          _fmDragging = true;
+          var rect = _fmInner.getBoundingClientRect();
+          _fmInner.style.transform = '';
+          _fmInner.style.left = rect.left + 'px';
+          _fmInner.style.top = rect.top + 'px';
+          _fmDragX = e.clientX - rect.left;
+          _fmDragY = e.clientY - rect.top;
+          e.preventDefault();
+        }
+        function _fmOnMouseMove(e) {
+          if (!_fmDragging) return;
+          var nl = Math.max(0, Math.min(e.clientX - _fmDragX, window.innerWidth - _fmInner.offsetWidth));
+          var nt = Math.max(0, Math.min(e.clientY - _fmDragY, window.innerHeight - 48));
+          _fmInner.style.left = nl + 'px';
+          _fmInner.style.top = nt + 'px';
+        }
+        function _fmOnMouseUp() { _fmDragging = false; }
+        _fmHdr.addEventListener('mousedown', _fmOnMouseDown);
+        document.addEventListener('mousemove', _fmOnMouseMove, true);
+        document.addEventListener('mouseup', _fmOnMouseUp, true);
+        _bsFmDragCleanup = function() {
+          document.removeEventListener('mousemove', _fmOnMouseMove, true);
+          document.removeEventListener('mouseup', _fmOnMouseUp, true);
+        };
+
+        document.getElementById('bsFacadeModalClose').addEventListener('click', _bsCloseFacadeModal);
+        document.getElementById('bsFacadeCloseBtn').addEventListener('click', _bsCloseFacadeModal);
+
+        var delOverrideBtn = document.getElementById('bsFacadeDelOverride');
+        if (delOverrideBtn) {
+          delOverrideBtn.addEventListener('click', function() {
+            if (bs.facadeOverrides) delete bs.facadeOverrides[wallIdx];
+            _bsCloseFacadeModal();
+            _bsRefreshWallRow(wallIdx);
+            _bsRefreshDerived();
+            if (typeof render === 'function') render();
+          });
+        }
+
+        _bsFmEscHandler = function(e) { if (e.key === 'Escape') _bsCloseFacadeModal(); };
+        document.addEventListener('keydown', _bsFmEscHandler, true);
+
+        document.getElementById('bsFacadeHtInput').addEventListener('input', function() {
+          var v = parseFloat(this.value);
+          var o = _bsEnsureOverride(wallIdx);
+          if (Number.isFinite(v) && v > 0) { o.heightOverride = v; } else { delete o.heightOverride; }
+          _bsFmRefresh();
+          _bsRefreshWallVisuals(wallIdx);
+          if (typeof render === 'function') render();
+          if (window._recomputeNoiseMap) window._recomputeNoiseMap();
+        });
+
+        document.getElementById('bsFacadeConsSel').addEventListener('change', function() {
+          var selVal = this.value;
+          var found = null;
+          Object.keys(CONSTRUCTION_LIBRARY_GROUPED).forEach(function(cat) {
+            CONSTRUCTION_LIBRARY_GROUPED[cat].forEach(function(e) { if (e.name === selVal) found = e; });
+          });
+          if (found) {
+            var o = _bsEnsureOverride(wallIdx);
+            var prevEls = o.elements || [], prevHt = o.heightOverride;
+            Object.assign(o, JSON.parse(JSON.stringify(found)));
+            o.elements = prevEls;
+            if (Number.isFinite(prevHt)) o.heightOverride = prevHt;
+            _bsFmRefresh();
+            _bsRefreshWallVisuals(wallIdx);
+            if (typeof render === 'function') render();
+          }
+        });
+
+        document.getElementById('bsFacadeAddEl').addEventListener('click', function() {
+          var o = _bsEnsureOverride(wallIdx);
+          if (!o.elements) o.elements = [];
+          var defOpening = CONSTRUCTION_LIBRARY.openings && CONSTRUCTION_LIBRARY.openings.length > 0
+            ? JSON.parse(JSON.stringify(CONSTRUCTION_LIBRARY.openings[0]))
+            : { name: 'Open', rw: 0 };
+          o.elements.push({ width: 1, height: 1, x: 0, y: 0, construction: defOpening });
+          _bsFmRefresh();
+          _bsRefreshWallVisuals(wallIdx);
+          if (typeof render === 'function') render();
+        });
+
+        var modalBody = document.getElementById('bsFacadeModalBody');
+
+        modalBody.addEventListener('input', function(ev) {
+          var inp = ev.target;
+          var fieldMap = { 'bsfm-el-width': 'width', 'bsfm-el-height': 'height', 'bsfm-el-x': 'x', 'bsfm-el-y': 'y' };
+          for (var cls in fieldMap) {
+            if (inp.classList.contains(cls)) {
+              var ei = parseInt(inp.getAttribute('data-el'));
+              var v = parseFloat(inp.value);
+              var o = bs.facadeOverrides && bs.facadeOverrides[wallIdx];
+              if (o && o.elements && o.elements[ei]) {
+                o.elements[ei][fieldMap[cls]] = Number.isFinite(v) && v >= 0 ? v : 0;
+                _bsFmRefresh();
+                _bsRefreshWallVisuals(wallIdx);
+                if (typeof render === 'function') render();
+              }
+              return;
+            }
+          }
+        });
+
+        modalBody.addEventListener('change', function(ev) {
+          var sel = ev.target;
+          if (sel.classList.contains('bsfm-el-sel')) {
+            var ei = parseInt(sel.getAttribute('data-el'));
+            var found = null;
+            Object.keys(CONSTRUCTION_LIBRARY_GROUPED).forEach(function(cat) {
+              CONSTRUCTION_LIBRARY_GROUPED[cat].forEach(function(e) { if (e.name === sel.value) found = e; });
+            });
+            if (found) {
+              var o = bs.facadeOverrides && bs.facadeOverrides[wallIdx];
+              if (o && o.elements && o.elements[ei]) {
+                o.elements[ei].construction = JSON.parse(JSON.stringify(found));
+                _bsFmRefresh();
+                _bsRefreshWallVisuals(wallIdx);
+                if (typeof render === 'function') render();
+              }
+            }
+          }
+        });
+
+        modalBody.addEventListener('click', function(ev) {
+          var btn = ev.target.closest('.bsfm-del-el');
+          if (btn) {
+            var ei = parseInt(btn.getAttribute('data-el'));
+            var o = bs.facadeOverrides && bs.facadeOverrides[wallIdx];
+            if (o && o.elements) {
+              o.elements.splice(ei, 1);
+              _bsFmRefresh();
+              _bsRefreshWallVisuals(wallIdx);
+              if (typeof render === 'function') render();
+            }
+          }
+        });
+      }
+
+      /** Close the facade editor modal. */
+      function _bsCloseFacadeModal() {
+        if (_bsFacadeModal) { _bsFacadeModal.remove(); _bsFacadeModal = null; }
+        if (_bsFmEscHandler) { document.removeEventListener('keydown', _bsFmEscHandler, true); _bsFmEscHandler = null; }
+        if (_bsFmDragCleanup) { _bsFmDragCleanup(); _bsFmDragCleanup = null; }
+        _bsFmRefreshFn = null;
+        if (_bsPanel && _bsFacadeActiveWallIdx !== null) {
+          var rowEl = _bsPanel.querySelector('.bs-wall-row[data-wall="' + _bsFacadeActiveWallIdx + '"]');
+          if (rowEl) rowEl.style.background = '';
+        }
+        _bsFacadeActiveWallIdx = null;
+        _bsClearFacadeHighlight();
+      }
+      window._bsCloseFacadeModal = _bsCloseFacadeModal;
+
       /** Re-render the roof elements section. */
       function _bsRefreshRoofElements() {
         var el = document.getElementById('bsRoofElements');
@@ -38851,14 +39130,14 @@ if (window.pdfjsLib) {
           var hdr = ev.target.closest('.bs-wall-header');
           if (hdr) {
             var wi = parseInt(hdr.getAttribute('data-wall'));
-            var detail = wallListEl.querySelector('.bs-wall-detail[data-wall="' + wi + '"]');
-            if (detail) {
-              var open = detail.style.display !== 'none';
-              detail.style.display = open ? 'none' : '';
-              var chevron = hdr.querySelector('.bs-wall-chevron');
-              if (chevron) chevron.textContent = open ? '\u25bc' : '\u25b2';
-              if (open) { _bsClearFacadeHighlight(); } else { _bsHighlightFacade(bs, wi); }
-            }
+            _bsOpenFacadeModal(wi);
+            return;
+          }
+          // Also open modal when clicking mini thumbnail
+          var thumbDiv = ev.target.closest('.bs-wall-svg[data-wall-hdr]');
+          if (thumbDiv) {
+            var wi2 = parseInt(thumbDiv.getAttribute('data-wall-hdr'));
+            _bsOpenFacadeModal(wi2);
             return;
           }
           // Remove override
