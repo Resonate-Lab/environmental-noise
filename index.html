@@ -11125,6 +11125,7 @@ function cswSave() {
       height: null
     });
     _saveCustomSources();
+    rebuildConstructionGrouped();
     if (typeof renderLibraryTable === 'function') renderLibraryTable();
     closeCustomSourceWizard();
     return;
@@ -12138,20 +12139,21 @@ var areaSources = [];
 var buildingSources = [];
 var _bsIdCtr = 0;
 var _bsPanel = null, _bsPanelId = null, _bsDrawHandler = null, _drawingBuildingSource = false;
+var _bsFacadeHighlight = null;
 
 var BS_OCTAVE_BANDS = [63, 125, 250, 500, 1000, 2000, 4000, 8000];
 var BS_A_WEIGHTS    = [-26.2, -16.1, -8.6, -3.2, 0.0, 1.2, 1.0, -1.1];
 
-// ─── CONSTRUCTION_LIBRARY (Google Sheets only — 2026-04-22) ──────────────────
-// Populated exclusively from SourceLibrary 'Transmission Loss' rows.
-// No hardcoded fallback — arrays start empty until SourceLibrary loads.
+// ─── CONSTRUCTION_LIBRARY (Google Sheets + custom — 2026-05-07) ──────────────
+// Sheet rows come from SourceLibrary 'Transmission Loss' rows.
+// Custom TL entries added via the Custom Source Wizard are merged in from _customSources.
 var CONSTRUCTION_LIBRARY = { walls: [], roof: [], openings: [] };
 var CONSTRUCTION_LIBRARY_GROUPED = {};
 function rebuildConstructionGrouped() {
-  var tlEntries = [];
+  var sheetEntries = [];
   if (window.SourceLibrary) {
     var tlRows = window.SourceLibrary.getLibraryForSourceType('building_facade');
-    tlEntries = tlRows.map(function(row) {
+    sheetEntries = tlRows.map(function(row) {
       return {
         name: row.name,
         octaveR: {
@@ -12161,13 +12163,25 @@ function rebuildConstructionGrouped() {
       };
     });
   }
-  CONSTRUCTION_LIBRARY.walls    = tlEntries;
-  CONSTRUCTION_LIBRARY.roof     = tlEntries;
-  CONSTRUCTION_LIBRARY.openings = tlEntries;
+  var customEntries = [];
+  if (typeof _customSources !== 'undefined') {
+    var _bsBandsHz = [63, 125, 250, 500, 1000, 2000, 4000, 8000];
+    _customSources.forEach(function(cs) {
+      if (cs.dataType !== 'Transmission Loss') return;
+      var octaveR = {};
+      _bsBandsHz.forEach(function(hz, i) { octaveR[hz] = (cs.spectrum && cs.spectrum[i] != null) ? cs.spectrum[i] : null; });
+      customEntries.push({ name: cs.name, octaveR: octaveR });
+    });
+  }
+  var allEntries = sheetEntries.concat(customEntries);
+  CONSTRUCTION_LIBRARY.walls    = allEntries;
+  CONSTRUCTION_LIBRARY.roof     = allEntries;
+  CONSTRUCTION_LIBRARY.openings = allEntries;
   window.CONSTRUCTION_LIBRARY   = CONSTRUCTION_LIBRARY;
-  CONSTRUCTION_LIBRARY_GROUPED  = tlEntries.length > 0
-    ? { 'Building Materials': tlEntries }
-    : {};
+  var grouped = {};
+  if (sheetEntries.length > 0)  grouped['Building Materials'] = sheetEntries;
+  if (customEntries.length > 0) grouped['Custom Materials']   = customEntries;
+  CONSTRUCTION_LIBRARY_GROUPED = grouped;
   window.CONSTRUCTION_LIBRARY_GROUPED = CONSTRUCTION_LIBRARY_GROUPED;
 }
 rebuildConstructionGrouped();
@@ -37883,7 +37897,21 @@ if (window.pdfjsLib) {
 
     var _bsPanelDragCleanup = null;
 
+    function _bsClearFacadeHighlight() {
+      if (_bsFacadeHighlight) { _bsFacadeHighlight.remove(); _bsFacadeHighlight = null; }
+    }
+    function _bsHighlightFacade(bs, wallIdx) {
+      _bsClearFacadeHighlight();
+      if (!bs || !bs.vertices || wallIdx < 0) return;
+      var n = bs.vertices.length;
+      var v1 = bs.vertices[wallIdx], v2 = bs.vertices[(wallIdx + 1) % n];
+      _bsFacadeHighlight = L.polyline([v1, v2], {
+        color: '#f59e0b', weight: 5, opacity: 1, interactive: false
+      }).addTo(map);
+    }
+
     function closeBsPanel() {
+      _bsClearFacadeHighlight();
       if (_bsPanelDragCleanup) { _bsPanelDragCleanup(); _bsPanelDragCleanup = null; }
       var ex = document.getElementById('bsFloatPanel');
       if (ex && ex.parentNode) ex.parentNode.removeChild(ex);
@@ -38804,6 +38832,7 @@ if (window.pdfjsLib) {
               detail.style.display = open ? 'none' : '';
               var chevron = hdr.querySelector('.bs-wall-chevron');
               if (chevron) chevron.textContent = open ? '\u25bc' : '\u25b2';
+              if (open) { _bsClearFacadeHighlight(); } else { _bsHighlightFacade(bs, wi); }
             }
             return;
           }
