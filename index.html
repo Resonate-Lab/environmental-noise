@@ -12179,8 +12179,8 @@ function rebuildConstructionGrouped() {
   CONSTRUCTION_LIBRARY.openings = allEntries;
   window.CONSTRUCTION_LIBRARY   = CONSTRUCTION_LIBRARY;
   var grouped = {};
-  if (sheetEntries.length > 0)  grouped['Building Materials'] = sheetEntries;
   if (customEntries.length > 0) grouped['Custom Materials']   = customEntries;
+  if (sheetEntries.length > 0)  grouped['Building Materials'] = sheetEntries;
   CONSTRUCTION_LIBRARY_GROUPED = grouped;
   window.CONSTRUCTION_LIBRARY_GROUPED = CONSTRUCTION_LIBRARY_GROUPED;
   if (window._bsRefreshConstructionSelects) window._bsRefreshConstructionSelects();
