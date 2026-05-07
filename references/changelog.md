@@ -2,6 +2,8 @@
 
 ## May 2026
 
+- **Objects list: unplaced sources now show ⋮ menu with Place / Delete options.** All five source types (point, line, area, building, road) that are added via suggested sources but not yet drawn on the map previously showed a static "not placed — click to place" label. They now show "not placed" alongside a ⋮ button that opens a context menu with "Place on map" (enters map placement mode) and "Delete" (removes the source). Row click still places as before. Implemented via new `_objUnplacedMenuBtn(type, idx, btn)` function.
+
 - **Building source: custom TL materials now appear in construction dropdowns.** `rebuildConstructionGrouped()` now merges `_customSources` entries with `dataType === 'Transmission Loss'` into `CONSTRUCTION_LIBRARY`, converting the `spectrum[0..7]` array to `octaveR: {63..8000}`. Custom materials appear in a separate "Custom Materials" optgroup in wall, roof, and element construction selects. `cswSave()` TL branch now calls `rebuildConstructionGrouped()` immediately after saving so the dropdown updates without a page reload.
 
 - **Building source: active facade highlighted on map when editing openings.** Expanding a wall row in the Building Source panel now draws an amber (`#f59e0b`, weight 5) `L.polyline` over that wall's edge on the map. The highlight clears automatically when the wall is collapsed, a different wall is expanded, or the panel is closed. Implemented via `_bsFacadeHighlight` module variable and `_bsClearFacadeHighlight()` / `_bsHighlightFacade(bs, wallIdx)` helpers.
