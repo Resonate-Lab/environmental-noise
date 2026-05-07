@@ -1,33 +1,5 @@
 # Architecture
 
-## Authentication
-
-The whole app is gated by **Firebase Auth → Google Sign-In, restricted to `@resonate-consultants.com` accounts** — the same Pattern A flow used by the other Resonate Portal apps (`resonate-portal`, `labs-dashboard`, `music-room-designer`, etc.). Firebase project: `resonate-reflect` (see `.firebaserc`).
-
-### Files
-
-| File | Purpose |
-|---|---|
-| `firebase-auth.js` | ES module loaded as `<script type="module">` just before `</body>`. Initialises Firebase, wires up sign-in / sign-out, listens to `onAuthStateChanged`, enforces the `@resonate-consultants.com` domain check, and shows/hides `#auth-gate` vs `#app-root`. |
-| `firebase-auth.css` | Sign-in overlay and header sign-out badge styling. Brand-yellow accent strip on the card, dark gradient background. |
-| `index.html` | Hosts `#auth-gate` (sign-in card), `#app-root` (wraps the entire app, hidden until signed in), and `#auth-user-badge` in the header next to the library status badge. |
-
-### Behaviour
-
-- The body content is wrapped in `<div id="app-root" style="display:none;">` and only revealed once `onAuthStateChanged` fires with an approved user.
-- `signInWithPopup` is called with `GoogleAuthProvider` configured with `hd: 'resonate-consultants.com'` so the Google account picker only offers Resonate accounts. After the popup closes, a defensive client-side `email.endsWith('@resonate-consultants.com')` check signs the user out if Google returns anything else.
-- Auth state persists via `browserLocalPersistence` — users stay signed in across reloads / restarts.
-- A `reflect:auth-ready` `CustomEvent` fires on `window` after a successful sign-in, in case any module wants to defer work until after auth.
-- `window.ReflectAuth` exposes `current()` and `signOut()` for ad-hoc use from other scripts.
-
-### Save / load integrity
-
-Auth state is **not** persisted in Save Assessment JSON — the `_format: 'resonate-noise-tool'` schema is unaffected by the auth gate.
-
-### Manual prerequisite
-
-Google sign-in must be enabled in the Firebase Console for the `resonate-reflect` project (Build → Authentication → Sign-in method → Google). Authorised domains must include `resonate-reflect.web.app`, `resonate-reflect.firebaseapp.com`, and `localhost` (default entries are usually sufficient).
-
 ## Documentation surfaces
 
 The tool has three help-adjacent surfaces. Every meaningful feature must appear in all three, with audience-appropriate framing. UI chrome (buttons, keyboard shortcuts) is N/A in Methodology.
