@@ -37210,6 +37210,16 @@ if (window.pdfjsLib) {
     function _bsCompassDir(bearing) {
       return ['N','NE','E','SE','S','SW','W','NW'][Math.round(bearing/45)%8];
     }
+    // Returns the outward-facing compass direction for wall wallIdx — bearing from centroid to wall midpoint.
+    function _bsWallFacingDir(bs, wallIdx) {
+      var n = bs.vertices.length;
+      var v1 = bs.vertices[wallIdx], v2 = bs.vertices[(wallIdx + 1) % n];
+      var midLat = (v1[0] + v2[0]) / 2, midLng = (v1[1] + v2[1]) / 2;
+      var cLat = 0, cLng = 0;
+      bs.vertices.forEach(function(v) { cLat += v[0]; cLng += v[1]; });
+      cLat /= n; cLng /= n;
+      return _bsCompassDir(_bsBearing([cLat, cLng], [midLat, midLng]));
+    }
     function _bsCalcOneFacade(lpBB, lpOct, cons, area, overr, hemCorrection) {
       if (area <= 0) return null;
       // -6 dB diffuse-field-SPL to radiated intensity-per-area constant (Strutt/Bies-Hansen/VDI 3760).
@@ -37995,10 +38005,10 @@ if (window.pdfjsLib) {
       if (!Number.isFinite(wallLen) || wallLen <= 0 || !Number.isFinite(wallHt) || wallHt <= 0) {
         return '<svg width="' + W + '" height="' + H + '" style="display:block;"><text x="8" y="20" font-size="11" fill="#9ca3af">No dimensions</text></svg>';
       }
-      var ML = 30, MB = 16, MR = 8, MT = 4; // fixed margins: left (height label), bottom (width label), right, top
+      var ML = 46, MB = 16, MR = 8, MT = 4; // left wide enough for "9999.9m" height label
       var scaleX = (W - ML - MR) / wallLen, scaleY = (H - MT - MB) / wallHt;
       var sc = Math.min(scaleX, scaleY);
-      var svgW = Math.round(wallLen * sc), svgH = Math.round(wallHt * sc);
+      var svgW = Math.round(wallLen * sc), svgH = Math.max(Math.round(wallHt * sc), 2);
       var offX = ML, offY = MT;
       var EL_COLORS = ['#60a5fa','#34d399','#fbbf24','#f87171','#a78bfa','#fb923c'];
       var svg = '<svg width="' + W + '" height="' + H + '" style="display:block;border:1px solid #e9d5ff;border-radius:3px;background:#f5f3ff;">';
@@ -38017,8 +38027,8 @@ if (window.pdfjsLib) {
           svg += '<text x="' + (px + pw / 2).toFixed(1) + '" y="' + (py + ph / 2 + 4).toFixed(1) + '" text-anchor="middle" font-size="9" fill="#1f2937">' + (ei + 1) + '</text>';
         });
       }
-      svg += '<text x="' + (offX + svgW / 2) + '" y="' + (offY + svgH + 13) + '" text-anchor="middle" font-size="10" fill="#6b7280">' + wallLen.toFixed(1) + 'm</text>';
-      svg += '<text x="' + (offX - 5) + '" y="' + (offY + svgH / 2) + '" text-anchor="end" dominant-baseline="middle" font-size="10" fill="#6b7280">' + wallHt.toFixed(1) + 'm</text>';
+      svg += '<text x="' + (offX + svgW / 2) + '" y="' + (H - 3) + '" text-anchor="middle" font-size="10" fill="#6b7280">' + wallLen.toFixed(1) + 'm</text>';
+      svg += '<text x="' + (offX - 4) + '" y="' + (offY + svgH / 2) + '" text-anchor="end" dominant-baseline="middle" font-size="10" fill="#6b7280">' + wallHt.toFixed(1) + 'm</text>';
       svg += '</svg>';
       return svg;
     }
@@ -38103,7 +38113,7 @@ if (window.pdfjsLib) {
       for (var i = 0; i < n; i++) {
         var v1 = bs.vertices[i], v2 = bs.vertices[(i + 1) % n];
         var len = _bsSegLen(v1, v2);
-        var dir = _bsCompassDir(_bsBearing(v1, v2));
+        var dir = _bsWallFacingDir(bs, i);
         h += _bsWallDetailHTML(bs, i, dir, len);
       }
       return h;
