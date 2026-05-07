@@ -37944,7 +37944,7 @@ if (window.pdfjsLib) {
     window._bsRefreshConstructionSelects = _bsRefreshConstructionSelects;
 
     function _bsConsOptions(selectedName) {
-      var opts = '<option value="">— Custom / manual —</option>';
+      var opts = '';
       Object.keys(CONSTRUCTION_LIBRARY_GROUPED).forEach(function(cat) {
         opts += '<optgroup label="' + escapeHTML(cat) + '">';
         (CONSTRUCTION_LIBRARY_GROUPED[cat] || []).forEach(function(e) {
