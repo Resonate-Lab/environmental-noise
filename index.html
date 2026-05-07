@@ -141,14 +141,14 @@ input[type="number"]{width:100%;border:1px solid var(--border);border-radius:10p
   left: 50%;
   transform: translateX(-50%);
   z-index: 1200;
-  background: #1e40af;
+  background: #6d28d9;
   color: #fff;
   padding: 7px 20px 7px 14px;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
   pointer-events: none;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  box-shadow: 0 2px 10px rgba(109,40,217,0.35);
   white-space: nowrap;
   letter-spacing: 0.01em;
 }
@@ -326,7 +326,7 @@ input[type="number"]{width:100%;border:1px solid var(--border);border-radius:10p
 /* ===== Unified toggle button styles ===== */
 /* All toolbar toggles share the same base, hover, and active states */
 .tool-btn:hover { background: #f0f5fa; }
-.tool-btn.active { background: #dbe8f4; border-color: #90b4d2; font-weight: 700; }
+.tool-btn.active { background: #ede9fe; border-color: #a78bfa; font-weight: 700; }
 /* Clear All keeps distinct warning style */
 #mapClearBtn { color: #dc2626; border-color: #dc2626; margin-left: auto; }
 
@@ -399,7 +399,7 @@ input[type="number"]{width:100%;border:1px solid var(--border);border-radius:10p
   transition: background .12s, color .12s;
 }
 .mp-btn:hover { background: rgba(255,255,255,.11); color: #fff; }
-.mp-btn.active { background: rgba(59,130,246,.35); color: #fff; font-weight: 600; }
+.mp-btn.active { background: rgba(139,92,246,.35); color: #fff; font-weight: 600; }
 .mp-btn.mp-danger { color: #fca5a5; }
 .mp-btn.mp-danger:hover { background: rgba(239,68,68,.18); }
 .mp-sep { height: 1px; background: rgba(255,255,255,.1); margin: 3px 4px; }
@@ -1725,25 +1725,25 @@ body.panel-resizing #map-column {
 /* Panel mode banner (inside Modelling / toolsPanel) */
 .panel-mode-banner {
   padding: 10px 16px;
-  background: #fef3c7;
-  border-bottom: 1px solid #fde68a;
+  background: #ede9fe;
+  border-bottom: 1px solid #c4b5fd;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-shrink: 0;
 }
 .panel-mode-banner[hidden] { display: none; }
-.panel-mode-banner span { font-size: 12px; font-weight: 500; color: #78350f; }
+.panel-mode-banner span { font-size: 12px; font-weight: 500; color: #5b21b6; }
 .panel-mode-cancel {
   background: white;
-  border: 1px solid #fde68a;
+  border: 1px solid #c4b5fd;
   padding: 3px 10px;
   border-radius: 4px;
   font-size: 11px;
   cursor: pointer;
   flex-shrink: 0;
 }
-.panel-mode-cancel:hover { background: #fef3c7; }
+.panel-mode-cancel:hover { background: #ede9fe; }
 
 /* Annotation map overlay banner — matches #mode-banner blue pill style */
 #annMapBanner {
@@ -1753,13 +1753,13 @@ body.panel-resizing #map-column {
   left: 50%;
   transform: translateX(-50%);
   z-index: 1500;
-  background: #1e40af;
+  background: #6d28d9;
   color: #fff;
   padding: 6px 14px;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  box-shadow: 0 2px 10px rgba(109,40,217,0.35);
   white-space: nowrap;
   letter-spacing: 0.01em;
   pointer-events: all;
@@ -10935,13 +10935,14 @@ function deleteCustomLibEntry(id) {
  */
 
 /** Open the metric-selector wizard (Step 1). */
-function openCustomSourceWizard() {
+function openCustomSourceWizard(metric) {
   var overlay = document.getElementById('customSrcWizardOverlay');
   if (!overlay) return;
   // Move to body so it stacks above all slide-out panels
   if (overlay.parentNode !== document.body) document.body.appendChild(overlay);
   _cswResetToStep1();
   overlay.style.display = 'flex';
+  if (metric) cswSelectMetric(metric);
 }
 
 /** Close and reset the wizard without saving. */
@@ -17836,7 +17837,7 @@ function buildSrcPanelHTML(pin, pinIdx) {
       '<div id="sfp-lib-dropdown" style="position:absolute;top:100%;left:0;right:0;max-height:160px;overflow-y:auto;background:#fff;border:1px solid #ddd;border-top:none;border-radius:0 0 4px 4px;z-index:200;display:none;box-shadow:0 4px 8px rgba(0,0,0,0.1);"></div>' +
     '</div>' +
     '<div style="text-align:right;margin:-6px 0 10px;">' +
-      '<button id="sfp-lib-submit" style="background:none;border:none;cursor:not-allowed;font-size:11px;color:#9ca3af;text-decoration:underline;padding:0;" title="Submit to library (not yet available for point sources)">Submit to library\u2026</button>' +
+      '<button onclick="openCustomSourceWizard(\'Lw\')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#6d28d9;text-decoration:underline;padding:0;">+ Add new</button>' +
     '</div>' +
     '<div class="src-section-header" style="margin-top:0;">Sound Power Levels</div>' +
     srcPanelPeriodSectionHTML(pin, 'day', 'Day') +
@@ -32162,7 +32163,7 @@ if (window.pdfjsLib) {
         }
         var label;
         if (m === 'place-site') {
-          label = '📍 Click the map to set the site location (Esc to cancel)';
+          label = '+ Click the map to set the site location (Esc to cancel)';
         } else if (m === 'addSource') {
           label = '＋ Click the map to add a new source';
         } else if (isSourceMode(m)) {
@@ -36619,6 +36620,9 @@ if (window.pdfjsLib) {
             '<input id="asPanelLibCombo" type="text" placeholder="Search library\u2026" autocomplete="off" value="' + escapeHTML(asLibInitVal) + '" style="width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:4px;padding:5px 8px;font-size:12px;">' +
             '<div id="asPanelLibDrop" style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:#fff;border:1px solid #ddd;border-top:none;border-radius:0 0 4px 4px;z-index:200;display:none;box-shadow:0 4px 8px rgba(0,0,0,0.1);"></div>' +
           '</div>' +
+          '<div style="text-align:right;margin:-4px 0 8px;">' +
+            '<button onclick="openCustomSourceWizard()" style="background:none;border:none;cursor:pointer;font-size:11px;color:#6d28d9;text-decoration:underline;padding:0;">+ Add new</button>' +
+          '</div>' +
           '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">' +
             '<label style="font-size:11px;color:#555;white-space:nowrap;">Enter as:</label>' +
             '<select id="asPanelLwMode" style="padding:3px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px;">' +
@@ -37937,7 +37941,11 @@ if (window.pdfjsLib) {
     // Refresh construction dropdowns in the open panel (called after rebuildConstructionGrouped).
     function _bsRefreshConstructionSelects() {
       if (!_bsPanel) return;
-      _bsPanel.querySelectorAll('#bsDefWallSel, #bsRoofSel, .bs-wall-cons-sel').forEach(function(sel) {
+      var defWallInp = _bsPanel.querySelector('#bsDefWallInp');
+      if (defWallInp && bs && bs.defaultConstruction) defWallInp.value = bs.defaultConstruction.name || '';
+      var roofInp = _bsPanel.querySelector('#bsRoofInp');
+      if (roofInp && bs && bs.roofConstruction) roofInp.value = bs.roofConstruction.name || '';
+      _bsPanel.querySelectorAll('.bs-wall-cons-sel').forEach(function(sel) {
         var cur = sel.value;
         sel.innerHTML = _bsConsOptions(cur);
         sel.value = cur;
@@ -37956,6 +37964,50 @@ if (window.pdfjsLib) {
         opts += '</optgroup>';
       });
       return opts;
+    }
+
+    function _bsConsComboHTML(inputId, dropId, selectedName) {
+      return '<div style="position:relative;">' +
+        '<input id="' + inputId + '" type="text" autocomplete="off" placeholder="Search constructions…" value="' + escapeHTML(selectedName || '') + '" style="width:100%;box-sizing:border-box;padding:4px 6px;font-size:12px;border:1px solid #ddd;border-radius:4px;">' +
+        '<div id="' + dropId + '" style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:#fff;border:1px solid #ddd;border-top:none;border-radius:0 0 4px 4px;z-index:9999;display:none;box-shadow:0 4px 8px rgba(0,0,0,0.1);"></div>' +
+        '</div>';
+    }
+
+    function _bsConsInitCombo(inputEl, dropEl, onSelect) {
+      if (!inputEl || !dropEl) return;
+      function render(q) {
+        dropEl.innerHTML = '';
+        var hasAny = false;
+        Object.keys(CONSTRUCTION_LIBRARY_GROUPED).forEach(function(cat) {
+          var items = (CONSTRUCTION_LIBRARY_GROUPED[cat] || []).filter(function(e) {
+            return !q || e.name.toLowerCase().indexOf(q) !== -1;
+          });
+          if (!items.length) return;
+          var hdr = document.createElement('div');
+          hdr.textContent = cat;
+          hdr.style.cssText = 'padding:4px 8px 2px;font-size:10px;font-weight:bold;color:#888;background:#f5f5f5;text-transform:uppercase;letter-spacing:0.5px;pointer-events:none;';
+          dropEl.appendChild(hdr);
+          items.forEach(function(entry) {
+            var item = document.createElement('div');
+            item.textContent = entry.name;
+            item.style.cssText = 'padding:4px 8px 4px 14px;font-size:12px;cursor:pointer;border-bottom:1px solid #f0f0f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+            item.addEventListener('mouseenter', function() { this.style.background = '#f0f7ff'; });
+            item.addEventListener('mouseleave', function() { this.style.background = ''; });
+            item.addEventListener('mousedown', function(e) {
+              e.preventDefault();
+              inputEl.value = entry.name;
+              dropEl.style.display = 'none';
+              if (onSelect) onSelect(entry);
+            });
+            dropEl.appendChild(item);
+          });
+          hasAny = true;
+        });
+        dropEl.style.display = hasAny ? 'block' : 'none';
+      }
+      inputEl.addEventListener('input', function() { render(this.value.toLowerCase().trim()); });
+      inputEl.addEventListener('focus', function() { render(this.value.toLowerCase().trim()); });
+      inputEl.addEventListener('blur', function() { setTimeout(function() { dropEl.style.display = 'none'; }, 150); });
     }
 
     function _bsOctaveRRow(prefix, cons, readOnly) {
@@ -38133,17 +38185,18 @@ if (window.pdfjsLib) {
 
     /** Small plan-view SVG of the building footprint with the active wall highlighted. */
     function _bsBuildingPlanSVG(bs, wallIdx) {
-      var W = 100, H = 78, PAD = 8;
+      // Right strip reserved for north arrow; building polygon uses left portion
+      var W = 110, H = 78, PL = 6, PT = 6, PR = 26, PB = 6;
       var verts = bs.vertices;
       if (!verts || verts.length < 3) return '';
       var lats = verts.map(function(v){return v[0];}), lngs = verts.map(function(v){return v[1];});
       var minLat = Math.min.apply(null,lats), maxLat = Math.max.apply(null,lats);
       var minLng = Math.min.apply(null,lngs), maxLng = Math.max.apply(null,lngs);
       var latR = maxLat - minLat || 1e-5, lngR = maxLng - minLng || 1e-5;
-      var drawW = W - 2*PAD, drawH = H - 2*PAD;
+      var drawW = W - PL - PR, drawH = H - PT - PB;
       var sc = Math.min(drawW/lngR, drawH/latR);
       var usedW = lngR*sc, usedH = latR*sc;
-      var ox = PAD + (drawW-usedW)/2, oy = PAD + (drawH-usedH)/2;
+      var ox = PL + (drawW-usedW)/2, oy = PT + (drawH-usedH)/2;
       function px(lat,lng){return {x: ox+(lng-minLng)*sc, y: oy+(maxLat-lat)*sc};}
       var n = verts.length;
       var pts = verts.map(function(v){return px(v[0],v[1]);});
@@ -38154,11 +38207,11 @@ if (window.pdfjsLib) {
         var p1=pts[i],p2=pts[(i+1)%n];
         if (i===wallIdx) svg += '<line x1="'+p1.x.toFixed(1)+'" y1="'+p1.y.toFixed(1)+'" x2="'+p2.x.toFixed(1)+'" y2="'+p2.y.toFixed(1)+'" stroke="#f59e0b" stroke-width="3.5" stroke-linecap="round"/>';
       }
-      // North arrow (top-right)
-      var ax=W-11,ay=11;
-      svg += '<line x1="'+ax+'" y1="'+( ay+7)+'" x2="'+ax+'" y2="'+( ay-5)+'" stroke="#374151" stroke-width="1.5"/>';
-      svg += '<polygon points="'+ax+','+(ay-8)+' '+(ax-3)+','+(ay-2)+' '+(ax+3)+','+(ay-2)+'" fill="#374151"/>';
-      svg += '<text x="'+ax+'" y="'+(ay+17)+'" text-anchor="middle" font-size="8" font-weight="600" fill="#374151">N</text>';
+      // North arrow in right strip
+      var ax = W-13, ay = H/2;
+      svg += '<line x1="'+ax+'" y1="'+( ay+10)+'" x2="'+ax+'" y2="'+( ay-8)+'" stroke="#374151" stroke-width="1.5"/>';
+      svg += '<polygon points="'+ax+','+(ay-12)+' '+(ax-3.5)+','+(ay-5)+' '+(ax+3.5)+','+(ay-5)+'" fill="#374151"/>';
+      svg += '<text x="'+ax+'" y="'+(ay+22)+'" text-anchor="middle" font-size="8" font-weight="600" fill="#374151">N</text>';
       svg += '</svg>';
       return svg;
     }
@@ -38283,7 +38336,7 @@ if (window.pdfjsLib) {
       h += '<div id="bs-lib-dropdown" style="position:absolute;top:100%;left:0;right:0;max-height:160px;overflow-y:auto;background:#fff;border:1px solid #ddd;border-top:none;border-radius:0 0 4px 4px;z-index:200;display:none;box-shadow:0 4px 8px rgba(0,0,0,0.1);"></div>';
       h += '</div>';
       h += '<div style="text-align:right;margin:-6px 0 10px;">';
-      h += '<button id="bs-lib-submit" style="background:none;border:none;cursor:pointer;font-size:11px;color:#6d28d9;text-decoration:underline;padding:0;" title="Submit a new entry to the online source library">Submit to library\u2026</button>';
+      h += '<button onclick="openCustomSourceWizard(\'Lp\')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#6d28d9;text-decoration:underline;padding:0;">+ Add new</button>';
       h += '</div>';
 
       // Interior levels per period
@@ -38310,9 +38363,8 @@ if (window.pdfjsLib) {
 
       // Default wall construction
       h += '<div style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6d28d9;margin:10px 0 6px;">Wall Construction (Default)</div>';
-      h += '<select id="bsDefWallSel" style="width:100%;padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px;margin-bottom:4px;">';
-      h += _bsConsOptions(defWallName);
-      h += '</select>';
+      h += _bsConsComboHTML('bsDefWallInp', 'bsDefWallDrop', defWallName);
+      h += '<div style="text-align:right;margin-bottom:4px;"><button onclick="openCustomSourceWizard(\'TL\')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#6d28d9;text-decoration:underline;padding:0;">+ Add new</button></div>';
       h += '<div id="bsDefWallOctave">' + _bsOctaveRRow('bs_defwall', bs.defaultConstruction, true) + '</div>';
       h += '<label style="font-size:11px;display:flex;align-items:center;gap:4px;margin-top:4px;"><input type="checkbox" id="bsDefWallManual"> Manual R values</label>';
 
@@ -38321,9 +38373,8 @@ if (window.pdfjsLib) {
       var roofEnabled = bs.roofConstruction && bs.roofConstruction.enabled !== false;
       h += '<label style="font-size:11px;display:flex;align-items:center;gap:4px;margin-bottom:6px;"><input type="checkbox" id="bsRoofEnabled"' + (roofEnabled?' checked':'') + '> Roof radiates noise</label>';
       h += '<div id="bsRoofSection" style="' + (roofEnabled?'':'opacity:0.4;pointer-events:none;') + '">';
-      h += '<select id="bsRoofSel" style="width:100%;padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px;margin-bottom:4px;">';
-      h += _bsConsOptions(roofName);
-      h += '</select>';
+      h += _bsConsComboHTML('bsRoofInp', 'bsRoofDrop', roofName);
+      h += '<div style="text-align:right;margin-bottom:4px;"><button onclick="openCustomSourceWizard(\'TL\')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#6d28d9;text-decoration:underline;padding:0;">+ Add new</button></div>';
       h += '<div id="bsRoofOctave">' + _bsOctaveRRow('bs_roof', bs.roofConstruction, true) + '</div>';
       h += '<label style="font-size:11px;display:flex;align-items:center;gap:4px;margin-top:4px;"><input type="checkbox" id="bsRoofManual"> Manual R values</label>';
       h += _bsRoofDetailHTML(bs);
@@ -38399,9 +38450,11 @@ if (window.pdfjsLib) {
       h += '<input type="number" class="bsfm-el-height" data-el="' + ei + '" placeholder="H" value="' + elH + '" step="0.01" style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
       h += '<input type="number" class="bsfm-el-x"      data-el="' + ei + '" placeholder="0" value="' + elX + '" step="0.1"  style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
       h += '<input type="number" class="bsfm-el-y"      data-el="' + ei + '" placeholder="0" value="' + elY + '" step="0.1"  style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
-      h += '<select class="bsfm-el-sel" data-el="' + ei + '" style="width:100%;font-size:11px;padding:3px 4px;border:1px solid #ddd;border-radius:3px;">';
-      h += _bsConsOptions(el.construction ? el.construction.name : '');
-      h += '</select>';
+      h += '<div style="display:flex;flex-direction:column;gap:2px;position:relative;">';
+      h += '<input type="text" class="bsfm-el-cons-inp" data-el="' + ei + '" autocomplete="off" placeholder="Search…" value="' + escapeHTML(el.construction ? el.construction.name : '') + '" style="width:100%;box-sizing:border-box;font-size:11px;padding:3px 4px;border:1px solid #ddd;border-radius:3px;">';
+      h += '<div class="bsfm-el-cons-drop" data-el="' + ei + '" style="position:absolute;top:100%;left:0;right:0;max-height:160px;overflow-y:auto;background:#fff;border:1px solid #ddd;border-top:none;border-radius:0 0 4px 4px;z-index:9999;display:none;box-shadow:0 4px 8px rgba(0,0,0,0.1);"></div>';
+      h += '<div style="text-align:right;"><button onclick="openCustomSourceWizard(\'TL\')" style="background:none;border:none;cursor:pointer;font-size:10px;color:#6d28d9;text-decoration:underline;padding:0;">+ Add new</button></div>';
+      h += '</div>';
       h += '<button class="bsfm-del-el" data-el="' + ei + '" style="width:24px;height:24px;font-size:12px;cursor:pointer;background:#fee2e2;border:1px solid #fca5a5;border-radius:3px;color:#b91c1c;padding:0;">✕</button>';
       h += '</div>';
       return h;
@@ -38597,6 +38650,21 @@ if (window.pdfjsLib) {
             var html = '';
             elements2.forEach(function(el, ei) { html += _bsFmElementRow(ei, el); });
             elListEl.innerHTML = html;
+            elements2.forEach(function(el, ei) {
+              _bsConsInitCombo(
+                elListEl.querySelector('.bsfm-el-cons-inp[data-el="' + ei + '"]'),
+                elListEl.querySelector('.bsfm-el-cons-drop[data-el="' + ei + '"]'),
+                function(found) {
+                  var o = bs.facadeOverrides && bs.facadeOverrides[wallIdx];
+                  if (o && o.elements && o.elements[ei]) {
+                    o.elements[ei].construction = JSON.parse(JSON.stringify(found));
+                    _bsFmRefresh();
+                    _bsRefreshWallVisuals(wallIdx);
+                    if (typeof render === 'function') render();
+                  }
+                }
+              );
+            });
           }
         }
         _bsFmRefreshFn = _bsFmRefresh;
@@ -38613,7 +38681,6 @@ if (window.pdfjsLib) {
         mh += _bsBuildingPlanSVG(bs, wallIdx);
         mh += '<div style="flex:1;min-width:0;">';
         mh += '<div style="font-size:13px;font-weight:600;">Wall ' + (wallIdx + 1) + ' — ' + dir + ', ' + len.toFixed(1) + ' m</div>';
-        mh += '<div style="font-size:10px;color:#9ca3af;margin-top:1px;">Facade Editor · drag to move</div>';
         mh += '</div>';
         mh += '<button id="bsFacadeModalClose" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;padding:2px 8px;line-height:1;flex-shrink:0;">&times;</button>';
         mh += '</div>';
@@ -38622,10 +38689,9 @@ if (window.pdfjsLib) {
         mh += '<label style="font-size:12px;color:#374151;display:flex;flex-direction:column;gap:3px;flex:0 0 auto;">Wall height (m)';
         mh += '<input type="number" id="bsFacadeHtInput" value="' + (overr && Number.isFinite(overr.heightOverride) ? overr.heightOverride : '') + '" placeholder="' + wallHt + '" step="0.1" min="0.1" style="width:80px;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:4px;"></label>';
         mh += '<label style="font-size:12px;color:#374151;display:flex;flex-direction:column;gap:3px;flex:1 1 auto;">Construction';
-        mh += '<select id="bsFacadeConsSel" style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:4px;">';
-        if (!overr) mh += '<option value="">(Default construction)</option>';
-        mh += _bsConsOptions(cons.name || '');
-        mh += '</select></label></div>';
+        mh += _bsConsComboHTML('bsFacadeConsInp', 'bsFacadeConsDrop', cons.name || '');
+        mh += '<div style="text-align:right;"><button onclick="openCustomSourceWizard(\'TL\')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#6d28d9;text-decoration:underline;padding:0;">+ Add new</button></div>';
+        mh += '</label></div>';
         mh += '<div id="bsFacadeSvgLarge" style="margin-bottom:12px;">' + _bsWallFaceSVG(len, wallHt, cons, elements, 660) + '</div>';
         mh += '<div style="display:grid;grid-template-columns:70px 70px 80px 80px 1fr 28px;gap:8px;padding:0 2px;margin-bottom:4px;">';
         mh += '<div style="font-size:11px;font-weight:600;color:#374151;">W (m)<div style="font-size:9px;font-weight:400;color:#9ca3af;">width</div></div>';
@@ -38706,13 +38772,10 @@ if (window.pdfjsLib) {
           if (window._recomputeNoiseMap) window._recomputeNoiseMap();
         });
 
-        document.getElementById('bsFacadeConsSel').addEventListener('change', function() {
-          var selVal = this.value;
-          var found = null;
-          Object.keys(CONSTRUCTION_LIBRARY_GROUPED).forEach(function(cat) {
-            CONSTRUCTION_LIBRARY_GROUPED[cat].forEach(function(e) { if (e.name === selVal) found = e; });
-          });
-          if (found) {
+        _bsConsInitCombo(
+          document.getElementById('bsFacadeConsInp'),
+          document.getElementById('bsFacadeConsDrop'),
+          function(found) {
             var o = _bsEnsureOverride(wallIdx);
             var prevEls = o.elements || [], prevHt = o.heightOverride;
             Object.assign(o, JSON.parse(JSON.stringify(found)));
@@ -38722,7 +38785,7 @@ if (window.pdfjsLib) {
             _bsRefreshWallVisuals(wallIdx);
             if (typeof render === 'function') render();
           }
-        });
+        );
 
         document.getElementById('bsFacadeAddEl').addEventListener('click', function() {
           var o = _bsEnsureOverride(wallIdx);
@@ -38757,25 +38820,6 @@ if (window.pdfjsLib) {
           }
         });
 
-        modalBody.addEventListener('change', function(ev) {
-          var sel = ev.target;
-          if (sel.classList.contains('bsfm-el-sel')) {
-            var ei = parseInt(sel.getAttribute('data-el'));
-            var found = null;
-            Object.keys(CONSTRUCTION_LIBRARY_GROUPED).forEach(function(cat) {
-              CONSTRUCTION_LIBRARY_GROUPED[cat].forEach(function(e) { if (e.name === sel.value) found = e; });
-            });
-            if (found) {
-              var o = bs.facadeOverrides && bs.facadeOverrides[wallIdx];
-              if (o && o.elements && o.elements[ei]) {
-                o.elements[ei].construction = JSON.parse(JSON.stringify(found));
-                _bsFmRefresh();
-                _bsRefreshWallVisuals(wallIdx);
-                if (typeof render === 'function') render();
-              }
-            }
-          }
-        });
 
         modalBody.addEventListener('click', function(ev) {
           var btn = ev.target.closest('.bsfm-del-el');
@@ -38997,26 +39041,6 @@ if (window.pdfjsLib) {
           });
         }
 
-        var bsLibSubmitBtn = panel.querySelector('#bs-lib-submit');
-        if (bsLibSubmitBtn) {
-          bsLibSubmitBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            // Pre-fill with current day-period octave band Lp values if present
-            var prefill = { data_type: 'Lp, dB(Z)' };
-            var hasVals = false;
-            [63, 125, 250, 500, 1000, 2000, 4000, 8000].forEach(function(b) {
-              var inp = document.getElementById('bs_day_lp_' + b);
-              if (inp && inp.value.trim()) {
-                prefill['hz_' + b] = parseFloat(inp.value);
-                hasVals = true;
-              }
-            });
-            if (!hasVals) prefill = { data_type: 'Lp, dB(Z)' };
-            if (typeof window.showSubmitSourceModal === 'function') {
-              window.showSubmitSourceModal(prefill);
-            }
-          });
-        }
       }
 
       // ── Interior Lp + active + pct per period ────────────────────────────
@@ -39052,21 +39076,19 @@ if (window.pdfjsLib) {
       });
 
       // ── Default wall construction ─────────────────────────────────────────
-      var defWallSel = document.getElementById('bsDefWallSel');
       var defWallManual = document.getElementById('bsDefWallManual');
-      if (defWallSel) defWallSel.addEventListener('change', function() {
-        var found = null;
-        CONSTRUCTION_LIBRARY.walls.forEach(function(e) { if (e.name === this.value) found = e; }.bind(this));
-        if (found) {
+      _bsConsInitCombo(
+        document.getElementById('bsDefWallInp'),
+        document.getElementById('bsDefWallDrop'),
+        function(found) {
           bs.defaultConstruction = JSON.parse(JSON.stringify(found));
           var octaveDiv = document.getElementById('bsDefWallOctave');
           if (octaveDiv) octaveDiv.innerHTML = _bsOctaveRRow('bs_defwall', bs.defaultConstruction, !defWallManual.checked);
-          // Refresh all walls that don't have overrides
           var wallListEl = document.getElementById('bsWallList');
           if (wallListEl) wallListEl.innerHTML = _bsAllWallsHTML(bs);
           _bsRefreshDerived(); if (typeof render === 'function') render();
         }
-      });
+      );
       if (defWallManual) defWallManual.addEventListener('change', function() {
         var octaveDiv = document.getElementById('bsDefWallOctave');
         if (octaveDiv) octaveDiv.innerHTML = _bsOctaveRRow('bs_defwall', bs.defaultConstruction, !this.checked);
@@ -39085,7 +39107,6 @@ if (window.pdfjsLib) {
 
       // ── Roof construction ─────────────────────────────────────────────────
       var roofEnabledChk = document.getElementById('bsRoofEnabled');
-      var roofSel = document.getElementById('bsRoofSel');
       var roofManual = document.getElementById('bsRoofManual');
       if (roofEnabledChk) roofEnabledChk.addEventListener('change', function() {
         if (!bs.roofConstruction) bs.roofConstruction = JSON.parse(JSON.stringify(CONSTRUCTION_LIBRARY.roof[0]));
@@ -39094,10 +39115,10 @@ if (window.pdfjsLib) {
         if (sec) { sec.style.opacity = this.checked ? '1' : '0.4'; sec.style.pointerEvents = this.checked ? '' : 'none'; }
         _bsRefreshDerived(); if (typeof render === 'function') render();
       });
-      if (roofSel) roofSel.addEventListener('change', function() {
-        var found = null;
-        CONSTRUCTION_LIBRARY.roof.forEach(function(e) { if (e.name === this.value) found = e; }.bind(this));
-        if (found) {
+      _bsConsInitCombo(
+        document.getElementById('bsRoofInp'),
+        document.getElementById('bsRoofDrop'),
+        function(found) {
           var wasEnabled = bs.roofConstruction && bs.roofConstruction.enabled;
           bs.roofConstruction = JSON.parse(JSON.stringify(found));
           bs.roofConstruction.enabled = wasEnabled !== false;
@@ -39105,7 +39126,7 @@ if (window.pdfjsLib) {
           if (octaveDiv) octaveDiv.innerHTML = _bsOctaveRRow('bs_roof', bs.roofConstruction, !roofManual.checked);
           _bsRefreshDerived(); if (typeof render === 'function') render();
         }
-      });
+      );
       if (roofManual) roofManual.addEventListener('change', function() {
         var octaveDiv = document.getElementById('bsRoofOctave');
         if (octaveDiv) octaveDiv.innerHTML = _bsOctaveRRow('bs_roof', bs.roofConstruction, !this.checked);
@@ -39505,6 +39526,9 @@ if (window.pdfjsLib) {
           '<div style="position:relative;margin-bottom:8px;">' +
             '<input id="lsPanelLibCombo" type="text" placeholder="Search library\u2026" autocomplete="off" value="' + escapeHTML(lsLibInitVal) + '" style="width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:4px;padding:5px 8px;font-size:12px;">' +
             '<div id="lsPanelLibDrop" style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:#fff;border:1px solid #ddd;border-top:none;border-radius:0 0 4px 4px;z-index:200;display:none;box-shadow:0 4px 8px rgba(0,0,0,0.1);"></div>' +
+          '</div>' +
+          '<div style="text-align:right;margin:-4px 0 8px;">' +
+            '<button onclick="openCustomSourceWizard(\'Lw/m\')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#6d28d9;text-decoration:underline;padding:0;">+ Add new</button>' +
           '</div>' +
           '<div class="src-section-header" style="margin-top:0;">Sound Power Levels</div>' +
           periodBlock('day', 'Day') +
