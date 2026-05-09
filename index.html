@@ -2396,6 +2396,25 @@ body.panel-resizing #map-column {
 }
 .panel-empty-state.show { display: block; }
 
+/* SA zone labels — permanent on-map abbreviations (matches SAPPA style:
+   dark text, no chrome, white halo for readability over the coloured fill). */
+.leaflet-tooltip.sa-zone-label {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: #1f2937;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0;
+  pointer-events: none;
+  text-shadow:
+    -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
+    0 -1px 0 #fff, 0 1px 0 #fff, -1px 0 0 #fff, 1px 0 0 #fff;
+  white-space: nowrap;
+}
+.leaflet-tooltip.sa-zone-label::before { display: none; }
+
 /* Map guide overlay: centred prompt when nothing is placed */
 /* North arrow + scale bar — combined control */
 .leaflet-map-indicators {
@@ -29178,6 +29197,85 @@ if (window.pdfjsLib) {
       return '#999';
     }
 
+    /* --- SA P&D Code zone abbreviations (mirrors SAPPA on-map labels) --- */
+    var ZONE_ABBREVIATIONS = {
+      'Adelaide Park Lands':                            'APL',
+      'Business Neighbourhood':                         'BN',
+      'Capital City':                                   'CC',
+      'Caravan and Tourist Park':                       'CTP',
+      'City Living':                                    'CL',
+      'City Main Street':                               'CMS',
+      'City Riverbank':                                 'CR',
+      'Coastal Waters and Offshore Islands':            'CWOI',
+      'Commonwealth Facilities':                        'CF',
+      'Community Facilities':                           'ComF',
+      'Conservation':                                   'Cons',
+      'Deferred Urban':                                 'DU',
+      'Employment':                                     'Emp',
+      'Employment (Bulk Handling)':                     'Emp(BH)',
+      'Employment (Enterprise)':                        'Emp(En)',
+      'Established Neighbourhood':                      'EN',
+      'General Neighbourhood':                          'GN',
+      'Golf Course Estate':                             'GCE',
+      'Hills Face':                                     'HF',
+      'Hills Neighbourhood':                            'HN',
+      'Home Industry':                                  'HI',
+      'Housing Diversity Neighbourhood':                'HDN',
+      'Infrastructure':                                 'Inf',
+      'Infrastructure (Airfield)':                      'Inf(A)',
+      'Infrastructure (Ferry and Marina Facilities)':   'Inf(FMF)',
+      'Local Activity Centre':                          'LAC',
+      'Master Planned Neighbourhood':                   'MPN',
+      'Master Planned Renewal':                         'MPR',
+      'Master Planned Township':                        'MPT',
+      'Motorsport Park':                                'MP',
+      'Neighbourhood':                                  'N',
+      'Open Space':                                     'OS',
+      'Productive Rural Landscape':                     'PRL',
+      'Recreation':                                     'Rec',
+      'Remote Areas':                                   'RA',
+      'Residential Park':                               'RP',
+      'Resource Extraction':                            'ResE',
+      'Rural':                                          'R',
+      'Rural Aquaculture':                              'RAq',
+      'Rural Horticulture':                             'RH',
+      'Rural Intensive Enterprise':                     'RIE',
+      'Rural Living':                                   'RL',
+      'Rural Neighbourhood':                            'RN',
+      'Rural Settlement':                               'RS',
+      'Rural Shack Settlement':                         'RSS',
+      'Strategic Employment':                           'SE',
+      'Strategic Innovation':                           'StI',
+      'Suburban Activity Centre':                       'SAC',
+      'Suburban Business':                              'SB',
+      'Suburban Main Street':                           'SMS',
+      'Suburban Neighbourhood':                         'SN',
+      'Tourism Development':                            'TD',
+      'Township':                                       'T',
+      'Township Activity Centre':                       'TAC',
+      'Township Main Street':                           'TMS',
+      'Township Neighbourhood':                         'TN',
+      'Urban Activity Centre':                          'UAC',
+      'Urban Corridor (Boulevard)':                     'UC(Bo)',
+      'Urban Corridor (Business)':                      'UC(Bu)',
+      'Urban Corridor (Living)':                        'UC(L)',
+      'Urban Corridor (Main Street)':                   'UC(MS)',
+      'Urban Neighbourhood':                            'UN',
+      'Urban Renewal Neighbourhood':                    'URN',
+      'Waterfront Neighbourhood':                       'WN'
+    };
+    function getZoneAbbreviation(name) {
+      if (!name) return '';
+      if (ZONE_ABBREVIATIONS[name]) return ZONE_ABBREVIATIONS[name];
+      // Case-insensitive exact match
+      var lc = name.toLowerCase();
+      for (var k in ZONE_ABBREVIATIONS) {
+        if (k.toLowerCase() === lc) return ZONE_ABBREVIATIONS[k];
+      }
+      return '';
+    }
+    window._getZoneAbbreviation = getZoneAbbreviation;
+
     /* --- Visual zoning overlay (esri-leaflet) --- */
     // SA: SAPPA ArcGIS REST API (CurrentZones/CurrentOverlays) is authentication-restricted
     // and not publicly accessible cross-origin. Overlay layers disabled until SA Gov
@@ -45788,6 +45886,18 @@ if (window.pdfjsLib) {
               '<b>' + escHtml(zoneName) + '</b>' +
               '<br><small style="color:#666;">SAPPA — authoritative zoning</small>'
             );
+            // Permanent on-map abbreviation label, mirroring SAPPA.
+            // Only attach if we have a known abbreviation; falls back to
+            // no label rather than rendering the full zone name.
+            var abbr = (window._getZoneAbbreviation || function(){return '';})(zoneName);
+            if (abbr && lyr.bindTooltip) {
+              lyr.bindTooltip(abbr, {
+                permanent: true,
+                direction: 'center',
+                className: 'sa-zone-label',
+                opacity: 1
+              });
+            }
           },
           minZoom: 12,
           simplifyFactor: 0,
@@ -45829,6 +45939,15 @@ if (window.pdfjsLib) {
               '<b>' + escHtml(zoneName) + '</b>' +
               '<br><small style="color:#666;">PlanSA open data (generalised — verify on <a href="https://sappa.plan.sa.gov.au/" target="_blank" rel="noopener">SAPPA ↗</a>)</small>'
             );
+            var abbr = (window._getZoneAbbreviation || function(){return '';})(zoneName);
+            if (abbr && lyr.bindTooltip) {
+              lyr.bindTooltip(abbr, {
+                permanent: true,
+                direction: 'center',
+                className: 'sa-zone-label',
+                opacity: 1
+              });
+            }
           },
         });
         callback(layer);
