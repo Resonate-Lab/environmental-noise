@@ -37327,6 +37327,19 @@ if (window.pdfjsLib) {
       return {walls:walls, roof:roofByPeriod, total:totalByPeriod};
     }
     function _bsMakeDefault(verts, ht, roofMode, referenceVertexIndex) {
+      // Prefer "Sheet metal" as the wall + roof default (typical light
+      // industrial / mechanical-equipment enclosure). Fall back to the
+      // first library entry if it isn't present.
+      function _bsPickDefault(arr, preferredName) {
+        if (!arr || !arr.length) return null;
+        var lower = preferredName.toLowerCase();
+        for (var i = 0; i < arr.length; i++) {
+          if (arr[i].name && arr[i].name.toLowerCase() === lower) return arr[i];
+        }
+        return arr[0];
+      }
+      var defWall = _bsPickDefault(CONSTRUCTION_LIBRARY.walls, 'Sheet metal');
+      var defRoof = _bsPickDefault(CONSTRUCTION_LIBRARY.roof, 'Sheet metal');
       return {
         id: 'bs_' + (++_bsIdCtr),
         name: 'Building source ' + _bsIdCtr,
@@ -37343,9 +37356,9 @@ if (window.pdfjsLib) {
         },
         activeInPeriod: { day: true, eve: true, night: true },
         operatingPct: { day: 100, eve: 100, night: 100 },
-        defaultConstruction: JSON.parse(JSON.stringify(CONSTRUCTION_LIBRARY.walls[0])),
+        defaultConstruction: defWall ? JSON.parse(JSON.stringify(defWall)) : { rw: 25 },
         facadeOverrides: {},
-        roofConstruction: Object.assign(JSON.parse(JSON.stringify(CONSTRUCTION_LIBRARY.roof[0])), { enabled: true }),
+        roofConstruction: defRoof ? Object.assign(JSON.parse(JSON.stringify(defRoof)), { enabled: true }) : { rw: 30, enabled: true },
         roofElements: [],
         manualOverride: { day: false, eve: false, night: false }
       };
@@ -38006,7 +38019,11 @@ if (window.pdfjsLib) {
         dropEl.style.display = hasAny ? 'block' : 'none';
       }
       inputEl.addEventListener('input', function() { render(this.value.toLowerCase().trim()); });
-      inputEl.addEventListener('focus', function() { render(this.value.toLowerCase().trim()); });
+      // On focus, show the full library (don't filter by the pre-filled
+      // value — otherwise opening the dropdown for a wall already set to
+      // "Sheet metal" only ever shows "Sheet metal"). Select the input
+      // text so typing replaces the existing value.
+      inputEl.addEventListener('focus', function() { render(''); try { this.select(); } catch (e) {} });
       inputEl.addEventListener('blur', function() { setTimeout(function() { dropEl.style.display = 'none'; }, 150); });
     }
 
