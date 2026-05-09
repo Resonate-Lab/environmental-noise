@@ -38446,10 +38446,15 @@ if (window.pdfjsLib) {
       var elX = Number.isFinite(el.x)      ? el.x      : '';
       var elY = Number.isFinite(el.y)      ? el.y      : '';
       var h = '<div class="bsfm-el-row" data-el="' + ei + '" style="display:grid;grid-template-columns:70px 70px 80px 80px 1fr 28px;gap:8px;align-items:center;margin-bottom:6px;padding:6px 4px;background:#f9fafb;border-radius:4px;border:1px solid #e5e7eb;">';
-      h += '<input type="number" class="bsfm-el-width"  data-el="' + ei + '" placeholder="W" value="' + elW + '" step="0.01" style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
-      h += '<input type="number" class="bsfm-el-height" data-el="' + ei + '" placeholder="H" value="' + elH + '" step="0.01" style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
-      h += '<input type="number" class="bsfm-el-x"      data-el="' + ei + '" placeholder="0" value="' + elX + '" step="0.1"  style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
-      h += '<input type="number" class="bsfm-el-y"      data-el="' + ei + '" placeholder="0" value="' + elY + '" step="0.1"  style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
+      // autocomplete/autocorrect/spellcheck off + name="" so the browser
+      // never offers an autofill suggestion popup. Autofill popups steal
+      // focus on the second keystroke, which presents as the cursor
+      // tabbing away mid-type.
+      var _na = ' autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name=""';
+      h += '<input type="text" inputmode="decimal"' + _na + ' class="bsfm-el-width"  data-el="' + ei + '" placeholder="W" value="' + elW + '" style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
+      h += '<input type="text" inputmode="decimal"' + _na + ' class="bsfm-el-height" data-el="' + ei + '" placeholder="H" value="' + elH + '" style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
+      h += '<input type="text" inputmode="decimal"' + _na + ' class="bsfm-el-x"      data-el="' + ei + '" placeholder="0" value="' + elX + '" style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
+      h += '<input type="text" inputmode="decimal"' + _na + ' class="bsfm-el-y"      data-el="' + ei + '" placeholder="0" value="' + elY + '" style="width:100%;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:3px;">';
       h += '<div style="display:flex;flex-direction:column;gap:2px;position:relative;">';
       h += '<input type="text" class="bsfm-el-cons-inp" data-el="' + ei + '" autocomplete="off" placeholder="Search…" value="' + escapeHTML(el.construction ? el.construction.name : '') + '" style="width:100%;box-sizing:border-box;font-size:11px;padding:3px 4px;border:1px solid #ddd;border-radius:3px;">';
       h += '<div class="bsfm-el-cons-drop" data-el="' + ei + '" style="position:absolute;top:100%;left:0;right:0;max-height:160px;overflow-y:auto;background:#fff;border:1px solid #ddd;border-top:none;border-radius:0 0 4px 4px;z-index:9999;display:none;box-shadow:0 4px 8px rgba(0,0,0,0.1);"></div>';
@@ -38638,13 +38643,21 @@ if (window.pdfjsLib) {
         _bsHighlightFacade(bs, wallIdx);
 
         // Internal refresh—re-renders large SVG and element list
-        function _bsFmRefresh() {
+        // SVG-only refresh: safe to call on every keystroke because it does
+        // not rebuild the element-row input list (which would steal focus
+        // and break double-digit typing).
+        function _bsFmRefreshSvg() {
           var overr2 = bs.facadeOverrides && bs.facadeOverrides[wallIdx];
           var cons2 = overr2 || bs.defaultConstruction;
           var wallHt2 = (overr2 && Number.isFinite(overr2.heightOverride)) ? overr2.heightOverride : (bs.height_m || 6);
           var elements2 = overr2 ? (overr2.elements || []) : [];
           var svgCont = document.getElementById('bsFacadeSvgLarge');
           if (svgCont) svgCont.innerHTML = _bsWallFaceSVG(len, wallHt2, cons2, elements2, 660);
+        }
+        function _bsFmRefresh() {
+          _bsFmRefreshSvg();
+          var overr2 = bs.facadeOverrides && bs.facadeOverrides[wallIdx];
+          var elements2 = overr2 ? (overr2.elements || []) : [];
           var elListEl = document.getElementById('bsFacadeElList');
           if (elListEl) {
             var html = '';
@@ -38667,7 +38680,12 @@ if (window.pdfjsLib) {
             });
           }
         }
-        _bsFmRefreshFn = _bsFmRefresh;
+        // _bsRefreshWallVisuals fires this callback whenever the wall's
+        // mini-thumbnail is regenerated. Point it at the SVG-only path so
+        // the modal's element-row inputs don't get destroyed mid-edit.
+        // Add / delete / save handlers below still call _bsFmRefresh()
+        // directly when the row list itself needs rebuilding.
+        _bsFmRefreshFn = _bsFmRefreshSvg;
 
         // Build modal
         var overr = bs.facadeOverrides && bs.facadeOverrides[wallIdx];
@@ -38687,7 +38705,7 @@ if (window.pdfjsLib) {
         mh += '<div id="bsFacadeModalBody" style="padding:14px 16px;overflow-y:auto;">';
         mh += '<div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:12px;">';
         mh += '<label style="font-size:12px;color:#374151;display:flex;flex-direction:column;gap:3px;flex:0 0 auto;">Wall height (m)';
-        mh += '<input type="number" id="bsFacadeHtInput" value="' + (overr && Number.isFinite(overr.heightOverride) ? overr.heightOverride : '') + '" placeholder="' + wallHt + '" step="0.1" min="0.1" style="width:80px;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:4px;"></label>';
+        mh += '<input type="text" inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="" id="bsFacadeHtInput" value="' + (overr && Number.isFinite(overr.heightOverride) ? overr.heightOverride : '') + '" placeholder="' + wallHt + '" style="width:80px;font-size:12px;padding:3px 5px;border:1px solid #ddd;border-radius:4px;"></label>';
         mh += '<label style="font-size:12px;color:#374151;display:flex;flex-direction:column;gap:3px;flex:1 1 auto;">Construction';
         mh += _bsConsComboHTML('bsFacadeConsInp', 'bsFacadeConsDrop', cons.name || '');
         mh += '<div style="text-align:right;"><button onclick="openCustomSourceWizard(\'TL\')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#6d28d9;text-decoration:underline;padding:0;">+ Add new</button></div>';
@@ -38762,11 +38780,12 @@ if (window.pdfjsLib) {
         _bsFmEscHandler = function(e) { if (e.key === 'Escape') _bsCloseFacadeModal(); };
         document.addEventListener('keydown', _bsFmEscHandler, true);
 
-        document.getElementById('bsFacadeHtInput').addEventListener('input', function() {
+        // Wall-height input: pure native typing. All work waits for change.
+        document.getElementById('bsFacadeHtInput').addEventListener('change', function() {
           var v = parseFloat(this.value);
           var o = _bsEnsureOverride(wallIdx);
           if (Number.isFinite(v) && v > 0) { o.heightOverride = v; } else { delete o.heightOverride; }
-          _bsFmRefresh();
+          _bsFmRefreshSvg();
           _bsRefreshWallVisuals(wallIdx);
           if (typeof render === 'function') render();
           if (window._recomputeNoiseMap) window._recomputeNoiseMap();
@@ -38801,8 +38820,16 @@ if (window.pdfjsLib) {
 
         var modalBody = document.getElementById('bsFacadeModalBody');
 
-        modalBody.addEventListener('input', function(ev) {
+        // Element-row W/H/X/Y inputs:
+        // - During typing: do absolutely nothing. Native input behaviour
+        //   only. No JS touches the input or anything around it, so the
+        //   browser is free to handle multi-digit entry naturally.
+        // - On change (fires on blur, Enter, Tab): commit the parsed value
+        //   to the data and run the full refresh (panel thumbnail, Rw,
+        //   derived Lw, global render, noise-map recompute).
+        modalBody.addEventListener('change', function(ev) {
           var inp = ev.target;
+          if (!inp.classList) return;
           var fieldMap = { 'bsfm-el-width': 'width', 'bsfm-el-height': 'height', 'bsfm-el-x': 'x', 'bsfm-el-y': 'y' };
           for (var cls in fieldMap) {
             if (inp.classList.contains(cls)) {
@@ -38810,10 +38837,11 @@ if (window.pdfjsLib) {
               var v = parseFloat(inp.value);
               var o = bs.facadeOverrides && bs.facadeOverrides[wallIdx];
               if (o && o.elements && o.elements[ei]) {
-                o.elements[ei][fieldMap[cls]] = Number.isFinite(v) && v >= 0 ? v : 0;
-                _bsFmRefresh();
+                o.elements[ei][fieldMap[cls]] = (Number.isFinite(v) && v >= 0) ? v : 0;
+                _bsFmRefreshSvg();
                 _bsRefreshWallVisuals(wallIdx);
                 if (typeof render === 'function') render();
+                if (window._recomputeNoiseMap) window._recomputeNoiseMap();
               }
               return;
             }
