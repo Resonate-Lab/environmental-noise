@@ -45771,6 +45771,165 @@ if (window.pdfjsLib) {
     }
   }
 
+  /* ── Viewport-aware zone label management ─────────────────────────────────
+     Labels (zone abbreviations) are free-floating L.tooltip instances rather
+     than bindTooltip-on-polygon. That lets us reposition each one to the
+     centroid of the polygon's *visible* portion when the user pans or zooms,
+     so the label stays on screen even when the polygon extends well outside
+     the viewport. */
+  var _saZoneLabels = [];           // [{ tooltip, rings, abbr, attached }]
+  var _saZoneLabelTimer = null;
+
+  function _saZL_extractRings(lyr) {
+    var out = [];
+    if (!lyr || !lyr.getLatLngs) return out;
+    var ll = lyr.getLatLngs();
+    function isLL(x) { return x && typeof x.lat === 'number'; }
+    if (!ll || !ll.length) return out;
+    if (Array.isArray(ll[0]) && Array.isArray(ll[0][0]) && isLL(ll[0][0][0])) {
+      // MultiPolygon: [[outer, hole...], [outer, hole...], ...]
+      for (var i = 0; i < ll.length; i++) {
+        if (ll[i][0] && ll[i][0].length) out.push(ll[i][0].map(function(p){return [p.lng, p.lat];}));
+      }
+    } else if (Array.isArray(ll[0]) && isLL(ll[0][0])) {
+      // Polygon with possible holes: [outer, hole1, hole2, ...] — only outer
+      out.push(ll[0].map(function(p){return [p.lng, p.lat];}));
+    } else if (isLL(ll[0])) {
+      // Plain ring
+      out.push(ll.map(function(p){return [p.lng, p.lat];}));
+    }
+    return out;
+  }
+
+  function _saZL_polygonSignedArea(verts) {
+    var a = 0;
+    for (var i = 0; i < verts.length; i++) {
+      var p = verts[i], q = verts[(i + 1) % verts.length];
+      a += p[0] * q[1] - q[0] * p[1];
+    }
+    return a * 0.5;
+  }
+
+  function _saZL_polygonCentroid(verts) {
+    var area = _saZL_polygonSignedArea(verts);
+    if (Math.abs(area) < 1e-12) {
+      var x = 0, y = 0;
+      for (var i = 0; i < verts.length; i++) { x += verts[i][0]; y += verts[i][1]; }
+      return [x / verts.length, y / verts.length];
+    }
+    var cx = 0, cy = 0;
+    for (var j = 0; j < verts.length; j++) {
+      var p = verts[j], q = verts[(j + 1) % verts.length];
+      var f = p[0] * q[1] - q[0] * p[1];
+      cx += (p[0] + q[0]) * f;
+      cy += (p[1] + q[1]) * f;
+    }
+    return [cx / (6 * area), cy / (6 * area)];
+  }
+
+  function _saZL_clipPolygonToRect(poly, r) {
+    function inside(p, e) {
+      return e === 'L' ? p[0] >= r.minX
+           : e === 'R' ? p[0] <= r.maxX
+           : e === 'B' ? p[1] >= r.minY
+           :             p[1] <= r.maxY;
+    }
+    function ix(p1, p2, e) {
+      var dx = p2[0] - p1[0], dy = p2[1] - p1[1], t = 0;
+      t = e === 'L' ? (r.minX - p1[0]) / dx
+        : e === 'R' ? (r.maxX - p1[0]) / dx
+        : e === 'B' ? (r.minY - p1[1]) / dy
+        :             (r.maxY - p1[1]) / dy;
+      return [p1[0] + t * dx, p1[1] + t * dy];
+    }
+    var result = poly.slice();
+    var edges = ['L','R','B','T'];
+    for (var k = 0; k < edges.length; k++) {
+      if (!result.length) break;
+      var input = result;
+      result = [];
+      var e = edges[k];
+      for (var i = 0; i < input.length; i++) {
+        var c = input[i];
+        var p = input[(i + input.length - 1) % input.length];
+        var ci = inside(c, e), pi = inside(p, e);
+        if (ci) {
+          if (!pi) result.push(ix(p, c, e));
+          result.push(c);
+        } else if (pi) {
+          result.push(ix(p, c, e));
+        }
+      }
+    }
+    return result;
+  }
+
+  function _saZL_addLabel(lyr, abbr) {
+    if (!abbr || !lyr) return;
+    var rings = _saZL_extractRings(lyr);
+    if (!rings.length) return;
+    var initLng = rings[0][0][0], initLat = rings[0][0][1];
+    var tt = L.tooltip({
+      permanent: true, direction: 'center', className: 'sa-zone-label',
+      opacity: 1, interactive: false
+    }).setLatLng([initLat, initLng]).setContent(abbr);
+    _saZoneLabels.push({ tooltip: tt, rings: rings, abbr: abbr, attached: false });
+    _saZL_scheduleUpdate();
+  }
+
+  function _saZL_scheduleUpdate() {
+    if (_saZoneLabelTimer) return;
+    _saZoneLabelTimer = setTimeout(function() {
+      _saZoneLabelTimer = null;
+      _saZL_update();
+    }, 80);
+  }
+
+  function _saZL_update() {
+    var m = window._map;
+    if (!m || !_saZoneLabels.length) return;
+    if (!_planZonesOn) {
+      // Zones toggled off — detach all labels (they're kept in the array
+      // so they can come back on toggle-on without reloading features).
+      for (var i = 0; i < _saZoneLabels.length; i++) {
+        var e = _saZoneLabels[i];
+        if (e.attached) { try { e.tooltip.remove(); } catch (_) {} e.attached = false; }
+      }
+      return;
+    }
+    var b = m.getBounds();
+    var rect = { minX: b.getWest(), maxX: b.getEast(), minY: b.getSouth(), maxY: b.getNorth() };
+    for (var n = 0; n < _saZoneLabels.length; n++) {
+      var entry = _saZoneLabels[n];
+      var bestPt = null, bestArea = 0;
+      for (var r = 0; r < entry.rings.length; r++) {
+        var verts = entry.rings[r];
+        // Cheap bbox prefilter
+        var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (var v = 0; v < verts.length; v++) {
+          var pt = verts[v];
+          if (pt[0] < minX) minX = pt[0]; if (pt[0] > maxX) maxX = pt[0];
+          if (pt[1] < minY) minY = pt[1]; if (pt[1] > maxY) maxY = pt[1];
+        }
+        if (maxX < rect.minX || minX > rect.maxX || maxY < rect.minY || minY > rect.maxY) continue;
+        var clipped = _saZL_clipPolygonToRect(verts, rect);
+        if (clipped.length < 3) continue;
+        var area = Math.abs(_saZL_polygonSignedArea(clipped));
+        if (area > bestArea) {
+          bestArea = area;
+          bestPt = _saZL_polygonCentroid(clipped);
+        }
+      }
+      if (bestPt) {
+        entry.tooltip.setLatLng([bestPt[1], bestPt[0]]);
+        if (!entry.attached) { entry.tooltip.addTo(m); entry.attached = true; }
+      } else if (entry.attached) {
+        try { entry.tooltip.remove(); } catch (_) {}
+        entry.attached = false;
+      }
+    }
+  }
+
   /* ── Zone style: reuses ZONE_COLOURS from the map IIFE via window._getZoneColour ── */
   function getZoneStyle(zoneName) {
     var col = (window._getZoneColour && window._getZoneColour(zoneName)) || '#999';
@@ -45886,18 +46045,9 @@ if (window.pdfjsLib) {
               '<b>' + escHtml(zoneName) + '</b>' +
               '<br><small style="color:#666;">SAPPA — authoritative zoning</small>'
             );
-            // Permanent on-map abbreviation label, mirroring SAPPA.
-            // Only attach if we have a known abbreviation; falls back to
-            // no label rather than rendering the full zone name.
+            // Free-floating, viewport-aware abbreviation label
             var abbr = (window._getZoneAbbreviation || function(){return '';})(zoneName);
-            if (abbr && lyr.bindTooltip) {
-              lyr.bindTooltip(abbr, {
-                permanent: true,
-                direction: 'center',
-                className: 'sa-zone-label',
-                opacity: 1
-              });
-            }
+            if (abbr) _saZL_addLabel(lyr, abbr);
           },
           minZoom: 12,
           simplifyFactor: 0,
@@ -45940,14 +46090,7 @@ if (window.pdfjsLib) {
               '<br><small style="color:#666;">PlanSA open data (generalised — verify on <a href="https://sappa.plan.sa.gov.au/" target="_blank" rel="noopener">SAPPA ↗</a>)</small>'
             );
             var abbr = (window._getZoneAbbreviation || function(){return '';})(zoneName);
-            if (abbr && lyr.bindTooltip) {
-              lyr.bindTooltip(abbr, {
-                permanent: true,
-                direction: 'center',
-                className: 'sa-zone-label',
-                opacity: 1
-              });
-            }
+            if (abbr) _saZL_addLabel(lyr, abbr);
           },
         });
         callback(layer);
@@ -46007,15 +46150,17 @@ if (window.pdfjsLib) {
       if (!_zonesLayer) {
         loadZonesLayer(function(layer) {
           _zonesLayer = layer;
-          if (_planZonesOn) { addLayerToMap(_zonesLayer); _showZonesLegend(); }
+          if (_planZonesOn) { addLayerToMap(_zonesLayer); _showZonesLegend(); _saZL_scheduleUpdate(); }
         });
       } else {
         addLayerToMap(_zonesLayer);
         _showZonesLegend();
+        _saZL_scheduleUpdate();
       }
     } else {
       removeLayerFromMap(_zonesLayer);
       _hideZonesLegend();
+      _saZL_update();   // syncs labels to detached state when _planZonesOn === false
     }
     updateAttribution();
   }
@@ -46023,11 +46168,14 @@ if (window.pdfjsLib) {
   /* ── Wire up buttons + legend moveend refresh ───────────────────────────── */
   document.addEventListener('DOMContentLoaded', function() {
 
-    // Refresh zones legend when map pans/zooms (viewport-aware, debounced 150 ms)
+    // Refresh zones legend when map pans/zooms (viewport-aware, debounced 150 ms).
+    // Also reposition zone abbreviation labels so they stay inside the visible
+    // portion of each polygon as the user pans/zooms.
     var m = window._map;
     if (m) {
       m.on('moveend zoomend', function() {
         if (_planZonesOn) refreshZonesLegendDebounced();
+        _saZL_scheduleUpdate();
       });
     }
   });
