@@ -46153,6 +46153,27 @@ if (window.pdfjsLib) {
     if (m && ctrl && ctrl.getContainer()) { try { m.removeControl(ctrl); } catch(e) {} }
   }
 
+  // Minimum zoom at which the SA zone layer is allowed to load. Below this
+  // the local GeoJSON fallback would render tens of thousands of polygons
+  // and freeze the page — typically observed when an old saved project is
+  // loaded at the all-of-Australia default zoom with zones=true persisted.
+  var ZONES_MIN_ZOOM = 12;
+  var _zonesPending = false;
+
+  function _doZoneEnableNow() {
+    fetchMetadata();
+    if (!_zonesLayer) {
+      loadZonesLayer(function(layer) {
+        _zonesLayer = layer;
+        if (_planZonesOn) { addLayerToMap(_zonesLayer); _showZonesLegend(); _saZL_scheduleUpdate(); }
+      });
+    } else {
+      addLayerToMap(_zonesLayer);
+      _showZonesLegend();
+      _saZL_scheduleUpdate();
+    }
+  }
+
   function toggleZones(on) {
     _planZonesOn = on;
     var btn = document.getElementById('planningZonesBtn');
@@ -46166,18 +46187,21 @@ if (window.pdfjsLib) {
     }
 
     if (on) {
-      fetchMetadata();
-      if (!_zonesLayer) {
-        loadZonesLayer(function(layer) {
-          _zonesLayer = layer;
-          if (_planZonesOn) { addLayerToMap(_zonesLayer); _showZonesLegend(); _saZL_scheduleUpdate(); }
-        });
+      var m = window._map;
+      var z = m ? m.getZoom() : 0;
+      if (z < ZONES_MIN_ZOOM) {
+        _zonesPending = true;
+        try {
+          if (typeof showToast === 'function') {
+            showToast('SA zones will appear when zoomed in (zoom ' + ZONES_MIN_ZOOM + '+).');
+          }
+        } catch (_) {}
       } else {
-        addLayerToMap(_zonesLayer);
-        _showZonesLegend();
-        _saZL_scheduleUpdate();
+        _zonesPending = false;
+        _doZoneEnableNow();
       }
     } else {
+      _zonesPending = false;
       removeLayerFromMap(_zonesLayer);
       _hideZonesLegend();
       _saZL_update();   // syncs labels to detached state when _planZonesOn === false
@@ -46189,13 +46213,17 @@ if (window.pdfjsLib) {
   document.addEventListener('DOMContentLoaded', function() {
 
     // Refresh zones legend when map pans/zooms (viewport-aware, debounced 150 ms).
-    // Also reposition zone abbreviation labels so they stay inside the visible
-    // portion of each polygon as the user pans/zooms.
+    // Also reposition zone abbreviation labels, and complete a deferred zone
+    // enable once zoom finally reaches ZONES_MIN_ZOOM.
     var m = window._map;
     if (m) {
       m.on('moveend zoomend', function() {
         if (_planZonesOn) refreshZonesLegendDebounced();
         _saZL_scheduleUpdate();
+        if (_zonesPending && _planZonesOn && m.getZoom() >= ZONES_MIN_ZOOM) {
+          _zonesPending = false;
+          _doZoneEnableNow();
+        }
       });
     }
   });
