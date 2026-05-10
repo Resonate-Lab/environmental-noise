@@ -25052,6 +25052,18 @@ setInitialCollapseState();
         data._version = 7;
         data._exportedAt = new Date().toISOString();
 
+        // Map view at save time, so reopening returns to the saved framing
+        // rather than the all-of-Australia default zoom.
+        try {
+          if (window._map && typeof window._map.getCenter === 'function') {
+            var _mvC = window._map.getCenter();
+            var _mvZ = window._map.getZoom();
+            if (_mvC && Number.isFinite(_mvC.lat) && Number.isFinite(_mvC.lng) && Number.isFinite(_mvZ)) {
+              data.mapView = { center: [_mvC.lat, _mvC.lng], zoom: _mvZ };
+            }
+          }
+        } catch (_mvErr) {}
+
         // State
         data.currentState = currentState;
         data.vicAreaType = vicAreaType;
@@ -26824,15 +26836,68 @@ setInitialCollapseState();
               window._recvOnDragEnd(cmode, data.markers[cmode]);
             }
           }
-          // Fit map bounds to markers
+          // Restore the map view. Prefer the explicitly saved center/zoom
+          // ("as saved"); otherwise fit bounds to every project object so we
+          // never leave the user staring at the all-of-Australia default.
           if (map) {
-            var allLL = window._getAllLatLngs ? window._getAllLatLngs() : {};
-            var bounds = [];
-            Object.keys(allLL).forEach(function(k) {
-              if (allLL[k]) bounds.push([allLL[k].lat, allLL[k].lng]);
-            });
-            if (bounds.length > 0) {
-              map.fitBounds(bounds, {padding: [40, 40], maxZoom: 16});
+            var _restoredView = false;
+            if (data.mapView && Array.isArray(data.mapView.center)
+                && data.mapView.center.length === 2
+                && Number.isFinite(data.mapView.center[0])
+                && Number.isFinite(data.mapView.center[1])
+                && Number.isFinite(data.mapView.zoom)) {
+              try {
+                map.setView(data.mapView.center, data.mapView.zoom);
+                _restoredView = true;
+              } catch (_svErr) {}
+            }
+            if (!_restoredView) {
+              var bounds = [];
+              var allLL = window._getAllLatLngs ? window._getAllLatLngs() : {};
+              Object.keys(allLL).forEach(function(k) {
+                if (allLL[k]) bounds.push([allLL[k].lat, allLL[k].lng]);
+              });
+              if (typeof sourcePins !== 'undefined') {
+                sourcePins.forEach(function(s) {
+                  if (s && s.lat != null && s.lng != null) bounds.push([s.lat, s.lng]);
+                });
+              }
+              if (typeof _sitePin !== 'undefined' && _sitePin && _sitePin.lat != null) {
+                bounds.push([_sitePin.lat, _sitePin.lng]);
+              }
+              [
+                typeof lineSources !== 'undefined' ? lineSources : null,
+                typeof areaSources !== 'undefined' ? areaSources : null,
+                typeof buildingSources !== 'undefined' ? buildingSources : null,
+                typeof userBarriers !== 'undefined' ? userBarriers : null
+              ].forEach(function(arr) {
+                if (!arr) return;
+                arr.forEach(function(o) {
+                  var verts = o && o.vertices;
+                  if (Array.isArray(verts)) {
+                    verts.forEach(function(v) {
+                      if (Array.isArray(v) && v.length >= 2 && Number.isFinite(v[0]) && Number.isFinite(v[1])) {
+                        bounds.push([v[0], v[1]]);
+                      }
+                    });
+                  }
+                });
+              });
+              if (typeof customBuildings !== 'undefined') {
+                customBuildings.forEach(function(cb) {
+                  var poly = cb && cb.polygon;
+                  if (Array.isArray(poly)) {
+                    poly.forEach(function(v) {
+                      if (Array.isArray(v) && v.length >= 2 && Number.isFinite(v[0]) && Number.isFinite(v[1])) {
+                        bounds.push([v[0], v[1]]);
+                      }
+                    });
+                  }
+                });
+              }
+              if (bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [40, 40], maxZoom: 17 });
+              }
             }
           }
         }, 500);
