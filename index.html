@@ -2472,7 +2472,8 @@ body.panel-resizing #map-column {
 .leaflet-bar a:last-child  { border-radius: 0 0 6px 6px !important; border-bottom: none !important; }
 .leaflet-bar a:hover { background: #2d3748 !important; color: #e2e8f0 !important; }
 .leaflet-bar a.leaflet-disabled { background: #1e2430 !important; color: #4b5563 !important; opacity: 0.5 !important; }
-/* Leaflet attribution — dark styled, compact */
+/* Leaflet attribution — dark styled, compact, capped width so it stays at
+   bottom-right rather than wrapping across the whole bottom of the map. */
 .leaflet-control-attribution {
   background: #1e2430 !important;
   color: #64748b !important;
@@ -2481,9 +2482,15 @@ body.panel-resizing #map-column {
   padding: 1px 5px !important;
   border-radius: 3px 0 0 0 !important;
   box-shadow: none !important;
+  max-width: 55% !important;
 }
 .leaflet-control-attribution a {
   color: #94a3b8 !important;
+}
+/* Bottom-left controls (zone legend, MUA legend, MBS010 legend, etc.) sit
+   above the attribution band so the two never visually overlap. */
+.leaflet-bottom.leaflet-left {
+  bottom: 24px !important;
 }
 #map-guide-overlay {
   display: none !important;
@@ -45898,7 +45905,20 @@ if (window.pdfjsLib) {
       return;
     }
     var b = m.getBounds();
-    var rect = { minX: b.getWest(), maxX: b.getEast(), minY: b.getSouth(), maxY: b.getNorth() };
+    // Inset the clip rect from the bottom so zone labels never get placed
+    // inside the attribution band (or other bottom-pinned chrome). Inset
+    // is the attribution element height in pixels, converted to lat/lng.
+    var attrEl = document.querySelector('.leaflet-control-attribution');
+    var attrH = attrEl ? (attrEl.offsetHeight || 0) : 0;
+    var minLat = b.getSouth();
+    if (attrH > 0) {
+      try {
+        var sePix = m.latLngToContainerPoint(b.getSouthEast());
+        var insetSE = m.containerPointToLatLng(L.point(sePix.x, sePix.y - attrH));
+        if (Number.isFinite(insetSE.lat) && insetSE.lat > minLat) minLat = insetSE.lat;
+      } catch (_) {}
+    }
+    var rect = { minX: b.getWest(), maxX: b.getEast(), minY: minLat, maxY: b.getNorth() };
     for (var n = 0; n < _saZoneLabels.length; n++) {
       var entry = _saZoneLabels[n];
       var bestPt = null, bestArea = 0;
