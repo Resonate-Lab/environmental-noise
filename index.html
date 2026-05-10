@@ -25046,6 +25046,11 @@ setInitialCollapseState();
     /* ── EXPORT ── */
     var exportBtn = document.getElementById('exportJsonBtn');
     if (exportBtn) exportBtn.addEventListener('click', function() {
+      // NOTE — keep in sync with serialiseState() (around L28010), which is
+      // the undo-snapshot path. Drift between the two has been the recurring
+      // root cause of undo silently losing co-edited state. New top-level
+      // fields added here should generally be added there too unless they
+      // are deliberately omitted from undo (e.g. mapView, _scenarios).
       try {
         var data = {};
         data._format = 'resonate-noise-tool';
@@ -26853,48 +26858,54 @@ setInitialCollapseState();
             }
             if (!_restoredView) {
               var bounds = [];
+              function _pushVert(v) {
+                if (Array.isArray(v) && v.length >= 2
+                    && Number.isFinite(v[0]) && Number.isFinite(v[1])) {
+                  bounds.push([v[0], v[1]]);
+                }
+              }
+              // Receivers + source markers (latlngs map: r1..r4, source_*).
               var allLL = window._getAllLatLngs ? window._getAllLatLngs() : {};
               Object.keys(allLL).forEach(function(k) {
                 if (allLL[k]) bounds.push([allLL[k].lat, allLL[k].lng]);
               });
+              // Top-level point/line/area/building source arrays.
               if (typeof sourcePins !== 'undefined') {
                 sourcePins.forEach(function(s) {
                   if (s && s.lat != null && s.lng != null) bounds.push([s.lat, s.lng]);
                 });
               }
-              if (typeof _sitePin !== 'undefined' && _sitePin && _sitePin.lat != null) {
-                bounds.push([_sitePin.lat, _sitePin.lng]);
-              }
               [
                 typeof lineSources !== 'undefined' ? lineSources : null,
                 typeof areaSources !== 'undefined' ? areaSources : null,
-                typeof buildingSources !== 'undefined' ? buildingSources : null,
-                typeof userBarriers !== 'undefined' ? userBarriers : null
+                typeof buildingSources !== 'undefined' ? buildingSources : null
               ].forEach(function(arr) {
                 if (!arr) return;
                 arr.forEach(function(o) {
                   var verts = o && o.vertices;
-                  if (Array.isArray(verts)) {
-                    verts.forEach(function(v) {
-                      if (Array.isArray(v) && v.length >= 2 && Number.isFinite(v[0]) && Number.isFinite(v[1])) {
-                        bounds.push([v[0], v[1]]);
-                      }
-                    });
-                  }
+                  if (Array.isArray(verts)) verts.forEach(_pushVert);
                 });
               });
-              if (typeof customBuildings !== 'undefined') {
-                customBuildings.forEach(function(cb) {
-                  var poly = cb && cb.polygon;
-                  if (Array.isArray(poly)) {
-                    poly.forEach(function(v) {
-                      if (Array.isArray(v) && v.length >= 2 && Number.isFinite(v[0]) && Number.isFinite(v[1])) {
-                        bounds.push([v[0], v[1]]);
-                      }
-                    });
-                  }
+              // userBarriers, customBuildings, _sitePin live inside the
+              // initMap IIFE — only reachable through the window getters.
+              try {
+                var _ub = (typeof window._getUserBarriers === 'function') ? window._getUserBarriers() : [];
+                (_ub || []).forEach(function(o) {
+                  var verts = o && o.vertices;
+                  if (Array.isArray(verts)) verts.forEach(_pushVert);
                 });
-              }
+              } catch (_) {}
+              try {
+                var _cb = (typeof window._getCustomBuildings === 'function') ? window._getCustomBuildings() : [];
+                (_cb || []).forEach(function(o) {
+                  var poly = o && o.polygon;
+                  if (Array.isArray(poly)) poly.forEach(_pushVert);
+                });
+              } catch (_) {}
+              try {
+                var _sp = (typeof window._getSitePin === 'function') ? window._getSitePin() : null;
+                if (_sp && _sp.lat != null && _sp.lng != null) bounds.push([_sp.lat, _sp.lng]);
+              } catch (_) {}
               if (bounds.length > 0) {
                 map.fitBounds(bounds, { padding: [40, 40], maxZoom: 17 });
               }
@@ -28001,11 +28012,17 @@ setInitialCollapseState();
   window._undoRestoring = false;
 
   // ── Serialise current state to JSON string ─────────────────────────────
+  // NOTE — keep in sync with the JSON export click-handler (around L25048).
+  // Drift between the two is the recurring root cause of undo silently
+  // losing co-edited state (e.g. the May 2026 cmetEnabled regression).
+  // Fields the export captures but undo intentionally skips:
+  //   - mapView         (zoom/pan should not be undoable; user gesture)
+  //   - _scenarios      (preserved separately via opts.preserveScenarios)
   function serialiseState() {
     try {
       var data = {};
       data._format  = 'resonate-noise-tool';
-      data._version = 5;
+      data._version = 7;
       data._exportedAt = new Date().toISOString();
       data.currentState  = typeof currentState  !== 'undefined' ? currentState  : 'SA';
       data.vicAreaType   = typeof vicAreaType   !== 'undefined' ? vicAreaType   : 'urban';
@@ -28211,6 +28228,44 @@ setInitialCollapseState();
                    reflectionRhoCustom:(cb.reflectionRhoCustom !== null && cb.reflectionRhoCustom !== undefined) ? cb.reflectionRhoCustom : 1.0 };
         });
       }
+
+      // OSM building height overrides — must round-trip through undo
+      // otherwise an undone delete/exclude would silently leave the
+      // override missing from the next snapshot.
+      try {
+        if (window._buildings) {
+          var _bo = [];
+          window._buildings.forEach(function(b) {
+            if (!b.isCustom && (b.userHeightOverride || b.excluded || b.demolished)) {
+              _bo.push({ osmId: b.id, heightM: b.heightM, excluded: !!b.excluded, demolished: !!b.demolished });
+            }
+          });
+          if (_bo.length) data.buildingOverrides = _bo;
+        }
+      } catch (_) {}
+
+      // Site plan overlays (PDF/image base64 + bounds + display settings)
+      try {
+        if (window._siteOverlays && window._siteOverlays.length > 0 && window._soSerialize) {
+          var _so = window._soSerialize();
+          if (_so && _so.length) data.siteOverlays = _so;
+        }
+      } catch (_) {}
+
+      // Receiver predictions — recomputed on render() but cheaper to
+      // restore directly so undo doesn't briefly show stale values.
+      try {
+        if (typeof loadPred === 'function') {
+          var _pr = {};
+          ['r1','r2','r3','r4'].forEach(function(rid) {
+            ['day','eve','night','lmax'].forEach(function(per) {
+              var v = loadPred(rid + '_' + per);
+              if (v) _pr[rid + '_' + per] = v;
+            });
+          });
+          if (Object.keys(_pr).length) data.predictions = _pr;
+        }
+      } catch (_) {}
 
       // Line sources
       if (typeof lineSources !== 'undefined' && lineSources.length) {

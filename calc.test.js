@@ -477,3 +477,108 @@ describe('getReflectionRho — ISO 9613-2:1996 Table 4', () => {
     expect(lp_adjusted).toBeCloseTo(36.021, 2);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Simple / ISO 9613-2 convergence at G=0
+//
+// CLAUDE.md guard rail: at ground factor G=0 the ISO method should converge
+// with the Simple method per-band at short and moderate distances. The
+// convergence is *not* an exact equality across all distances:
+//
+//   - Simple uses Adiv = 20·log10(r) + 8  (hemispherical, +6 dB ground
+//     reflection baked in).
+//   - ISO uses    Adiv = 20·log10(d) + 11 (free-field divergence) plus a
+//     per-band Agr that is *negative* (a gain) at G=0 because the source-
+//     and receiver-region constants As, Ar default to −1.5 dB. At G=0 the
+//     two source / receiver regions contribute -1.5 + -1.5 = -3 dB which
+//     closes the gap with Simple's hemispherical +6 dB.
+//   - The ISO middle-region term Am = −3q (q non-zero only for distances
+//     beyond 30·(hS+hR)) introduces an extra few-tenths-of-a-dB at long
+//     range — by ISO 9613-2 design, not a bug.
+//
+// These tests lock the convergence in the short / moderate regime so any
+// future drift in Adiv constants, As / Ar / Am formulas, or A-weighting
+// is caught.
+// ---------------------------------------------------------------------------
+describe('Simple ↔ ISO 9613-2 convergence at G=0', () => {
+  const A_WEIGHTS = [-26.2, -16.1, -8.6, -3.2, 0.0, 1.2, 1.0, -1.1];
+
+  // Energy-sum a flat dB(Z) per-band spectrum into a single broadband dB(A).
+  // Matches the SharedCalc.energySumA path used internally.
+  function broadbandLwA(specZ) {
+    let sum = 0;
+    for (let i = 0; i < 8; i++) sum += Math.pow(10, (specZ[i] + A_WEIGHTS[i]) / 10);
+    return 10 * Math.log10(sum);
+  }
+  function flatSpectrum(LwZ) {
+    return [LwZ, LwZ, LwZ, LwZ, LwZ, LwZ, LwZ, LwZ];
+  }
+  const isoParamsG0 = { groundFactor: 0, temperature: 10, humidity: 70 };
+
+  // Tolerances reflect observed deltas; tight enough to catch a systematic
+  // offset (the audit-claim 3 dB error would fail every assertion below).
+  // Residual gap = Aatm + per-band A-weighted reweighting of Agr ≠ 0.
+
+  // dp ≤ 30·(hS+hR) → q = 0 → Am = 0 → ISO matches Simple closely.
+  it('d = 10 m, hS = hR = 1.5 m: |Simple − ISO| ≤ 0.6 dB', () => {
+    const spec   = flatSpectrum(80);
+    const LwA    = broadbandLwA(spec);
+    const simple = attenuatePoint(LwA, 10);
+    const iso    = calcISOatPoint(spec, 1.5, 10, 0, 0, 1.5, isoParamsG0);
+    expect(Math.abs(simple - iso)).toBeLessThanOrEqual(0.6);
+  });
+
+  it('d = 30 m, hS = hR = 1.5 m: |Simple − ISO| ≤ 1.0 dB', () => {
+    const spec   = flatSpectrum(80);
+    const LwA    = broadbandLwA(spec);
+    const simple = attenuatePoint(LwA, 30);
+    const iso    = calcISOatPoint(spec, 1.5, 30, 0, 0, 1.5, isoParamsG0);
+    expect(Math.abs(simple - iso)).toBeLessThanOrEqual(1.0);
+  });
+
+  // d = 50 m is still inside dp ≤ 30·(1.5+1.5) = 90, so q = 0; Aatm has
+  // grown but the convergence still holds within ~1.5 dB.
+  it('d = 50 m, hS = hR = 1.5 m: |Simple − ISO| ≤ 1.5 dB (Aatm grows)', () => {
+    const spec   = flatSpectrum(80);
+    const LwA    = broadbandLwA(spec);
+    const simple = attenuatePoint(LwA, 50);
+    const iso    = calcISOatPoint(spec, 1.5, 50, 0, 0, 1.5, isoParamsG0);
+    expect(Math.abs(simple - iso)).toBeLessThanOrEqual(1.5);
+  });
+
+  // Beyond 30·(hS+hR) the ISO middle-region q-term kicks in and ISO drops
+  // below Simple. Locking the expected sign so a future regression that
+  // flips it would fail.
+  it('d = 200 m, hS = hR = 1.5 m: ISO ≤ Simple, gap ≤ 5 dB (long-range Am term)', () => {
+    const spec   = flatSpectrum(80);
+    const LwA    = broadbandLwA(spec);
+    const simple = attenuatePoint(LwA, 200);
+    const iso    = calcISOatPoint(spec, 1.5, 200, 0, 0, 1.5, isoParamsG0);
+    expect(iso).toBeLessThanOrEqual(simple + 0.05);
+    expect(simple - iso).toBeLessThanOrEqual(5.0);
+  });
+
+  // Elevated source / receiver (e.g. roof at 6 m, person at 1.5 m). Heights
+  // change the per-band a'/b'/c'/d' terms but those are gated by Gs / Gr
+  // (= 0 here), so they drop out and convergence still holds within ~1 dB.
+  it('elevated geometry (hS = 6 m, hR = 1.5 m, d = 30 m): |Simple − ISO| ≤ 1.0 dB', () => {
+    const spec   = flatSpectrum(80);
+    const LwA    = broadbandLwA(spec);
+    const simple = attenuatePoint(LwA, 30);
+    const iso    = calcISOatPoint(spec, 6.0, 30, 0, 0, 1.5, isoParamsG0);
+    expect(Math.abs(simple - iso)).toBeLessThanOrEqual(1.0);
+  });
+
+  // A systematic 3 dB offset (the audit-claim error mode) would manifest
+  // here as ISO and Simple differing by ~3 dB at G=0, short range, in
+  // exactly the direction the agent predicted. Explicit guard against it.
+  it('rejects a +3 dB systematic offset hypothesis at short range', () => {
+    const spec   = flatSpectrum(80);
+    const LwA    = broadbandLwA(spec);
+    const simple = attenuatePoint(LwA, 10);
+    const iso    = calcISOatPoint(spec, 1.5, 10, 0, 0, 1.5, isoParamsG0);
+    // If ISO were systematically 3 dB quieter than Simple (the audit's
+    // claim), `simple - iso` would be ~3 dB. It is observed to be ~0 dB.
+    expect(simple - iso).toBeLessThan(1.5);
+  });
+});

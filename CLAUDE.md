@@ -38,11 +38,11 @@ Browser-based environmental noise assessment tool implementing ISO 9613-2 propag
 
 ## Key Rules for Every Change
 
-1. **Save/load integrity** — Any new state MUST be serialised in Save Assessment JSON (`_format: 'resonate-noise-tool'`, `_version: 2`). Verify save → load round-trip preserves all state.
+1. **Save/load integrity** — Any new state MUST be serialised in BOTH the main JSON export (around `index.html` L25048) AND `serialiseState()` for undo snapshots (around L28010). The two paths have drifted before; keep them in sync. Also covers `_format: 'resonate-noise-tool'`, `_version: 7`. Verify save → load round-trip preserves all state.
 2. **No silent regressions** — Verify adjacent functionality still works after changes
 3. **Multi-state independence** — SA, VIC, and NSW criteria logic are independent modules. Changes to one must not affect others.
 4. **Terrain awareness** — Any geometry change must consider terrain re-fetch if terrain is enabled
-5. **Simple/ISO convergence** — When ground factor G=0, ISO method should match simple method. Check this after propagation changes.
+5. **Simple/ISO convergence** — At G=0 the ISO method **converges with** the simple method *per-band* at short and moderate distances (typically within ~1 dB up to 50 m at ground-level geometry; locked by tests in `calc.test.js` describe block "Simple ↔ ISO 9613-2 convergence at G=0"). At long distances (`d > 30·(hS+hR)`) ISO includes the middle-region term `Am = -3q` and diverges from Simple by design — this is correct, not a regression. Check the convergence tests pass after any propagation change.
 
 ## After Making Changes
 
