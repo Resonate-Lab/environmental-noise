@@ -33320,12 +33320,13 @@ if (window.pdfjsLib) {
     }
 
     /** Get buildings eligible for barrier screening (combined OSM + custom, minus excluded/demolished).
-     *  OSM and custom buildings are only included when the buildings layer is active (_buildingsOn).
-     *  User-drawn barriers are always included (they have their own suppressed flag). */
+     *  OSM buildings are only included when the buildings layer is active (_buildingsOn).
+     *  Custom user-drawn buildings, barriers, and building sources are always included. */
     function getScreenableBuildings() {
-      // OSM + custom buildings: only when buildings layer is active
+      // OSM buildings: only when buildings layer is active
       var osm = _buildingsOn ? buildings.filter(function(b) { return !b.excluded && !b.demolished; }) : [];
-      var result = (_buildingsOn && typeof customBuildings !== 'undefined') ? osm.concat(customBuildings) : osm;
+      // Custom user-drawn buildings always screen regardless of the OSM buildings toggle
+      var result = (typeof customBuildings !== 'undefined') ? osm.concat(customBuildings) : osm;
       // User-drawn barriers are independent of the buildings layer toggle
       if (typeof userBarriers !== 'undefined') {
         userBarriers.forEach(function(ub) {
