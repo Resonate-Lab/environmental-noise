@@ -15929,6 +15929,59 @@ async function generatePDFAppendix(btn) {
           });
         });
 
+        // Draw scale bar and north arrow onto the canvas (top-right, matching live map position).
+        // These are hidden via .leaflet-top suppression above, so we redraw them manually.
+        chain = chain.then(function() {
+          var _map = typeof window._getMapRef === 'function' ? window._getMapRef() : null;
+          var margin = 8, gap = 6, arrowW = 28, arrowH = 28, radius = 6;
+          var arrowX = W - margin - arrowW, arrowY = margin;
+
+          // North arrow: dark rounded rect + arrowhead polygon (matches MapIndicatorsControl SVG)
+          ctx.save();
+          ctx.fillStyle = '#1e2430';
+          ctx.beginPath(); ctx.roundRect(arrowX, arrowY, arrowW, arrowH, radius); ctx.fill();
+          var svgOffX = arrowX + (arrowW - 14) / 2, svgOffY = arrowY + (arrowH - 12) / 2;
+          ctx.fillStyle = '#94a3b8';
+          ctx.beginPath();
+          ctx.moveTo(svgOffX + 7,  svgOffY + 0);
+          ctx.lineTo(svgOffX + 14, svgOffY + 12);
+          ctx.lineTo(svgOffX + 7,  svgOffY + 8);
+          ctx.lineTo(svgOffX + 0,  svgOffY + 12);
+          ctx.closePath(); ctx.fill();
+          ctx.restore();
+
+          // Scale bar: compute from map (same formula as _updateScale at line ~28999)
+          if (_map) {
+            var cy = _map.getSize().y / 2;
+            var p1 = _map.containerPointToLatLng([0, cy]);
+            var p2 = _map.containerPointToLatLng([80, cy]);
+            var metres = p1.distanceTo(p2);
+            var scaleLabel, scalePixels;
+            if (metres >= 1000) {
+              var km = metres / 1000;
+              var nice = km >= 100 ? Math.round(km / 50) * 50 : km >= 10 ? Math.round(km / 5) * 5 : Math.round(km);
+              scaleLabel = nice + ' km'; scalePixels = Math.round(80 * nice * 1000 / metres);
+            } else {
+              var nice = metres >= 100 ? Math.round(metres / 50) * 50 : metres >= 10 ? Math.round(metres / 5) * 5 : Math.round(metres);
+              scaleLabel = nice + ' m'; scalePixels = Math.round(80 * nice / metres);
+            }
+            if (scalePixels > 0) {
+              var scaleX = arrowX - gap - scalePixels, scaleY = arrowY;
+              // Height matches CSS: font-size 8px × line-height 1.2 + padding 1px top + 1px bottom ≈ 12px
+              var scaleH = 12;
+              ctx.save();
+              ctx.fillStyle = '#1e2430';
+              // border-radius: 0 0 4px 4px — flat top, rounded bottom corners (matches CSS)
+              ctx.beginPath(); ctx.roundRect(scaleX, scaleY, scalePixels, scaleH, [0, 0, 4, 4]); ctx.fill();
+              ctx.fillStyle = '#94a3b8';
+              ctx.font = '8px sans-serif';
+              ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+              ctx.fillText(scaleLabel, scaleX + scalePixels / 2, scaleY + scaleH / 2);
+              ctx.restore();
+            }
+          }
+        });
+
         chain.then(function() {
           ctx.restore();
           hideEls.forEach(function(el) { el.style.visibility = ''; });
@@ -45545,6 +45598,59 @@ if (window.pdfjsLib) {
             document.body.classList.remove('legend-export');
             throw err;
           });
+        });
+
+        // Draw scale bar and north arrow onto the canvas (top-right, matching live map position).
+        // These are hidden via .leaflet-top suppression above, so we redraw them manually.
+        chain = chain.then(function() {
+          var _map = typeof window._getMapRef === 'function' ? window._getMapRef() : null;
+          var margin = 8, gap = 6, arrowW = 28, arrowH = 28, radius = 6;
+          var arrowX = W - margin - arrowW, arrowY = margin;
+
+          // North arrow: dark rounded rect + arrowhead polygon (matches MapIndicatorsControl SVG)
+          ctx.save();
+          ctx.fillStyle = '#1e2430';
+          ctx.beginPath(); ctx.roundRect(arrowX, arrowY, arrowW, arrowH, radius); ctx.fill();
+          var svgOffX = arrowX + (arrowW - 14) / 2, svgOffY = arrowY + (arrowH - 12) / 2;
+          ctx.fillStyle = '#94a3b8';
+          ctx.beginPath();
+          ctx.moveTo(svgOffX + 7,  svgOffY + 0);
+          ctx.lineTo(svgOffX + 14, svgOffY + 12);
+          ctx.lineTo(svgOffX + 7,  svgOffY + 8);
+          ctx.lineTo(svgOffX + 0,  svgOffY + 12);
+          ctx.closePath(); ctx.fill();
+          ctx.restore();
+
+          // Scale bar: compute from map (same formula as _updateScale at line ~28999)
+          if (_map) {
+            var cy = _map.getSize().y / 2;
+            var p1 = _map.containerPointToLatLng([0, cy]);
+            var p2 = _map.containerPointToLatLng([80, cy]);
+            var metres = p1.distanceTo(p2);
+            var scaleLabel, scalePixels;
+            if (metres >= 1000) {
+              var km = metres / 1000;
+              var nice = km >= 100 ? Math.round(km / 50) * 50 : km >= 10 ? Math.round(km / 5) * 5 : Math.round(km);
+              scaleLabel = nice + ' km'; scalePixels = Math.round(80 * nice * 1000 / metres);
+            } else {
+              var nice = metres >= 100 ? Math.round(metres / 50) * 50 : metres >= 10 ? Math.round(metres / 5) * 5 : Math.round(metres);
+              scaleLabel = nice + ' m'; scalePixels = Math.round(80 * nice / metres);
+            }
+            if (scalePixels > 0) {
+              var scaleX = arrowX - gap - scalePixels, scaleY = arrowY;
+              // Height matches CSS: font-size 8px × line-height 1.2 + padding 1px top + 1px bottom ≈ 12px
+              var scaleH = 12;
+              ctx.save();
+              ctx.fillStyle = '#1e2430';
+              // border-radius: 0 0 4px 4px — flat top, rounded bottom corners (matches CSS)
+              ctx.beginPath(); ctx.roundRect(scaleX, scaleY, scalePixels, scaleH, [0, 0, 4, 4]); ctx.fill();
+              ctx.fillStyle = '#94a3b8';
+              ctx.font = '8px sans-serif';
+              ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+              ctx.fillText(scaleLabel, scaleX + scalePixels / 2, scaleY + scaleH / 2);
+              ctx.restore();
+            }
+          }
         });
 
         // ── Finalise: restore clip, convert to JPEG blob, trigger download ─
