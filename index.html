@@ -973,6 +973,12 @@ body.map-fs-active { overflow: hidden; }
 .src-lib-row {
   display:flex; align-items:center; justify-content:space-between; margin:4px 0 3px;
 }
+.spec-shift-btn {
+  font-size:10px; padding:2px 7px; border-radius:10px;
+  background:#ede9fe; border:1px solid #a78bfa; color:#5b21b6;
+  cursor:pointer; white-space:nowrap; line-height:1.6;
+}
+.spec-shift-btn:hover { background:#ddd6fe; }
 
 /* ── Per-panel colour themes (header accent drives section/card/grid colours) ── */
 /* Point source — blue */
@@ -17419,9 +17425,11 @@ function renderSourcePins() {
   var container = document.getElementById('sourcePinCards');
   if (!container) return;
 
-  // Quick-path: update only mutable fields when card count hasn't changed
+  // Quick-path: update only mutable fields when card count hasn't changed.
+  // Requires shift pills to already exist in DOM; if absent, fall through to full rebuild.
   var existingCards = container.querySelectorAll('[data-pin-idx]');
-  if (existingCards.length === sourcePins.length && existingCards.length > 0) {
+  if (existingCards.length === sourcePins.length && existingCards.length > 0
+      && container.querySelector('.spec-shift-btn')) {
     sourcePins.forEach(function(pin, idx) {
       var coordEl = document.getElementById('pinCoords_' + idx);
       if (coordEl) coordEl.textContent = (pin.lat !== null) ? pin.lat.toFixed(5) + ', ' + pin.lng.toFixed(5) : '';
@@ -17552,6 +17560,14 @@ function renderSourcePins() {
       pLabel.style.cssText = 'font-size:11px;color:#555;width:60px;flex-shrink:0;padding-top:4px;';
       pRow.appendChild(pLabel);
 
+      // Shift pill — shown when declared Lw differs from bands' A-weighted sum
+      var shiftPill = document.createElement('span');
+      shiftPill.style.cssText = 'display:none;';
+      var shiftBtn = document.createElement('button');
+      shiftBtn.type = 'button'; shiftBtn.className = 'spec-shift-btn';
+      shiftPill.appendChild(shiftBtn);
+      var bandInputs = []; // populated below alongside band <input> elements
+
       // Overall Lw input
       var lwInp = document.createElement('input');
       lwInp.type = 'number';
@@ -17564,6 +17580,17 @@ function renderSourcePins() {
         var v = parseFloat(this.value);
         if (!sourcePins[idx].lw) sourcePins[idx].lw = {};
         sourcePins[idx].lw[p.key] = Number.isFinite(v) ? v : null;
+        // Show "Apply spectrum shape" pill when Lw diverges from stored bands
+        var specA = sourcePins[idx].spectrum && sourcePins[idx].spectrum[p.key];
+        if (Number.isFinite(v) && specA && typeof SharedCalc !== 'undefined') {
+          var currentLwA = SharedCalc.energySumA(specA);
+          var delta = Number.isFinite(currentLwA) ? (v - currentLwA) : 0;
+          if (Math.abs(delta) > 0.1) {
+            shiftBtn.textContent = 'Apply spectrum shape (' + (delta >= 0 ? '+' : '') + delta.toFixed(1) + ' dB)';
+            shiftBtn.dataset.shiftDelta = delta;
+            shiftPill.style.display = '';
+          } else { shiftPill.style.display = 'none'; }
+        } else { shiftPill.style.display = 'none'; }
         if (typeof renderDebounced === 'function') renderDebounced();
       });
       pRow.appendChild(lwInp);
@@ -17637,12 +17664,32 @@ function renderSourcePins() {
           if (lwa !== null) {
             sourcePins[idx].lw[p.key] = Math.round(lwa * 10) / 10;
           }
+          // User editing bands directly — hide stale shift pill
+          shiftPill.style.display = 'none';
           if (typeof renderDebounced === 'function') renderDebounced();
         });
+        bandInputs.push(bandInp);
         bandWrap.appendChild(bandInp);
         specWrap.appendChild(bandWrap);
       });
       pRow.appendChild(specWrap);
+
+      // Attach shift-pill click handler now that bandInputs is fully populated
+      shiftBtn.addEventListener('click', function() {
+        var d = parseFloat(this.dataset.shiftDelta);
+        if (!Number.isFinite(d)) return;
+        var spec = sourcePins[idx].spectrum && sourcePins[idx].spectrum[p.key];
+        if (!spec) return;
+        for (var i = 0; i < 8; i++) {
+          if (Number.isFinite(spec[i])) {
+            spec[i] = Math.round((spec[i] + d) * 10) / 10;
+            if (bandInputs[i]) bandInputs[i].value = spec[i];
+          }
+        }
+        shiftPill.style.display = 'none';
+        if (typeof renderDebounced === 'function') renderDebounced();
+      });
+      pRow.appendChild(shiftPill);
 
       // Copy from Day button (for eve and night)
       if (p.key === 'eve' || p.key === 'night') {
@@ -17712,20 +17759,24 @@ function srcPanelPeriodSectionHTML(pin, period, periodLabel) {
   var lwVal = (pin.lw && pin.lw[period] !== undefined && pin.lw[period] !== null) ? pin.lw[period] : '';
   var spectrum = pin.spectrum[period] || {};
   var active = !pin.activeInPeriod || pin.activeInPeriod[period] !== false;
+  var isOverride = !(pin.spectrumOverride && pin.spectrumOverride[period] === false);
   var diffMark = srcPanelPeriodDiffersFromDay(pin, period) ? ' <span class="sfp-td-' + period + '" style="color:#c0392b;font-size:10px;">&#9679;</span>' : '';
 
   var bandsHTML = SFP_FREQS.map(function(f) {
     var v = '';
     if (Array.isArray(spectrum)) {
-      // legacy array format
       var idx = SFP_FREQS.indexOf(f);
       v = (spectrum[idx] !== null && spectrum[idx] !== undefined && Number.isFinite(spectrum[idx])) ? spectrum[idx] : '';
     } else if (spectrum && spectrum[f] !== undefined) {
       v = spectrum[f];
     }
+    var roAttr = isOverride ? '' : ' readonly';
+    var roStyle = isOverride
+      ? 'width:100%;box-sizing:border-box;text-align:center;padding:2px 0;font-size:11px;'
+      : 'width:100%;box-sizing:border-box;text-align:center;padding:2px 0;font-size:11px;background:#f5f5f5;color:#555;cursor:default;';
     return '<label style="display:flex;flex-direction:column;align-items:center;font-size:10px;gap:2px;">' +
       f + '<input type="number" class="sfp-band-' + period + '" data-freq="' + f + '" value="' + v + '" ' +
-      'style="width:100%;box-sizing:border-box;text-align:center;padding:2px 0;font-size:11px;" placeholder="\u2014"></label>';
+      'style="' + roStyle + '" placeholder="\u2014"' + roAttr + '></label>';
   }).join('');
 
   return '<div class="sfp-period-section src-period-card" data-period="' + period + '" style="' + (!active ? 'opacity:0.5;' : '') + '">' +
@@ -17735,9 +17786,10 @@ function srcPanelPeriodSectionHTML(pin, period, periodLabel) {
         '<input type="checkbox" class="sfp-active-' + period + '"' + (active ? ' checked' : '') + '> Active' +
       '</label>' +
     '</div>' +
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">' +
       '<label style="font-size:11px;white-space:nowrap;">Lw dB(A):</label>' +
       '<input type="number" class="sfp-lw-' + period + '" value="' + lwVal + '" style="width:64px;text-align:center;font-size:13px;">' +
+      '<span class="sfp-shift-pill-' + period + '" style="display:none;"><button type="button" class="spec-shift-btn sfp-shift-btn-' + period + '">Apply spectrum shape</button></span>' +
       '<label style="font-size:11px;white-space:nowrap;margin-left:4px;">Quantity: <input type="number" class="sfp-units-' + period + '" value="' + (_getNumUnits(pin, period)) + '" min="1" step="1" style="width:54px;text-align:center;font-size:12px;"></label>' +
     '</div>' +
     '<div style="margin-bottom:6px;">' +
@@ -17745,6 +17797,11 @@ function srcPanelPeriodSectionHTML(pin, period, periodLabel) {
     '</div>' +
     '<div class="src-band-sublabel">Octave band Lw (dB)</div>' +
     '<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:3px;">' + bandsHTML + '</div>' +
+    '<div style="margin-top:4px;">' +
+      '<label style="font-size:11px;cursor:pointer;color:#555;">' +
+        '<input type="checkbox" class="sfp-override-' + period + '"' + (isOverride ? ' checked' : '') + '> Manual spectrum override' +
+      '</label>' +
+    '</div>' +
   '</div>';
 }
 
@@ -18125,13 +18182,22 @@ function attachSrcPanelListeners(pin, pinIdx) {
       if (!pin._userEdited.night) { pin.lw.night  = lwVal; pin.spectrum.night = spec ? spec.slice() : null; }
       var ni = panel.querySelector('.sfp-name'); if (ni) ni.value = pin.name;
       var hi = panel.querySelector('.sfp-height'); if (hi) hi.value = pin.height_m;
+      // Lock spectrum to library shape; user must enable override to edit bands
+      if (!pin.spectrumOverride) pin.spectrumOverride = {};
       ['day', 'eve', 'night'].forEach(function(p) {
+        pin.spectrumOverride[p] = false;
         var lwEl2 = panel.querySelector('.sfp-lw-' + p); if (lwEl2) lwEl2.value = pin.lw[p] !== null && pin.lw[p] !== undefined ? pin.lw[p] : '';
+        var overrideCb = panel.querySelector('.sfp-override-' + p);
+        if (overrideCb) overrideCb.checked = false;
         panel.querySelectorAll('.sfp-band-' + p).forEach(function(inp) {
           var freq = inp.dataset.freq;
           var idx = ['63','125','250','500','1k','2k','4k','8k'].indexOf(freq);
           inp.value = (pin.spectrum[p] && idx >= 0 && pin.spectrum[p][idx] !== null && Number.isFinite(pin.spectrum[p][idx])) ? pin.spectrum[p][idx] : '';
+          inp.readOnly = true;
+          inp.style.background = '#f5f5f5'; inp.style.color = '#555'; inp.style.cursor = 'default';
         });
+        var pill4 = panel.querySelector('.sfp-shift-pill-' + p);
+        if (pill4) pill4.style.display = 'none';
       });
       if (typeof window._setSrcMarkerTitle === 'function') window._setSrcMarkerTitle(pinIdx, 'S' + (pinIdx + 1) + ' \u2014 ' + pin.name);
       updateSrcPanelPeriodDots(pin, panel);
@@ -18276,7 +18342,63 @@ function attachSrcPeriodListeners(pin, pinIdx, period, panel) {
       }
       _sfpUpdateTotalLw(pin, panel);
       updateSrcPanelPeriodDots(pin, panel);
+      // Show "Apply spectrum shape" pill when Lw diverges from stored bands
+      var specArr = pin.spectrum && pin.spectrum[period];
+      var shiftPill = panel.querySelector('.sfp-shift-pill-' + period);
+      var shiftBtn = panel.querySelector('.sfp-shift-btn-' + period);
+      if (shiftPill && Number.isFinite(newLw) && Array.isArray(specArr) && typeof SharedCalc !== 'undefined') {
+        var currentLwA = SharedCalc.energySumA(specArr);
+        var lwDelta = Number.isFinite(currentLwA) ? (newLw - currentLwA) : 0;
+        if (Math.abs(lwDelta) > 0.1) {
+          if (shiftBtn) {
+            shiftBtn.textContent = 'Apply spectrum shape (' + (lwDelta >= 0 ? '+' : '') + lwDelta.toFixed(1) + ' dB)';
+            shiftBtn.dataset.shiftDelta = lwDelta;
+          }
+          shiftPill.style.display = '';
+        } else { shiftPill.style.display = 'none'; }
+      } else if (shiftPill) { shiftPill.style.display = 'none'; }
       if (typeof window.updateAll === 'function') window.updateAll();
+    });
+  }
+
+  // Shift pill click handler \u2014 shift all 8 bands by delta, update DOM inputs
+  var sfpShiftBtn = panel.querySelector('.sfp-shift-btn-' + period);
+  if (sfpShiftBtn) {
+    sfpShiftBtn.addEventListener('click', function() {
+      var d = parseFloat(this.dataset.shiftDelta);
+      if (!Number.isFinite(d)) return;
+      var spec = pin.spectrum && pin.spectrum[period];
+      if (!Array.isArray(spec)) return;
+      for (var i = 0; i < 8; i++) {
+        if (Number.isFinite(spec[i])) {
+          spec[i] = Math.round((spec[i] + d) * 10) / 10;
+          var bandEl = panel.querySelector('.sfp-band-' + period + '[data-freq="' + SFP_FREQS[i] + '"]');
+          if (bandEl) bandEl.value = spec[i];
+        }
+      }
+      var pill = panel.querySelector('.sfp-shift-pill-' + period);
+      if (pill) pill.style.display = 'none';
+      if (typeof window.updateAll === 'function') window.updateAll();
+    });
+  }
+
+  // Manual spectrum override checkbox
+  var sfpOverrideCb = panel.querySelector('.sfp-override-' + period);
+  if (sfpOverrideCb) {
+    sfpOverrideCb.addEventListener('change', function() {
+      var on = this.checked;
+      if (!pin.spectrumOverride) pin.spectrumOverride = {};
+      pin.spectrumOverride[period] = on;
+      panel.querySelectorAll('.sfp-band-' + period).forEach(function(inp) {
+        inp.readOnly = !on;
+        inp.style.background = on ? '' : '#f5f5f5';
+        inp.style.color = on ? '' : '#555';
+        inp.style.cursor = on ? '' : 'default';
+      });
+      if (!on) {
+        var pill3 = panel.querySelector('.sfp-shift-pill-' + period);
+        if (pill3) pill3.style.display = 'none';
+      }
     });
   }
 
@@ -18312,6 +18434,9 @@ function attachSrcPeriodListeners(pin, pinIdx, period, panel) {
         if (!pin._userEdited) pin._userEdited = { eve: false, night: false };
         pin._userEdited[period] = true;
       }
+      // Band edited directly — hide stale shift pill
+      var pill2 = panel.querySelector('.sfp-shift-pill-' + period);
+      if (pill2) pill2.style.display = 'none';
       updateSrcPanelPeriodDots(pin, panel);
       if (typeof window.updateAll === 'function') window.updateAll();
     });
@@ -18378,7 +18503,7 @@ function openSrcPanel(pinIdx, clientX, clientY) {
   if (!pin.activeInPeriod.hasOwnProperty('lmax')) pin.activeInPeriod.lmax = false;
   var panel = document.createElement('div');
   panel.id = 'srcFloatPanel';
-  panel.style.cssText = 'position:fixed;width:360px;max-height:calc(100vh - 80px);overflow:hidden;display:flex;flex-direction:column;background:#fff;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,0.22);z-index:5000;font-size:13px;line-height:1.4;';
+  panel.style.cssText = 'position:fixed;width:400px;max-height:calc(100vh - 80px);overflow:hidden;display:flex;flex-direction:column;background:#fff;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,0.22);z-index:5000;font-size:13px;line-height:1.4;';
   panel.innerHTML = buildSrcPanelHTML(pin, pinIdx);
   document.body.appendChild(panel);
   _srcPanel = panel;
@@ -36778,6 +36903,7 @@ if (window.pdfjsLib) {
             '<label style="font-size:11px;white-space:nowrap;" id="asPanelLwLbl_' + pKey + '">' + lwLabel + ' ' +
               '<input type="number" id="asPanelLw_' + pKey + '" value="' + lwVal + '" step="0.1" style="width:62px;text-align:center;font-size:12px;">' +
             '</label>' +
+            '<span id="asShiftPill_' + pKey + '" style="display:none;"><button type="button" class="spec-shift-btn" id="asShiftBtn_' + pKey + '">Apply spectrum shape</button></span>' +
             '<label style="font-size:11px;white-space:nowrap;">Quantity: ' +
               '<input type="number" id="asPanelQty_' + pKey + '" value="' + qty + '" min="1" step="1" style="width:46px;text-align:center;font-size:12px;">' +
             '</label>' +
@@ -36818,7 +36944,7 @@ if (window.pdfjsLib) {
       var lwHdrStr  = _lwHdrVal !== null
         ? ' \u2014 ' + (lwMode === 'per_m2' ? 'Lw/m\u00b2 ' : 'Lw ') + (+_lwHdrVal).toFixed(1) + ' dB(A)' : '';
 
-      return '<div id="asFloatPanel" style="position:fixed;width:360px;background:#fff;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,0.22);z-index:5000;font-size:13px;line-height:1.4;max-height:calc(100vh - 80px);display:flex;flex-direction:column;overflow:hidden;">' +
+      return '<div id="asFloatPanel" style="position:fixed;width:400px;background:#fff;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,0.22);z-index:5000;font-size:13px;line-height:1.4;max-height:calc(100vh - 80px);display:flex;flex-direction:column;overflow:hidden;">' +
         '<div style="background:#fff;border-left:4px solid #d97706;border-radius:8px 8px 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;cursor:move;border-bottom:1px solid #f0f0f0;flex-shrink:0;" id="asPanelHeader">' +
           '<span style="font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;" id="asPanelTitle">' + escapeHTML((as.name || 'Area source') + lwHdrStr) + '</span>' +
           '<button id="asPanelClose" style="background:none;border:none;color:#bbb;font-size:18px;cursor:pointer;padding:0 4px;">&#x2715;</button>' +
@@ -37159,6 +37285,22 @@ if (window.pdfjsLib) {
             as._userEdited = as._userEdited || {};
             as._userEdited[pKey] = true;
           }
+          // Show shift pill whenever Lw diverges from stored spectrum (regardless of override state)
+          var asSpec = as.spectrum && as.spectrum[pKey];
+          var asShiftPill = document.getElementById('asShiftPill_' + pKey);
+          var asShiftBtn  = document.getElementById('asShiftBtn_' + pKey);
+          if (asShiftPill && asShiftBtn && Number.isFinite(storedLw) && asSpec && typeof SharedCalc !== 'undefined') {
+            var asSpecArr = [63,125,250,500,1000,2000,4000,8000].map(function(f) {
+              var sv = asSpec[f]; return (sv !== undefined && Number.isFinite(parseFloat(sv))) ? parseFloat(sv) : null;
+            });
+            var asCurrentLwA = asSpecArr.every(function(sv) { return sv !== null; }) ? SharedCalc.energySumA(asSpecArr) : null;
+            var asDelta = Number.isFinite(asCurrentLwA) ? (storedLw - asCurrentLwA) : 0;
+            if (Math.abs(asDelta) > 0.1) {
+              asShiftBtn.textContent = 'Apply spectrum shape (' + (asDelta >= 0 ? '+' : '') + asDelta.toFixed(1) + ' dB)';
+              asShiftBtn.dataset.shiftDelta = asDelta;
+              asShiftPill.style.display = '';
+            } else { asShiftPill.style.display = 'none'; }
+          } else if (asShiftPill) { asShiftPill.style.display = 'none'; }
           triggerRecompute();
         });
 
@@ -37203,7 +37345,31 @@ if (window.pdfjsLib) {
             as.spectrum = as.spectrum || {};
             as.spectrum[pKey] = as.spectrum[pKey] || {};
             as.spectrum[pKey][f] = parseFloat(this.value);
+            // Hide stale shift pill when bands are manually edited
+            var pill = document.getElementById('asShiftPill_' + pKey);
+            if (pill) pill.style.display = 'none';
           });
+        });
+
+        // Shift button click — apply uniform dB offset to all stored spectrum bands
+        var asShiftBtnEl = document.getElementById('asShiftBtn_' + pKey);
+        if (asShiftBtnEl) asShiftBtnEl.addEventListener('click', function() {
+          var d = parseFloat(this.dataset.shiftDelta);
+          if (!Number.isFinite(d)) return;
+          as.spectrum = as.spectrum || {};
+          as.spectrum[pKey] = as.spectrum[pKey] || {};
+          var asBands = [63,125,250,500,1000,2000,4000,8000];
+          asBands.forEach(function(f) {
+            var cur = as.spectrum[pKey][f];
+            if (Number.isFinite(parseFloat(cur))) {
+              as.spectrum[pKey][f] = Math.round((parseFloat(cur) + d) * 10) / 10;
+              var bEl = document.getElementById('asPanelBand_' + pKey + '_' + f);
+              if (bEl) bEl.value = as.spectrum[pKey][f];
+            }
+          });
+          var pill = document.getElementById('asShiftPill_' + pKey);
+          if (pill) pill.style.display = 'none';
+          triggerRecompute();
         });
       });
 
@@ -38268,7 +38434,17 @@ if (window.pdfjsLib) {
       return html;
     }
 
-    function _bsOctaveLpRow(prefix, lpOct) {
+    /** Compute A-weighted broadband Lp from an octave-band object {63:v,125:v,...} (Z-weighted dB).
+     *  Returns null if any band is missing. */
+    function _bsOctaveLpA(octaveObj) {
+      var arr = BS_OCTAVE_BANDS.map(function(b) {
+        return (octaveObj && octaveObj[b] != null && Number.isFinite(octaveObj[b])) ? octaveObj[b] : null;
+      });
+      if (arr.some(function(v) { return v === null; })) return null;
+      return (typeof SharedCalc !== 'undefined') ? SharedCalc.energySumA(arr) : null;
+    }
+
+    function _bsOctaveLpRow(prefix, lpOct, readOnly) {
       var bands = [63,125,250,500,1000,2000,4000,8000];
       var html = '<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px;margin-top:4px;">';
       bands.forEach(function(b) {
@@ -38277,7 +38453,9 @@ if (window.pdfjsLib) {
       });
       bands.forEach(function(b) {
         var val = lpOct && Number.isFinite(lpOct[b]) ? lpOct[b] : '';
-        html += '<input type="number" data-band="' + b + '" id="' + prefix + '_lp_' + b + '" value="' + val + '" style="width:100%;font-size:11px;text-align:center;border:1px solid #ddd;border-radius:3px;padding:1px 0;">';
+        var roAttr = readOnly ? ' readonly' : '';
+        var roStyle = readOnly ? 'background:#f5f5f5;color:#555;cursor:default;' : '';
+        html += '<input type="number" data-band="' + b + '" id="' + prefix + '_lp_' + b + '" value="' + val + '" style="width:100%;font-size:11px;text-align:center;border:1px solid #ddd;border-radius:3px;padding:1px 0;' + roStyle + '"' + roAttr + '>';
       });
       html += '</div>';
       return html;
@@ -38589,6 +38767,7 @@ if (window.pdfjsLib) {
         var intLp = (bs.interiorLp && bs.interiorLp[period]) || {broadband:null, octave:{}};
         var active = !bs.activeInPeriod || bs.activeInPeriod[period] !== false;
         var pct = (bs.operatingPct && Number.isFinite(bs.operatingPct[period])) ? bs.operatingPct[period] : 100;
+        var bsIsOverride = !(bs.spectrumOverride && bs.spectrumOverride[period] === false);
         h += '<div style="border:1px solid #e9d5ff;border-radius:6px;padding:8px;margin-bottom:8px;">';
         h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
         h += '<b style="font-size:12px;">' + label + '</b>';
@@ -38598,8 +38777,16 @@ if (window.pdfjsLib) {
         h += '<div style="margin-bottom:6px;">';
         h += '<label style="font-size:11px;">Op. %: <input type="number" id="bsPct_'+period+'" value="' + pct + '" min="0" max="100" style="width:50px;margin-left:4px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;font-size:12px;"></label>';
         h += '</div>';
+        var _lpA = _bsOctaveLpA(intLp.octave);
+        h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap;">';
+        h += '<label style="font-size:11px;white-space:nowrap;">Lp dB(A): <input type="number" id="bsTotalLp_'+period+'" value="'+(_lpA !== null ? _lpA.toFixed(1) : '')+'" step="0.1" style="width:65px;font-size:12px;border:1px solid #ddd;border-radius:3px;padding:2px 5px;margin-left:4px;" title="Total A-weighted interior Lp — derived from octave bands. Change to shift all bands proportionally."></label>';
+        h += '<span id="bsShiftPill_'+period+'" style="display:none;"><button type="button" class="spec-shift-btn" id="bsShiftBtn_'+period+'">Apply spectrum shape</button></span>';
+        h += '</div>';
         h += '<div style="font-size:11px;color:#6b7280;font-weight:600;margin-bottom:3px;">Octave band Lp (dB)</div>';
-        h += _bsOctaveLpRow('bs_' + period, intLp.octave);
+        h += _bsOctaveLpRow('bs_' + period, intLp.octave, !bsIsOverride);
+        h += '<div style="margin-top:4px;">';
+        h += '<label style="font-size:11px;cursor:pointer;color:#555;"><input type="checkbox" id="bsOverride_'+period+'"' + (bsIsOverride?' checked':'') + '> Manual spectrum override</label>';
+        h += '</div>';
         h += '</div>';
       });
 
@@ -39246,6 +39433,25 @@ if (window.pdfjsLib) {
               if (inp) inp.value = (val !== null && val !== undefined) ? val : '';
             });
             if (Number.isFinite(entry.lp_dba)) bs.interiorLp[p].broadband = entry.lp_dba;
+            // Sync the Lp dB(A) total field with the library's declared Lp
+            var lpDisplay = Number.isFinite(entry.lp_dba) ? entry.lp_dba : _bsOctaveLpA(bs.interiorLp[p].octave);
+            var lpEl = document.getElementById('bsTotalLp_' + p);
+            if (lpEl) lpEl.value = lpDisplay !== null ? lpDisplay.toFixed(1) : '';
+            // Hide any stale shift pill
+            var pill = document.getElementById('bsShiftPill_' + p);
+            if (pill) pill.style.display = 'none';
+            // Lock spectrum to library shape
+            if (!bs.spectrumOverride) bs.spectrumOverride = {};
+            bs.spectrumOverride[p] = false;
+            var bsOvCb = document.getElementById('bsOverride_' + p);
+            if (bsOvCb) bsOvCb.checked = false;
+            BS_OCTAVE_BANDS.forEach(function(bnd) {
+              var bndInp = document.getElementById('bs_' + p + '_lp_' + bnd);
+              if (bndInp) {
+                bndInp.readOnly = true;
+                bndInp.style.background = '#f5f5f5'; bndInp.style.color = '#555'; bndInp.style.cursor = 'default';
+              }
+            });
           });
           bs.lpLibraryEntry = entry.name;
           _bsRefreshDerived();
@@ -39340,9 +39546,75 @@ if (window.pdfjsLib) {
               bs.interiorLp[period].octave[b] = null;
               this.style.borderColor = '';
             }
+            // Sync the Lp dB(A) total display and clear stale shift pill
+            var lpA = _bsOctaveLpA(bs.interiorLp[period].octave);
+            var lpEl = document.getElementById('bsTotalLp_' + period);
+            if (lpEl) lpEl.value = lpA !== null ? lpA.toFixed(1) : '';
+            var pill = document.getElementById('bsShiftPill_' + period);
+            if (pill) pill.style.display = 'none';
             _bsRefreshDerived(); if (typeof render === 'function') render();
           });
         });
+
+        // Lp dB(A) total input — shows shift pill when level differs from bands
+        var lpTotalInp = document.getElementById('bsTotalLp_' + period);
+        if (lpTotalInp) lpTotalInp.addEventListener('input', function() {
+          var newLp = parseFloat(this.value);
+          var currentLpA = _bsOctaveLpA(bs.interiorLp[period].octave);
+          var delta = (Number.isFinite(newLp) && Number.isFinite(currentLpA)) ? (newLp - currentLpA) : 0;
+          var pill = document.getElementById('bsShiftPill_' + period);
+          var btn  = document.getElementById('bsShiftBtn_' + period);
+          if (pill && btn && Math.abs(delta) > 0.1) {
+            btn.textContent = 'Apply spectrum shape (' + (delta >= 0 ? '+' : '') + delta.toFixed(1) + ' dB)';
+            btn.dataset.shiftDelta = delta;
+            pill.style.display = '';
+          } else if (pill) { pill.style.display = 'none'; }
+        });
+
+        // Shift button click — apply uniform dB offset to all bands
+        var shiftBtnEl = document.getElementById('bsShiftBtn_' + period);
+        if (shiftBtnEl) shiftBtnEl.addEventListener('click', function() {
+          var d = parseFloat(this.dataset.shiftDelta);
+          if (!Number.isFinite(d)) return;
+          if (!bs.interiorLp[period].octave) return;
+          BS_OCTAVE_BANDS.forEach(function(bnd) {
+            if (bs.interiorLp[period].octave[bnd] != null) {
+              bs.interiorLp[period].octave[bnd] = Math.round((bs.interiorLp[period].octave[bnd] + d) * 10) / 10;
+              var inp2 = document.getElementById('bs_' + period + '_lp_' + bnd);
+              if (inp2) inp2.value = bs.interiorLp[period].octave[bnd];
+            }
+          });
+          // Update total display and hide pill
+          var lpA2 = _bsOctaveLpA(bs.interiorLp[period].octave);
+          var lpEl2 = document.getElementById('bsTotalLp_' + period);
+          if (lpEl2) lpEl2.value = lpA2 !== null ? lpA2.toFixed(1) : '';
+          var pill2 = document.getElementById('bsShiftPill_' + period);
+          if (pill2) pill2.style.display = 'none';
+          _bsRefreshDerived(); if (typeof render === 'function') render();
+        });
+
+        // Manual spectrum override checkbox — toggles band readonly state
+        var bsOverrideCb = document.getElementById('bsOverride_' + period);
+        if (bsOverrideCb) {
+          bsOverrideCb.addEventListener('change', function() {
+            var on = this.checked;
+            if (!bs.spectrumOverride) bs.spectrumOverride = {};
+            bs.spectrumOverride[period] = !on; // false = override ON (editable)
+            BS_OCTAVE_BANDS.forEach(function(bnd) {
+              var inp3 = document.getElementById('bs_' + period + '_lp_' + bnd);
+              if (inp3) {
+                inp3.readOnly = !on;
+                inp3.style.background = on ? '' : '#f5f5f5';
+                inp3.style.color = on ? '' : '#555';
+                inp3.style.cursor = on ? '' : 'default';
+              }
+            });
+            if (!on) {
+              var pillOv = document.getElementById('bsShiftPill_' + period);
+              if (pillOv) pillOv.style.display = 'none';
+            }
+          });
+        }
       });
 
       // ── Default wall construction ─────────────────────────────────────────
@@ -39701,18 +39973,22 @@ if (window.pdfjsLib) {
       function periodBlock(pKey, pLabel) {
         var mvt = (ls.movements && ls.movements[pKey]) || { N:1, speed:10, operatingPct:100 };
         var active = ls.activeInPeriod ? ls.activeInPeriod[pKey] !== false : true;
-        var calcLwm = _lsGetEffectiveLwm(ls, pKey);
-        var calcStr = Number.isFinite(calcLwm) ? calcLwm.toFixed(1) : '—';
-        var isOverride = ls.manualOverride && ls.manualOverride[pKey];
-        var manLwm = ls.manualLwm && Number.isFinite(ls.manualLwm[pKey]) ? ls.manualLwm[pKey] : '';
+        var isSpecOverride = ls.spectrumOverride && ls.spectrumOverride[pKey];
+        var hasManualLwm = ls.manualOverride && ls.manualOverride[pKey] && ls.manualLwm && Number.isFinite(ls.manualLwm[pKey]);
+        var formulaLwm = (function() {
+          var base = ls.lw_m_base && ls.lw_m_base[pKey];
+          if (!Number.isFinite(base)) return null;
+          return _lsCalcLwmAdj(base, mvt.N || 1, mvt.speed || 10, mvt.operatingPct || 100);
+        })();
+        var lwmDisplayVal = hasManualLwm ? ls.manualLwm[pKey] : (Number.isFinite(formulaLwm) ? formulaLwm.toFixed(1) : '');
+        var hintStr = (hasManualLwm && Number.isFinite(formulaLwm)) ? 'Library formula: ' + formulaLwm.toFixed(1) + ' dB(A)' : '';
         var ms = ls.manualSpectrum && ls.manualSpectrum[pKey] ? ls.manualSpectrum[pKey] : {};
         var baseSpectrum = ls.spectrum_m_base && ls.spectrum_m_base[pKey] ? ls.spectrum_m_base[pKey] : null;
         var bands = [63,125,250,500,1000,2000,4000,8000];
         var bandLabels = ['63','125','250','500','1k','2k','4k','8k'];
-        // 8-column compact grid — always visible; readonly when not in manual override
         var bandInputs = bands.map(function(f, i) {
           var val, roAttr, roStyle;
-          if (isOverride) {
+          if (isSpecOverride) {
             val = ms[f] !== undefined ? ms[f] : '';
             roAttr = '';
             roStyle = 'width:100%;box-sizing:border-box;text-align:center;padding:2px 0;font-size:11px;';
@@ -39723,7 +39999,7 @@ if (window.pdfjsLib) {
           }
           return '<label style="display:flex;flex-direction:column;align-items:center;font-size:10px;gap:2px;">' +
             bandLabels[i] +
-            '<input type="number" id="lsPanelBand_' + pKey + '_' + f + '" value="' + val + '" step="0.5" style="' + roStyle + '" placeholder="\u2014"' + roAttr + '>' +
+            '<input type="number" id="lsPanelBand_' + pKey + '_' + f + '" value="' + val + '" step="0.5" style="' + roStyle + '" placeholder="—"' + roAttr + '>' +
             '</label>';
         }).join('');
         return '<div class="ls-period-section src-period-card" data-period="' + pKey + '" style="' + (!active ? 'opacity:0.5;' : '') + '">' +
@@ -39733,6 +40009,11 @@ if (window.pdfjsLib) {
               '<input type="checkbox" id="lsPanelActive_' + pKey + '"' + (active ? ' checked' : '') + '> Active' +
             '</label>' +
           '</div>' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap;">' +
+            '<label style="font-size:11px;white-space:nowrap;">Lw/m dB(A): <input type="number" id="lsPanelLwm_' + pKey + '" value="' + lwmDisplayVal + '" step="0.1" style="width:70px;text-align:center;font-size:12px;border:1px solid #ddd;border-radius:3px;padding:2px 5px;"></label>' +
+            '<span id="lsShiftPill_' + pKey + '" style="display:none;"><button type="button" class="spec-shift-btn" id="lsShiftBtn_' + pKey + '">Apply spectrum shape</button></span>' +
+          '</div>' +
+          '<div id="lsCalcHint_' + pKey + '" style="font-size:11px;color:#6b7280;margin-bottom:4px;' + (hintStr ? '' : 'display:none;') + '">' + hintStr + '</div>' +
           '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
             '<label style="font-size:11px;white-space:nowrap;">Quantity: <input type="number" id="lsPanelN_' + pKey + '" value="' + (mvt.N || 1) + '" min="1" step="1" style="width:46px;text-align:center;font-size:12px;"></label>' +
             '<label style="font-size:11px;white-space:nowrap;margin-left:4px;">Speed (km/h): <input type="number" id="lsPanelSpeed_' + pKey + '" value="' + (mvt.speed || 10) + '" min="1" step="1" style="width:50px;text-align:center;font-size:12px;"></label>' +
@@ -39741,19 +40022,10 @@ if (window.pdfjsLib) {
             '<label style="font-size:11px;white-space:nowrap;">Op. %: <input type="number" id="lsPanelPct_' + pKey + '" value="' + (mvt.operatingPct || 100) + '" min="1" max="100" step="1" style="width:52px;text-align:center;font-size:12px;"></label>' +
           '</div>' +
           '<div class="src-band-sublabel">Octave band Lw/m (dB)</div>' +
-          '<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin-bottom:4px;">' + bandInputs + '</div>' +
-          '<div style="text-align:right;margin-bottom:4px;font-size:12px;color:#555;">Calculated Lw/m: <b id="lsPanelCalcLwm_' + pKey + '">' + calcStr + '</b> dB(A)</div>' +
-          '<div>' +
-            '<label style="font-size:11px;cursor:pointer;"><input type="checkbox" id="lsPanelOverride_' + pKey + '"' + (isOverride ? ' checked' : '') + '> Manual Lw/m override</label>' +
-            '<div id="lsPanelOverrideSection_' + pKey + '" style="display:' + (isOverride ? 'block' : 'none') + ';margin-top:6px;">' +
-              '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
-                '<label style="font-size:11px;white-space:nowrap;">Lw/m dB(A): <input type="number" id="lsPanelManLwm_' + pKey + '" value="' + manLwm + '" step="0.1" style="width:70px;text-align:center;font-size:12px;"></label>' +
-              '</div>' +
-            '</div>' +
-          '</div>' +
+          '<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin-bottom:6px;">' + bandInputs + '</div>' +
+          '<label style="font-size:11px;cursor:pointer;"><input type="checkbox" id="lsPanelSpecOverride_' + pKey + '"' + (isSpecOverride ? ' checked' : '') + '> Manual spectrum override</label>' +
         '</div>';
       }
-
       var totalLenM = Math.round(lsLen);
       // Build initial multi-period Total Lw HTML
       var _lsLbls = { day: 'Day', eve: 'Eve', night: 'Night' };
@@ -39771,7 +40043,7 @@ if (window.pdfjsLib) {
 
       var lsDayLwm = _lsGetEffectiveLwm(ls, 'day');
       var lsHeaderLwStr = Number.isFinite(lsDayLwm) ? ' \u2014 Lw/m ' + lsDayLwm.toFixed(1) + ' dB(A)' : '';
-      return '<div id="lsFloatPanel" style="position:fixed;width:360px;background:#fff;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,0.22);z-index:5000;font-size:13px;line-height:1.4;max-height:calc(100vh - 80px);display:flex;flex-direction:column;overflow:hidden;">' +
+      return '<div id="lsFloatPanel" style="position:fixed;width:400px;background:#fff;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,0.22);z-index:5000;font-size:13px;line-height:1.4;max-height:calc(100vh - 80px);display:flex;flex-direction:column;overflow:hidden;">' +
         '<div style="background:#fff;border-left:4px solid #d32f2f;border-radius:8px 8px 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;cursor:move;border-bottom:1px solid #f0f0f0;flex-shrink:0;" id="lsPanelHeader">' +
           '<span style="font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;" id="lsPanelTitle">' + escapeHTML((ls.name || 'Line source') + lsHeaderLwStr) + '</span>' +
           '<button id="lsPanelClose" style="background:none;border:none;color:#bbb;font-size:18px;cursor:pointer;padding:0 4px;">&#x2715;</button>' +
@@ -39838,9 +40110,22 @@ if (window.pdfjsLib) {
 
     function _lsPanelUpdateCalc(ls) {
       ['day','eve','night'].forEach(function(p) {
-        var lwm = _lsGetEffectiveLwm(ls, p);
-        var el = document.getElementById('lsPanelCalcLwm_' + p);
-        if (el) el.textContent = Number.isFinite(lwm) ? lwm.toFixed(1) : '—';
+        var isLwOv = ls.manualOverride && ls.manualOverride[p];
+        var el = document.getElementById('lsPanelLwm_' + p);
+        if (el && !isLwOv) {
+          var lwm = _lsGetEffectiveLwm(ls, p);
+          el.value = Number.isFinite(lwm) ? lwm.toFixed(1) : '';
+        }
+        var hintEl3 = document.getElementById('lsCalcHint_' + p);
+        if (hintEl3) {
+          var mvtH3 = ls.movements && ls.movements[p] || { N:1, speed:10, operatingPct:100 };
+          var baseH3 = ls.lw_m_base && ls.lw_m_base[p];
+          var formulaH3 = Number.isFinite(baseH3) ? _lsCalcLwmAdj(baseH3, mvtH3.N||1, mvtH3.speed||10, mvtH3.operatingPct||100) : null;
+          if (isLwOv && Number.isFinite(formulaH3)) {
+            hintEl3.textContent = 'Library formula: ' + formulaH3.toFixed(1) + ' dB(A)';
+            hintEl3.style.display = '';
+          } else { hintEl3.style.display = 'none'; }
+        }
       });
       var lsLen = _lsTotalLength(ls.vertices);
       var tlEl = document.getElementById('lsPanelTotalLw');
@@ -39924,11 +40209,45 @@ if (window.pdfjsLib) {
             }
             renderLineSourceLayer();
           }
+          var lsBands = [63,125,250,500,1000,2000,4000,8000];
           ['day','eve','night'].forEach(function(p) {
             if (!ls.lw_m_base) ls.lw_m_base = {};
             ls.lw_m_base[p] = entry.lw_m_dba;
             if (!ls.spectrum_m_base) ls.spectrum_m_base = {};
-            ls.spectrum_m_base[p] = entry.spectrum_m;
+            // spectrum_m_base is array-indexed; entry.spectrum_m is freq-keyed object — convert
+            ls.spectrum_m_base[p] = entry.spectrum_m
+              ? lsBands.map(function(f) { return entry.spectrum_m[f] !== undefined ? entry.spectrum_m[f] : null; })
+              : null;
+            // Always update band inputs to library spectrum (override cleared below)
+            if (entry.spectrum_m) {
+              lsBands.forEach(function(f, i) {
+                var inp = document.getElementById('lsPanelBand_' + p + '_' + f);
+                if (inp) {
+                  inp.value = (entry.spectrum_m[f] !== undefined && entry.spectrum_m[f] !== null) ? entry.spectrum_m[f] : '';
+                  inp.readOnly = true;
+                  inp.style.background = '#f5f5f5';
+                  inp.style.color = '#555';
+                  inp.style.cursor = 'default';
+                }
+              });
+            }
+            // Clear manual Lw/m override — revert to library formula
+            if (!ls.manualOverride) ls.manualOverride = {};
+            if (!ls.manualLwm) ls.manualLwm = {};
+            ls.manualOverride[p] = false;
+            ls.manualLwm[p] = null;
+            if (!ls.movements) ls.movements = {};
+            var newLwm = _lsGetEffectiveLwm(ls, p);
+            var lwmEl = document.getElementById('lsPanelLwm_' + p);
+            if (lwmEl) lwmEl.value = Number.isFinite(newLwm) ? newLwm.toFixed(1) : '';
+            var hintEl4 = document.getElementById('lsCalcHint_' + p);
+            if (hintEl4) hintEl4.style.display = 'none';
+            if (!ls.spectrumOverride) ls.spectrumOverride = {};
+            ls.spectrumOverride[p] = false;
+            var spOvCb2 = document.getElementById('lsPanelSpecOverride_' + p);
+            if (spOvCb2) spOvCb2.checked = false;
+            var pill2 = document.getElementById('lsShiftPill_' + p);
+            if (pill2) pill2.style.display = 'none';
           });
           ls.height_m = entry.height_m;
           var htEl = document.getElementById('lsPanelHeight');
@@ -40070,9 +40389,8 @@ if (window.pdfjsLib) {
         var nInp = document.getElementById('lsPanelN_' + p);
         var speedInp = document.getElementById('lsPanelSpeed_' + p);
         var pctInp = document.getElementById('lsPanelPct_' + p);
-        var overrideChk = document.getElementById('lsPanelOverride_' + p);
-        var overrideSec = document.getElementById('lsPanelOverrideSection_' + p);
-        var manLwmInp = document.getElementById('lsPanelManLwm_' + p);
+        var specOverrideChk = document.getElementById('lsPanelSpecOverride_' + p);
+        var lwmInp = document.getElementById('lsPanelLwm_' + p);
 
         function readMovements() {
           if (!ls.movements) ls.movements = { day:{N:1,speed:10,operatingPct:100}, eve:{N:1,speed:10,operatingPct:100}, night:{N:1,speed:10,operatingPct:100} };
@@ -40109,6 +40427,25 @@ if (window.pdfjsLib) {
             if (!ls._userEdited) ls._userEdited = { eve: false, night: false };
             ls._userEdited[p] = true;
           }
+          // Update displayed Lw/m fields and library formula hints
+          ['day','eve','night'].forEach(function(pp) {
+            var isLwOv2 = ls.manualOverride && ls.manualOverride[pp];
+            var lwmEl2 = document.getElementById('lsPanelLwm_' + pp);
+            if (lwmEl2 && !isLwOv2) {
+              var lwmVal = _lsGetEffectiveLwm(ls, pp);
+              lwmEl2.value = Number.isFinite(lwmVal) ? lwmVal.toFixed(1) : '';
+            }
+            var hintEl2 = document.getElementById('lsCalcHint_' + pp);
+            if (hintEl2) {
+              var mvtH2 = ls.movements && ls.movements[pp] || { N:1, speed:10, operatingPct:100 };
+              var baseH2 = ls.lw_m_base && ls.lw_m_base[pp];
+              var formulaH2 = Number.isFinite(baseH2) ? _lsCalcLwmAdj(baseH2, mvtH2.N||1, mvtH2.speed||10, mvtH2.operatingPct||100) : null;
+              if (isLwOv2 && Number.isFinite(formulaH2)) {
+                hintEl2.textContent = 'Library formula: ' + formulaH2.toFixed(1) + ' dB(A)';
+                hintEl2.style.display = '';
+              } else { hintEl2.style.display = 'none'; }
+            }
+          });
         }
 
         if (activeChk) activeChk.addEventListener('change', function() {
@@ -40121,23 +40458,22 @@ if (window.pdfjsLib) {
         if (speedInp) speedInp.addEventListener('input', function() { readMovements(); triggerRecompute(); });
         if (pctInp) pctInp.addEventListener('input', function() { readMovements(); triggerRecompute(); });
 
-        if (overrideChk) overrideChk.addEventListener('change', function() {
-          if (!ls.manualOverride) ls.manualOverride = { day:false, eve:false, night:false };
-          ls.manualOverride[p] = this.checked;
-          if (overrideSec) overrideSec.style.display = this.checked ? 'block' : 'none';
-          // Toggle spectrum band inputs between readonly (adjusted) and editable (manual)
+        // Manual spectrum override checkbox — toggles editability of octave band inputs
+        if (specOverrideChk) specOverrideChk.addEventListener('change', function() {
+          if (!ls.spectrumOverride) ls.spectrumOverride = {};
+          ls.spectrumOverride[p] = this.checked;
           var bandFreqs = [63,125,250,500,1000,2000,4000,8000];
           var baseSpec = ls.spectrum_m_base && ls.spectrum_m_base[p] ? ls.spectrum_m_base[p] : null;
           var manSpec = ls.manualSpectrum && ls.manualSpectrum[p] ? ls.manualSpectrum[p] : {};
           bandFreqs.forEach(function(f, i) {
             var bEl = document.getElementById('lsPanelBand_' + p + '_' + f);
             if (!bEl) return;
-            if (overrideChk.checked) {
+            if (specOverrideChk.checked) {
               bEl.readOnly = false;
               bEl.style.background = '';
               bEl.style.color = '';
               bEl.style.cursor = '';
-              bEl.value = manSpec[f] !== undefined ? manSpec[f] : '';
+              bEl.value = manSpec[f] !== undefined ? manSpec[f] : (baseSpec && baseSpec[i] !== undefined ? baseSpec[i] : '');
             } else {
               bEl.readOnly = true;
               bEl.style.background = '#f5f5f5';
@@ -40149,10 +40485,54 @@ if (window.pdfjsLib) {
           triggerRecompute();
         });
 
-        if (manLwmInp) manLwmInp.addEventListener('input', function() {
-          if (!ls.manualLwm) ls.manualLwm = { day:null, eve:null, night:null };
+        // Lw/m input — always active; sets manual override when user types a value, clears when blank
+        if (lwmInp) lwmInp.addEventListener('input', function() {
+          if (!ls.manualLwm) ls.manualLwm = {};
+          if (!ls.manualOverride) ls.manualOverride = {};
           var v = parseFloat(this.value);
-          ls.manualLwm[p] = Number.isFinite(v) ? v : null;
+          if (Number.isFinite(v)) {
+            ls.manualLwm[p] = v;
+            ls.manualOverride[p] = true;
+          } else {
+            ls.manualLwm[p] = null;
+            ls.manualOverride[p] = false;
+            var calcV = _lsGetEffectiveLwm(ls, p);
+            this.value = Number.isFinite(calcV) ? calcV.toFixed(1) : '';
+          }
+          // Update library formula hint
+          var hintEl = document.getElementById('lsCalcHint_' + p);
+          if (hintEl) {
+            var mvtH = ls.movements && ls.movements[p] || { N:1, speed:10, operatingPct:100 };
+            var baseH = ls.lw_m_base && ls.lw_m_base[p];
+            var formulaH = Number.isFinite(baseH) ? _lsCalcLwmAdj(baseH, mvtH.N||1, mvtH.speed||10, mvtH.operatingPct||100) : null;
+            if (ls.manualOverride[p] && Number.isFinite(formulaH)) {
+              hintEl.textContent = 'Library formula: ' + formulaH.toFixed(1) + ' dB(A)';
+              hintEl.style.display = '';
+            } else { hintEl.style.display = 'none'; }
+          }
+          // Show shift pill when Lw/m diverges from stored spectrum
+          var lsShiftPill = document.getElementById('lsShiftPill_' + p);
+          var lsShiftBtn  = document.getElementById('lsShiftBtn_' + p);
+          if (lsShiftPill && lsShiftBtn && ls.manualOverride[p] && Number.isFinite(v) && typeof SharedCalc !== 'undefined') {
+            var bandFreqs2 = [63,125,250,500,1000,2000,4000,8000];
+            var lsSpecArr = bandFreqs2.map(function(f, i) {
+              var ms2 = ls.manualSpectrum && ls.manualSpectrum[p];
+              var bs2 = ls.spectrum_m_base && ls.spectrum_m_base[p];
+              var bv = (ms2 && ms2[f] !== undefined && Number.isFinite(ms2[f])) ? ms2[f]
+                     : (bs2 && bs2[i] !== undefined && Number.isFinite(bs2[i])) ? bs2[i] : null;
+              return bv;
+            });
+            // Add movement adjustment so the A-weighted band sum is comparable to the effective Lw/m
+            var mvt2 = ls.movements && ls.movements[p] || { N:1, speed:10, operatingPct:100 };
+            var movAdj2 = _lsCalcLwmAdj(0, mvt2.N||1, mvt2.speed||10, mvt2.operatingPct||100);
+            var lsCurrentLwA = lsSpecArr.every(function(sv) { return sv !== null; }) ? (SharedCalc.energySumA(lsSpecArr) + movAdj2) : null;
+            var lsDelta = Number.isFinite(lsCurrentLwA) ? (v - lsCurrentLwA) : 0;
+            if (Math.abs(lsDelta) > 0.1) {
+              lsShiftBtn.textContent = 'Apply spectrum shape (' + (lsDelta >= 0 ? '+' : '') + lsDelta.toFixed(1) + ' dB)';
+              lsShiftBtn.dataset.shiftDelta = lsDelta;
+              lsShiftPill.style.display = '';
+            } else { lsShiftPill.style.display = 'none'; }
+          } else if (lsShiftPill) { lsShiftPill.style.display = 'none'; }
           triggerRecompute();
         });
 
@@ -40164,8 +40544,44 @@ if (window.pdfjsLib) {
             if (!ls.manualSpectrum[p]) ls.manualSpectrum[p] = {};
             var v = parseFloat(this.value);
             ls.manualSpectrum[p][f] = Number.isFinite(v) ? v : 0;
+            // Hide stale shift pill when bands are manually edited
+            var pill = document.getElementById('lsShiftPill_' + p);
+            if (pill) pill.style.display = 'none';
             triggerRecompute();
           });
+        });
+
+        // Shift button click — shift displayed bands by delta, enable spectrum override
+        var lsShiftBtnEl = document.getElementById('lsShiftBtn_' + p);
+        if (lsShiftBtnEl) lsShiftBtnEl.addEventListener('click', function() {
+          var d = parseFloat(this.dataset.shiftDelta);
+          if (!Number.isFinite(d)) return;
+          if (!ls.manualSpectrum) ls.manualSpectrum = { day:{}, eve:{}, night:{} };
+          if (!ls.manualSpectrum[p]) ls.manualSpectrum[p] = {};
+          var baseSpec = ls.spectrum_m_base && ls.spectrum_m_base[p] ? ls.spectrum_m_base[p] : null;
+          [63,125,250,500,1000,2000,4000,8000].forEach(function(f, i) {
+            var cur = ls.manualSpectrum[p][f];
+            if (cur === undefined || !Number.isFinite(cur)) {
+              cur = (baseSpec && baseSpec[i] !== undefined && Number.isFinite(baseSpec[i])) ? baseSpec[i] : null;
+            }
+            if (cur !== null) {
+              ls.manualSpectrum[p][f] = Math.round((cur + d) * 10) / 10;
+              var bEl = document.getElementById('lsPanelBand_' + p + '_' + f);
+              if (bEl) bEl.value = ls.manualSpectrum[p][f];
+            }
+          });
+          // Enable spectrum override so shifted bands are shown as editable
+          if (!ls.spectrumOverride) ls.spectrumOverride = {};
+          ls.spectrumOverride[p] = true;
+          var spOvCb = document.getElementById('lsPanelSpecOverride_' + p);
+          if (spOvCb) spOvCb.checked = true;
+          [63,125,250,500,1000,2000,4000,8000].forEach(function(f) {
+            var bEl = document.getElementById('lsPanelBand_' + p + '_' + f);
+            if (bEl) { bEl.readOnly = false; bEl.style.background = ''; bEl.style.color = ''; bEl.style.cursor = ''; }
+          });
+          var pill = document.getElementById('lsShiftPill_' + p);
+          if (pill) pill.style.display = 'none';
+          triggerRecompute();
         });
       });
 

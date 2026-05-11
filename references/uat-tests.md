@@ -1,5 +1,44 @@
 # UAT Tests
 
+## Apply spectrum shape pill
+
+### Point source
+
+1. Open Source Data → Point source. Add a pin. From the Library dropdown select "People per person, raised voice — Lw 74 dB(A)". **Expected:** Lw field shows 74; 8 band inputs populate.
+2. Change Lw to 84. **Expected:** pill "Apply spectrum shape (+9.8 dB)" appears.
+3. Click the pill. **Expected:** all 8 band inputs increase by 9.8 dB; pill disappears; A-weighted sum of bands ≈ 84 dB(A).
+4. Manually edit any band value. **Expected:** pill is hidden (if visible).
+5. Re-select a library entry. **Expected:** pill is hidden; bands reset to library values at library Lw.
+
+### Building source
+
+6. Draw a building source. Open its panel. Select a library entry (e.g. Warehouse). **Expected:** "Lp dB(A)" field shows the A-weighted sum of the loaded bands (e.g. ~80.7).
+7. Change the Lp dB(A) field to 90.7. **Expected:** pill "Apply spectrum shape (+10.0 dB)" appears.
+8. Click the pill. **Expected:** all 8 band inputs increase by 10 dB; pill disappears; Lp dB(A) field still shows 90.7.
+9. Manually edit an individual band input. **Expected:** Lp dB(A) field updates to new A-weighted sum; pill hides.
+
+### Area source (manual override)
+
+10. Draw an area source. Load a library entry. Enable manual override. Change the Lw/m² value. **Expected:** pill appears.
+11. Click the pill. **Expected:** all 8 area band inputs shift by the delta; pill disappears.
+12. With manual override OFF, change Lw/m². **Expected:** pill does NOT appear (engine normalises silently).
+
+### Line source — restructured panel layout
+
+13. Draw a line source. Load a library entry. **Expected:** Lw/m dB(A) field appears at the top of each period (read-only, grey background); octave bands show library spectrum (read-only); "Manual Lw/m override" and "Manual spectrum override" checkboxes appear at bottom.
+14. Check "Manual Lw/m override". **Expected:** Lw/m field becomes white/editable. Change the value. **Expected:** pill "Apply spectrum shape (±X.X dB)" appears.
+15. Click the pill. **Expected:** all 8 band inputs shift by the delta; "Manual spectrum override" is checked automatically; band inputs become editable; pill disappears.
+16. Uncheck "Manual Lw/m override". **Expected:** Lw/m field reverts to calculated value (read-only, grey); pill is hidden.
+17. Change Quantity/Speed/Op%. **Expected:** the Lw/m display updates automatically in each period not in manual override.
+18. Check "Manual spectrum override" without Lw/m override. **Expected:** band inputs become editable independently; Lw/m field remains read-only.
+19. Load a different library entry. **Expected:** Lw/m field updates; bands update; "Manual spectrum override" unchecked; pill hidden.
+
+### No SoundPLAN re-run needed (UX-only)
+
+- These changes do not affect propagation formulas — no SoundPLAN benchmark re-run required.
+
+---
+
 ## RHS panel chrome
 
 ### Dark header / dynamic title
