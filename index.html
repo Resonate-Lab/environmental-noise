@@ -21872,6 +21872,9 @@ function render() {
   if (tbNight) tbNight.innerHTML = '';
   if (tbLmax)  tbLmax.innerHTML  = '';
 
+  // Reset per-receiver floor label tracking (used by updateReceiverLpLabels)
+  window._recvFloorLabelData = {};
+
   recs.forEach((rec, i) => {
     const keyText = rKeys[i] || '';
     const nameInput = document.getElementById(`recvName${i+1}`);
@@ -22010,6 +22013,20 @@ function render() {
         pEve   = (_rEve   !== '' && _rEve   != null) ? _rEve   + (rp.eve   || 0) : _rEve;
         pNight = (_rNight !== '' && _rNight != null) ? _rNight + (rp.night || 0) : _rNight;
         pLmax  = _rLmax;
+      }
+
+      // Track highest predicted level across all floors for the map pin label
+      if (_isMulti) {
+        var _floorVals = [pDay, pEve, pNight].filter(function(v) {
+          return v !== '' && v != null && Number.isFinite(Number(v));
+        }).map(Number);
+        if (_floorVals.length > 0) {
+          var _floorMax = Math.max.apply(null, _floorVals);
+          var _existing = window._recvFloorLabelData[_floorKey];
+          if (!_existing || _floorMax > _existing.maxVal) {
+            window._recvFloorLabelData[_floorKey] = { label: floor.label, maxVal: _floorMax };
+          }
+        }
       }
 
       // Build per-floor receiver label cell (child rows omit coords/terrain badge)
@@ -31538,7 +31555,15 @@ if (window.pdfjsLib) {
             .filter(function(v) { return v !== '' && v != null && Number.isFinite(Number(v)); })
             .map(Number);
           if (vals.length > 0) {
-            text = Math.round(Math.max.apply(null, vals)) + '\u202fdB(A)';
+            var gfMax = Math.max.apply(null, vals);
+            var floorData = window._recvFloorLabelData && window._recvFloorLabelData[mode];
+            if (floorData && floorData.maxVal > gfMax) {
+              text = floorData.label + '\u00a0' + Math.round(floorData.maxVal) + '\u202fdB(A)';
+            } else if (floorData && floorData.label !== 'GF') {
+              text = floorData.label + '\u00a0' + Math.round(gfMax) + '\u202fdB(A)';
+            } else {
+              text = Math.round(gfMax) + '\u202fdB(A)';
+            }
           }
         }
         lbl.setIcon(makeRecvLpIcon(text, cfg.color));
