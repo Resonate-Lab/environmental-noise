@@ -318,6 +318,20 @@ input[type="number"]{width:100%;border:1px solid var(--border);border-radius:10p
 }
 .pred-period-lbl + table { margin-top: 0; border-radius: 0 0 6px 6px; }
 
+/* ===== Multi-floor receiver rows ===== */
+.recv-floor-toggle {
+  background: none; border: none; cursor: pointer;
+  font-size: 9px; color: #6b7280; padding: 0 3px 0 0;
+  vertical-align: middle; line-height: 1;
+}
+.recv-floor-toggle:hover { color: #374151; }
+.recv-floor-label {
+  font-size: 10px; font-weight: 600; color: #2563eb;
+  background: #eff6ff; border-radius: 3px; padding: 1px 4px; margin-left: 3px;
+}
+.recv-floor-child td:first-child { color: #6b7280; }
+.recv-floor-child { background: #fafafa; }
+
 /* ===== Source contribution table ===== */
 .contrib-recv-hdr td { background: #f3f4f6; font-size: 12px; font-weight: 700; padding: 5px 8px; border-top: 2px solid var(--border); }
 .contrib-recv-hdr:first-child td { border-top: none; }
@@ -7635,32 +7649,35 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
          the roof, not at its actual floor level) but strictly better
          than clipping through the ground.                          */
       groundY += _3dBuildingHeightAt(pos.lat, pos.lng);
-      /* getReceiverHeight is a global function; uses 0-indexed idx
-         (per its implementation: key = 'r' + (idx + 1)). */
-      var rHeight = (typeof getReceiverHeight === 'function')
-                  ? getReceiverHeight(i - 1)
-                  : (typeof iso_receiverHeight !== 'undefined' ? iso_receiverHeight : 1.5);
-      var y = groundY + rHeight;
-
-      var mat = new THREE.MeshLambertMaterial({
-        color: _3D_RECEIVER_COLOURS[i - 1]
-      });
-      /* Sphere is positioned at the receiver point — `y` already
-         includes ground + building + receiver height, so placing
-         the sphere's centre at `y` puts the ear roughly there.
-         No orientation needed (sphere is rotationally symmetric
-         so the Math.PI rotation the old cone needed is gone).   */
-      var mesh = new THREE.Mesh(recvGeom, mat);
-      mesh.position.set(local.x, y, local.z);
-      mesh.name = 'receiver-' + key;
-      _3dReceiversGroup.add(mesh);
-
-      /* Label 2.5 m above the sphere centre — clears the 0.8 m
-         radius with ~1.7 m of margin, matches the visual rhythm
-         set by the 3-m-above offset on source bursts. */
+      var mat = new THREE.MeshLambertMaterial({ color: _3D_RECEIVER_COLOURS[i - 1] });
       var nameEl = document.getElementById('recvName' + i);
-      var labelText = (nameEl && nameEl.value) ? nameEl.value : (term.charAt(0) + i);
-      _addLabel(labelText, local.x, y + 2.5, local.z);
+      var baseName = (nameEl && nameEl.value) ? nameEl.value : (term.charAt(0) + i);
+
+      /* Build list of floors (GF + any configured upper floors) */
+      var _flrs = (typeof getReceiverFloorHeights === 'function')
+        ? getReceiverFloorHeights(key)
+        : [{ label: 'GF', height: (typeof getReceiverHeight === 'function' ? getReceiverHeight(i - 1) : 1.5) }];
+
+      /* Vertical connector line for multi-floor receivers */
+      if (_flrs.length > 1) {
+        var _lineGeo = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(local.x, groundY + _flrs[0].height, local.z),
+          new THREE.Vector3(local.x, groundY + _flrs[_flrs.length - 1].height, local.z)
+        ]);
+        var _lineMat = new THREE.LineBasicMaterial({ color: _3D_RECEIVER_COLOURS[i - 1], opacity: 0.4, transparent: true });
+        _3dReceiversGroup.add(new THREE.Line(_lineGeo, _lineMat));
+      }
+
+      /* One sphere + label per floor */
+      _flrs.forEach(function(floor) {
+        var y = groundY + floor.height;
+        var mesh = new THREE.Mesh(recvGeom, mat.clone());
+        mesh.position.set(local.x, y, local.z);
+        mesh.name = 'receiver-' + key + '-' + floor.label;
+        _3dReceiversGroup.add(mesh);
+        var labelText = _flrs.length > 1 ? baseName + ' ' + floor.label : baseName;
+        _addLabel(labelText, local.x, y + 2.5, local.z);
+      });
     }
   }
 
@@ -8114,6 +8131,29 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
     document.addEventListener('DOMContentLoaded', _wire3DButton);
   } else {
     _wire3DButton();
+  }
+})();
+
+// Floor-level receiver toggle — delegated on the period tables container
+(function() {
+  function _wireFloorToggle() {
+    var container = document.getElementById('vicStdPeriodTables');
+    if (!container) return;
+    container.addEventListener('click', function(e) {
+      var btn = e.target.closest('.recv-floor-toggle');
+      if (!btn) return;
+      e.stopPropagation();  // don't fire ISO breakdown click on the parent row
+      var key = btn.getAttribute('data-floor-key');
+      if (key && typeof _recvFloorsExpanded !== 'undefined') {
+        _recvFloorsExpanded[key] = !_recvFloorsExpanded[key];
+        if (typeof render === 'function') render();
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _wireFloorToggle);
+  } else {
+    _wireFloorToggle();
   }
 })();
 </script>
@@ -12906,11 +12946,33 @@ var recvDistToBoundary = { r1: null, r2: null, r3: null, r4: null };
 var _recvZoneHTML = { r1: '', r2: '', r3: '', r4: '' };
 var recvGroundElevations = { r1: null, r2: null, r3: null, r4: null };
 
+// Multi-floor receiver config (null = GF only)
+// { firstFloorHeight: number, floorHeight: number, numFloors: number }
+var recvFloors = { r1: null, r2: null, r3: null, r4: null };
+// Expand state for floor sub-rows in the results table (survives render() calls)
+var _recvFloorsExpanded = { r1: false, r2: false, r3: false, r4: false };
+
 /** Get effective receiver height for a specific receiver (0-based index) */
 function getReceiverHeight(receiverIdx) {
   var key = 'r' + (receiverIdx + 1);
   var h = recvHeights[key];
   return (h !== null && h !== undefined && Number.isFinite(h)) ? h : iso_receiverHeight;
+}
+
+/** Return array of floor heights for a receiver key.
+ *  [{label:'GF', height:n}, {label:'L1', height:n}, ...]
+ *  Always starts with GF at the receiver's configured height. */
+function getReceiverFloorHeights(key) {
+  var base = recvHeights[key];
+  if (!Number.isFinite(base)) base = iso_receiverHeight || 1.5;
+  var result = [{ label: 'GF', height: base }];
+  var cfg = recvFloors[key];
+  if (cfg && cfg.numFloors > 0) {
+    for (var f = 1; f <= cfg.numFloors; f++) {
+      result.push({ label: 'L' + f, height: cfg.firstFloorHeight + (f - 1) * cfg.floorHeight });
+    }
+  }
+  return result;
 }
 
 /** ISO 9613-2:1996 prediction for a single source at a receiver distance
@@ -13079,7 +13141,7 @@ function calcISO9613forSourcePin(si, prefix, distM, receiverIdx) {
   } else {
     // No spectrum: simple point source propagation with opTime weighting
     var lwW = lwVal + adjDB;
-    if (barrierDelta > 0 || endDeltaL > 0 || endDeltaR > 0 || terrainPerBand || _barrierInGap || _groundZones.length > 0) {
+    if (barrierDelta > 0 || endDeltaL > 0 || endDeltaR > 0 || terrainPerBand || _barrierInGap || _groundZones.length > 0 || _pathG > 0) {
       var flatSpec = [];
       for (var b = 0; b < 8; b++) flatSpec.push(lwW - 9.03);
 
@@ -21935,6 +21997,9 @@ function render() {
   if (tbNight) tbNight.innerHTML = '';
   if (tbLmax)  tbLmax.innerHTML  = '';
 
+  // Reset per-receiver floor label tracking (used by updateReceiverLpLabels)
+  window._recvFloorLabelData = {};
+
   recs.forEach((rec, i) => {
     const keyText = rKeys[i] || '';
     const nameInput = document.getElementById(`recvName${i+1}`);
@@ -22010,7 +22075,7 @@ function render() {
     // Shared receiver label cell
     var _rll = window.getReceiverLatLng ? window.getReceiverLatLng('r' + (i + 1)) : null;
     var _rcoord = _rll ? '<br><span style="font-size:10px;color:#9ca3af;">' + _rll.lat.toFixed(5) + ', ' + _rll.lng.toFixed(5) + '</span>' : '';
-    const recvCell = `<td><b>${recvLabel}</b>${keyText ? '<br><span class="small">' + keyText + '</span>' : ''}${_rcoord}${terrainBadge}</td>`;
+    let recvCell = `<td><b>${recvLabel}</b>${keyText ? '<br><span class="small">' + keyText + '</span>' : ''}${_rcoord}${terrainBadge}</td>`;
 
     // Build one result row for a given period
     function makeRow(predicted, criterion, cmp) {
@@ -22046,10 +22111,76 @@ function render() {
       })(i);
     }
 
-    if (tbDay)   { var dTr = makeRow(predDayPenalised,   dayCrit,  day);   addClick(dTr); tbDay.appendChild(dTr);   }
-    if (tbEve)   { var eTr = makeRow(predEvePenalised,   eveCrit,  eve);   addClick(eTr); tbEve.appendChild(eTr);   }
-    if (tbNight) { var nTr = makeRow(predNightPenalised, nightCrit, night); addClick(nTr); tbNight.appendChild(nTr); }
-    if (tbLmax)  { var xTr = makeRow(predLmaxAdj,        lmaxCrit, lmax);  addClick(xTr); tbLmax.appendChild(xTr);  }
+    // Multi-floor receiver rows (GF always first, then L1, L2 … hidden until expanded)
+    var _floorKey  = 'r' + (i + 1);
+    var _floorList = getReceiverFloorHeights(_floorKey);
+    var _isMulti   = _floorList.length > 1;
+    var _isExpanded = _isMulti && _recvFloorsExpanded[_floorKey];
+
+    _floorList.forEach(function(floor, fi) {
+      var _isGF    = fi === 0;
+      var _isChild = _isMulti && !_isGF;
+
+      // GF reuses already-computed penalised predictions; upper floors recalculate with a temporary height override
+      var pDay, pEve, pNight, pLmax;
+      if (_isGF) {
+        pDay = predDayPenalised; pEve = predEvePenalised;
+        pNight = predNightPenalised; pLmax = predLmaxAdj;
+      } else {
+        var _savedHt = recvHeights[_floorKey];
+        recvHeights[_floorKey] = floor.height;
+        var _rDay = calcPredAtReceiver('day',   null, i, dist);
+        var _rEve = calcPredAtReceiver('eve',   null, i, dist);
+        var _rNight = calcPredAtReceiver('night', null, i, dist);
+        var _rLmax  = calcPredAtReceiver('lmax',  null, i, dist);
+        recvHeights[_floorKey] = _savedHt;
+        pDay   = (_rDay   !== '' && _rDay   != null) ? _rDay   + (rp.day   || 0) : _rDay;
+        pEve   = (_rEve   !== '' && _rEve   != null) ? _rEve   + (rp.eve   || 0) : _rEve;
+        pNight = (_rNight !== '' && _rNight != null) ? _rNight + (rp.night || 0) : _rNight;
+        pLmax  = _rLmax;
+      }
+
+      // Track highest predicted level across all floors for the map pin label
+      if (_isMulti) {
+        var _floorVals = [pDay, pEve, pNight].filter(function(v) {
+          return v !== '' && v != null && Number.isFinite(Number(v));
+        }).map(Number);
+        if (_floorVals.length > 0) {
+          var _floorMax = Math.max.apply(null, _floorVals);
+          var _existing = window._recvFloorLabelData[_floorKey];
+          if (!_existing || _floorMax > _existing.maxVal) {
+            window._recvFloorLabelData[_floorKey] = { label: floor.label, maxVal: _floorMax };
+          }
+        }
+      }
+
+      // Build per-floor receiver label cell (child rows omit coords/terrain badge)
+      var _floorSuffix = _isMulti ? ' <span class="recv-floor-label">' + floor.label + '</span>' : '';
+      var _toggleBtn = (_isMulti && _isGF)
+        ? '<button class="recv-floor-toggle" data-floor-key="' + _floorKey
+          + '" aria-label="' + (_isExpanded ? 'Collapse' : 'Expand') + ' floor levels">'
+          + (_isExpanded ? '&#9660;' : '&#9658;') + '</button> '
+        : '';
+      recvCell = '<td' + (_isChild ? ' style="padding-left:20px"' : '') + '>'
+        + _toggleBtn + '<b>' + recvLabel + '</b>' + _floorSuffix
+        + (keyText ? '<br><span class="small">' + keyText + '</span>' : '')
+        + (_isChild ? '' : _rcoord + terrainBadge) + '</td>';
+
+      var _dc = compCell(pDay, dayCrit), _ec = compCell(pEve, eveCrit);
+      var _nc = compCell(pNight, nightCrit), _xc = compCell(pLmax, lmaxCrit);
+
+      var _tag = function(tr) {
+        if (_isMulti) tr.setAttribute('data-floor-key', _floorKey);
+        if (_isChild) { tr.classList.add('recv-floor-child'); if (!_isExpanded) tr.style.display = 'none'; }
+        else if (_isMulti) { tr.classList.add('recv-floor-parent'); }
+        return tr;
+      };
+
+      if (tbDay)   { var dTr = _tag(makeRow(pDay,   dayCrit,  _dc)); if (_isGF) addClick(dTr); tbDay.appendChild(dTr);   }
+      if (tbEve)   { var eTr = _tag(makeRow(pEve,   eveCrit,  _ec)); if (_isGF) addClick(eTr); tbEve.appendChild(eTr);   }
+      if (tbNight) { var nTr = _tag(makeRow(pNight, nightCrit, _nc)); if (_isGF) addClick(nTr); tbNight.appendChild(nTr); }
+      if (tbLmax)  { var xTr = _tag(makeRow(pLmax,  lmaxCrit, _xc)); if (_isGF) addClick(xTr); tbLmax.appendChild(xTr);  }
+    });
 
     // ── Phase 2: Collect strip data for the compliance summary ──
     if (!window._stripData) window._stripData = [null, null, null, null];
@@ -25179,7 +25310,7 @@ setInitialCollapseState();
       try {
         var data = {};
         data._format = 'resonate-noise-tool';
-        data._version = 7;
+        data._version = 8;
         data._exportedAt = new Date().toISOString();
 
         // Map view at save time, so reopening returns to the saved framing
@@ -25295,6 +25426,13 @@ setInitialCollapseState();
           }
         });
         if (anyRh) data.recvHeights = rh;
+
+        // Per-receiver floor configuration
+        var rf = {}, anyRf = false;
+        ['r1','r2','r3','r4'].forEach(function(k) {
+          if (recvFloors[k]) { rf[k] = recvFloors[k]; anyRf = true; }
+        });
+        if (anyRf) data.recvFloors = rf;
 
         // Per-receiver site boundary distances (reference only)
         var rdb = {};
@@ -26416,9 +26554,9 @@ setInitialCollapseState();
 
     function loadAssessment(data, opts) {
       // Guard: warn if the file was saved by a future version of this app.
-      if (data._version && data._version > 7) {
+      if (data._version && data._version > 8) {
         console.warn('[loadAssessment] File is format v' + data._version +
-          ' (this app supports v7) — some fields may not load correctly.');
+          ' (this app supports v8) — some fields may not load correctly.');
       }
 
       // Version ladder: migrate older saves before any other processing.
@@ -26725,6 +26863,13 @@ setInitialCollapseState();
       if (data.recvHeights) {
         ['r1','r2','r3','r4'].forEach(function(k) {
           recvHeights[k] = (data.recvHeights[k] !== undefined) ? data.recvHeights[k] : null;
+        });
+      }
+
+      // 8a2b. Per-receiver floor configuration
+      if (data.recvFloors) {
+        ['r1','r2','r3','r4'].forEach(function(k) {
+          recvFloors[k] = data.recvFloors[k] || null;
         });
       }
 
@@ -28147,7 +28292,7 @@ setInitialCollapseState();
     try {
       var data = {};
       data._format  = 'resonate-noise-tool';
-      data._version = 7;
+      data._version = 8;
       data._exportedAt = new Date().toISOString();
       data.currentState  = typeof currentState  !== 'undefined' ? currentState  : 'SA';
       data.vicAreaType   = typeof vicAreaType   !== 'undefined' ? vicAreaType   : 'urban';
@@ -28214,6 +28359,13 @@ setInitialCollapseState();
         });
       }
       if (anyRh) data.recvHeights = rh;
+      var rf = {}, anyRf = false;
+      if (typeof recvFloors !== 'undefined') {
+        ['r1','r2','r3','r4'].forEach(function(k) {
+          if (recvFloors[k]) { rf[k] = recvFloors[k]; anyRf = true; }
+        });
+      }
+      if (anyRf) data.recvFloors = rf;
       var rdb = {}, anyRdb = false;
       if (typeof recvDistToBoundary !== 'undefined') {
         ['r1','r2','r3','r4'].forEach(function(k) {
@@ -30348,6 +30500,8 @@ if (window.pdfjsLib) {
             if (result.subzone) zoneLabel += ' / ' + result.subzone;
             _recvZoneHTML[mode] = '<br><i style="color:#059669;">' + escapeHTML(zoneLabel) + '</i>';
             m.setPopupContent(buildRecvPopupHTML(mode, latlngs[mode]));
+            var _p = m.getPopup && m.getPopup();
+            if (_p && _p.isOpen && _p.isOpen() && typeof _p._adjustPan === 'function') _p._adjustPan();
           }
           /* If called for the subject site, also update the site pin popup */
           if (isSourceMode(mode) && result.zone) {
@@ -31277,6 +31431,8 @@ if (window.pdfjsLib) {
             _recvZoneHTML[mode] = '<br><i style="color:#059669;">' + escapeHTML(label) + '</i>' +
               (zoneType ? '<br><span style="font-size:11px;color:#059669;">Type ' + zoneType + (lga ? ' \u2014 ' + escapeHTML(lga) : '') + '</span>' : '');
             m.setPopupContent(buildRecvPopupHTML(mode, latlngs[mode]));
+            var _p = m.getPopup && m.getPopup();
+            if (_p && _p.isOpen && _p.isOpen() && typeof _p._adjustPan === 'function') _p._adjustPan();
           }
           /* If called for the subject site, also update the site pin popup */
           if (isSourceMode(mode) && zoneCode) {
@@ -31415,6 +31571,8 @@ if (window.pdfjsLib) {
           if (m) {
             _recvZoneHTML[mode] = zoneCode ? '<br><i style="color:#1e3a5f;">' + escapeHTML(label) + '</i>' : '';
             m.setPopupContent(buildRecvPopupHTML(mode, latlngs[mode]));
+            var _p = m.getPopup && m.getPopup();
+            if (_p && _p.isOpen && _p.isOpen() && typeof _p._adjustPan === 'function') _p._adjustPan();
           }
           /* If called for the subject site, also update the site pin popup */
           if (isSourceMode(mode)) {
@@ -31522,7 +31680,15 @@ if (window.pdfjsLib) {
             .filter(function(v) { return v !== '' && v != null && Number.isFinite(Number(v)); })
             .map(Number);
           if (vals.length > 0) {
-            text = Math.round(Math.max.apply(null, vals)) + '\u202fdB(A)';
+            var gfMax = Math.max.apply(null, vals);
+            var floorData = window._recvFloorLabelData && window._recvFloorLabelData[mode];
+            if (floorData && floorData.maxVal > gfMax) {
+              text = floorData.label + '\u00a0' + Math.round(floorData.maxVal) + '\u202fdB(A)';
+            } else if (floorData && floorData.label !== 'GF') {
+              text = floorData.label + '\u00a0' + Math.round(gfMax) + '\u202fdB(A)';
+            } else {
+              text = Math.round(gfMax) + '\u202fdB(A)';
+            }
           }
         }
         lbl.setIcon(makeRecvLpIcon(text, cfg.color));
@@ -31930,6 +32096,46 @@ if (window.pdfjsLib) {
 
     /** Build the HTML content for a receiver marker popup.
      *  Includes: name/coords, editable height input, terrain elevation context. */
+    /* Global popup handler functions — defined inside closure so they have access to
+     * markers, recvHeights, recvFloors, _recvFloorsExpanded, refreshRecvPopupTerrain.
+     * Using window.* so they survive setPopupContent DOM replacement (inline onchange). */
+    window._recvPopupApplyHt = function(mode, el) {
+      var v = parseFloat(el.value);
+      if (Number.isFinite(v) && v >= 0.1) { recvHeights[mode] = v; el.style.color = '#2563eb'; }
+      else { recvHeights[mode] = null; el.style.color = ''; }
+      refreshRecvPopupTerrain(mode);
+      render();
+      if (typeof _renderObjectList === 'function') _renderObjectList();
+    };
+    window._recvPopupHtKey = function(ev, mode, el) {
+      if (ev.key === 'Enter') { window._recvPopupApplyHt(mode, el); el.blur(); }
+    };
+    window._recvPopupFloorChk = function(mode, el) {
+      if (el.checked) {
+        recvFloors[mode] = { firstFloorHeight: 4.5, floorHeight: 3.0, recvAboveFloor: 1.5, numFloors: 1 };
+      } else {
+        recvFloors[mode] = null;
+        _recvFloorsExpanded[mode] = false;
+      }
+      var _mk = markers[mode];
+      if (_mk) { _mk.closePopup(); _mk.openPopup(); }
+      render();
+      if (typeof _renderObjectList === 'function') _renderObjectList();
+    };
+    window._recvPopupFloorInp = function(mode) {
+      var raf = parseFloat((document.getElementById('recv-popup-raf-' + mode) || {}).value);
+      var flh = parseFloat((document.getElementById('recv-popup-flh-' + mode) || {}).value);
+      var fln = parseInt((document.getElementById('recv-popup-fln-' + mode) || {}).value, 10);
+      if (Number.isFinite(raf) && raf > 0 && Number.isFinite(flh) && flh > 0 && fln >= 1) {
+        recvFloors[mode] = { firstFloorHeight: flh + raf, floorHeight: flh, recvAboveFloor: raf, numFloors: fln };
+        render();
+        if (typeof _renderObjectList === 'function') _renderObjectList();
+      }
+    };
+    window._recvPopupFloorKey = function(ev, mode, el) {
+      if (ev.key === 'Enter') { window._recvPopupFloorInp(mode); el.blur(); }
+    };
+
     function buildRecvPopupHTML(mode, latlng) {
       var cfg = getModeCfg(mode);
       var ll = latlng || latlngs[mode] || { lat: 0, lng: 0 };
@@ -31954,6 +32160,9 @@ if (window.pdfjsLib) {
         '<label style="white-space:nowrap;">Height above ground: ' +
         '<input type="number" id="recv-popup-ht-' + mode + '" ' +
           'min="0.1" max="50" step="0.1" value="' + ht.toFixed(1) + '" ' +
+          'onchange="window._recvPopupApplyHt(\'' + mode + '\',this)" ' +
+          'onblur="window._recvPopupApplyHt(\'' + mode + '\',this)" ' +
+          'onkeydown="window._recvPopupHtKey(event,\'' + mode + '\',this)" ' +
           'style="width:58px;padding:2px 4px;text-align:center;border:1px solid #ccc;border-radius:3px;font-size:12px;' +
           (recvHeights[mode] !== null ? 'color:#2563eb;' : '') + '"> m' +
         '</label></div>';
@@ -31976,6 +32185,38 @@ if (window.pdfjsLib) {
         html += 'Receiver height: ' + ht.toFixed(1) + ' m above ground';
       }
       html += '</div>';
+
+      // Multi-floor config
+      var _fc = (typeof recvFloors !== 'undefined') ? recvFloors[mode] : null;
+      var _flEnabled = !!_fc;
+      var _raf  = _fc ? (_fc.recvAboveFloor != null ? _fc.recvAboveFloor : 1.5) : 1.5;
+      var _flh  = _fc ? _fc.floorHeight      : 3.0;
+      var _fln  = _fc ? _fc.numFloors        : 1;
+      html += '<hr style="margin:8px 0;border:none;border-top:1px solid #e5e7eb;">' +
+        '<div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;">Multi-floor</div>' +
+        '<label style="font-size:11px;display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer;">' +
+          '<input type="checkbox" id="recv-popup-floors-' + mode + '"' + (_flEnabled ? ' checked' : '') + ' onchange="window._recvPopupFloorChk(\'' + mode + '\',this)"> Enable floors' +
+        '</label>' +
+        '<div id="recv-popup-floors-cfg-' + mode + '" style="display:' + (_flEnabled ? 'block' : 'none') + ';">' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px;">' +
+            '<span style="flex:1;">Recv. height above floor (m)</span>' +
+            '<input type="number" id="recv-popup-raf-' + mode + '" min="0.1" max="10" step="0.1" value="' + _raf.toFixed(1) + '" ' +
+              'onchange="window._recvPopupFloorInp(\'' + mode + '\')" onblur="window._recvPopupFloorInp(\'' + mode + '\')" onkeydown="window._recvPopupFloorKey(event,\'' + mode + '\',this)" ' +
+              'style="width:60px;padding:2px 4px;text-align:center;border:1px solid #ccc;border-radius:3px;font-size:11px;">' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px;">' +
+            '<span style="flex:1;">Floor-to-floor (m)</span>' +
+            '<input type="number" id="recv-popup-flh-' + mode + '" min="1" max="50" step="0.1" value="' + _flh.toFixed(1) + '" ' +
+              'onchange="window._recvPopupFloorInp(\'' + mode + '\')" onblur="window._recvPopupFloorInp(\'' + mode + '\')" onkeydown="window._recvPopupFloorKey(event,\'' + mode + '\',this)" ' +
+              'style="width:60px;padding:2px 4px;text-align:center;border:1px solid #ccc;border-radius:3px;font-size:11px;">' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:6px;font-size:11px;">' +
+            '<span style="flex:1;">Floors above GF</span>' +
+            '<input type="number" id="recv-popup-fln-' + mode + '" min="1" max="20" step="1" value="' + _fln + '" ' +
+              'onchange="window._recvPopupFloorInp(\'' + mode + '\')" onblur="window._recvPopupFloorInp(\'' + mode + '\')" onkeydown="window._recvPopupFloorKey(event,\'' + mode + '\',this)" ' +
+              'style="width:60px;padding:2px 4px;text-align:center;border:1px solid #ccc;border-radius:3px;font-size:11px;">' +
+          '</div>' +
+        '</div>';
 
       return html;
     }
@@ -32297,7 +32538,7 @@ if (window.pdfjsLib) {
       } else {
         /* === Circle marker for receiver pins === */
         m = L.marker(latlng, { icon: makeIcon(cfg), draggable: true, title: cfg.label })
-          .bindPopup(buildRecvPopupHTML(mode, latlng), { maxWidth: 300, minWidth: 220 })
+          .bindPopup(buildRecvPopupHTML(mode, latlng), { maxWidth: 300, minWidth: 220, maxHeight: 400 })
           .addTo(map);
         /* Lp label: always-visible predicted level below the receiver circle */
         var recvLbl = L.marker(latlng, {
@@ -32393,6 +32634,8 @@ if (window.pdfjsLib) {
           // Refresh popup coordinates (elevation will update via fetchPinElevation callback)
           if (markers[mode] && markers[mode].getPopup && markers[mode].getPopup()) {
             markers[mode].setPopupContent(buildRecvPopupHTML(mode, ll));
+            var _p2 = markers[mode].getPopup();
+            if (_p2 && _p2.isOpen && _p2.isOpen() && typeof _p2._adjustPan === 'function') _p2._adjustPan();
           }
           // Refresh Objects panel so coordinates update immediately
           if (typeof _renderObjectList === 'function') _renderObjectList();
@@ -32705,34 +32948,14 @@ if (window.pdfjsLib) {
       render();
     }
 
-    /* ── Receiver popup: rebuild with fresh values on every open, then wire up input ── */
+    /* ── Receiver popup: rebuild with fresh values on every open ── */
     map.on('popupopen', function(e) {
       ['r1','r2','r3','r4'].forEach(function(mode) {
-        // Rebuild popup content with current height and terrain values each time it opens
         if (markers[mode] && markers[mode].getPopup && markers[mode].getPopup() === e.popup) {
           markers[mode].setPopupContent(buildRecvPopupHTML(mode, latlngs[mode]));
+          e.popup.update();
+          if (typeof e.popup._adjustPan === 'function') e.popup._adjustPan();
         }
-        // Wire up the height input (the element was just (re)created by setPopupContent above)
-        var inp = document.getElementById('recv-popup-ht-' + mode);
-        if (!inp) return;
-        function applyRecvHt() {
-          var v = parseFloat(inp.value);
-          if (Number.isFinite(v) && v >= 0.1) {
-            recvHeights[mode] = v;
-            inp.style.color = '#2563eb';
-          } else {
-            recvHeights[mode] = null;
-            inp.style.color = '';
-          }
-          refreshRecvPopupTerrain(mode);
-          render();
-          if (typeof _renderObjectList === 'function') _renderObjectList();
-        }
-        inp.addEventListener('change', applyRecvHt);
-        inp.addEventListener('blur', applyRecvHt);
-        inp.addEventListener('keydown', function(ev) {
-          if (ev.key === 'Enter') { applyRecvHt(); inp.blur(); }
-        });
       });
     });
 
@@ -45264,9 +45487,16 @@ if (window.pdfjsLib) {
           var rHt = (recvHeights[modeKey] !== null && Number.isFinite(recvHeights[modeKey]))
             ? recvHeights[modeKey]
             : (typeof iso_receiverHeight !== 'undefined' ? (iso_receiverHeight || 1.5) : 1.5);
+          var _floorSummary = '';
+          if (typeof recvFloors !== 'undefined' && recvFloors[modeKey]) {
+            var _fls = getReceiverFloorHeights(modeKey);
+            _floorSummary = ' <span style="color:#2563eb;font-size:10px;">' +
+              _fls.slice(1).map(function(f) { return f.label + ':' + f.height.toFixed(1) + 'm'; }).join(' &middot; ') +
+              '</span>';
+          }
           html += '<span style="flex:1;overflow:hidden;min-width:0;">' +
             '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">' + name +
-            ' <span style="color:#6b7280;font-size:11px;">' + rHt.toFixed(1) + 'm</span></div>' +
+            ' <span style="color:#6b7280;font-size:11px;">GF ' + rHt.toFixed(1) + 'm</span>' + _floorSummary + '</div>' +
             '<div style="font-size:10px;color:#9ca3af;">' + ll.lat.toFixed(5) + ', ' + ll.lng.toFixed(5) + '</div>' +
             '</span>';
           html += '<button class="obj-menu-btn" onclick="event.stopPropagation();_objMenuBtn(\'receiver\',' + i + ',this)" style="background:none;border:none;cursor:pointer;font-size:16px;color:#9ca3af;padding:0 3px;line-height:1;flex-shrink:0;" title="Options">\u22ee</button>';

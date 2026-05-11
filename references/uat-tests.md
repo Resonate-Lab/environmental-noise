@@ -38,6 +38,29 @@
 - These changes do not affect propagation formulas — no SoundPLAN benchmark re-run required.
 
 ---
+## Multi-floor receivers
+
+### Configure and verify floor levels
+
+1. Place R1 on the map. Click the R1 marker to open its popup. **Expected:** popup shows "Multi-floor" section with an "Enable floors" checkbox (unchecked by default).
+2. Check "Enable floors". **Expected:** config section expands showing three inputs: L1 height (m AGL) = 4.0, Floor-to-floor (m) = 3.0, Floors above GF = 1.
+3. Set L1 height = 4.0, floor-to-floor = 3.0, floors = 2. Click away (blur). **Expected:** results table R1 row shows `▶` toggle and "GF" label; L1 and L2 rows are present but hidden.
+4. Click the `▶` toggle on the R1 GF row. **Expected:** L1 and L2 rows appear in ALL period tabs (Day/Eve/Night/Lmax) simultaneously; toggle shows `▼`.
+5. Confirm L1 predicted level differs from GF by ~1–3 dB (higher receiver = less ground effect over flat terrain at moderate distance).
+6. Click `▼` to collapse. **Expected:** L1 and L2 rows hidden again; toggle reverts to `▶`.
+7. Drag a source to a different position. **Expected:** after re-render, R1 rows remain expanded (expand state persists).
+
+### Objects panel
+8. While floors are configured, open the Objects panel (click Objects drawer). **Expected:** R1 row shows "GF 1.5m" then "L1:4.0m · L2:7.0m" in blue.
+
+### Save / load round-trip
+9. Save the project (Save button). Reload the page and open the saved file. **Expected:** R1 restores with floors configured; table shows GF + L1 + L2 rows (collapsed by default).
+
+### No-floor receiver unchanged
+10. Verify R2 (no floors) shows a single row with no toggle button and no regression in its predicted level.
+
+### 3D view
+11. Open the 3D view. **Expected:** R1 shows 3 stacked spheres at heights 1.5 m, 4.0 m, and 7.0 m above ground, connected by a translucent vertical line; labels show "GF", "L1", "L2".
 
 ## RHS panel chrome
 

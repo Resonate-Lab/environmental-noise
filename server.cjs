@@ -13,4 +13,4 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': ct, 'Cache-Control': 'no-cache, no-store, must-revalidate' });
     res.end(d);
   });
-}).listen(3737, () => console.log('Server on 3737'));
+}).listen(process.env.PORT || 3737, () => console.log('Server on ' + (process.env.PORT || 3737)));
