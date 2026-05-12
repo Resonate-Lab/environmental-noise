@@ -8353,7 +8353,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
 <!-- Methodology panel -->
 <div class="card" id="methodologyCard" style="margin-top:14px;">
   <h2>Methodology</h2>
-  <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">v2.0 — March 2026</div>
+  <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">v2.1 — May 2026</div>
   <div class="h2" style="font-size:13px;">Sound pressure level prediction</div>
   <div class="p">This calculator provides an indication of the sound pressure level at a specified distance due to various noise sources. Three propagation methods are available: a simple inverse square law screening method (no ground or atmospheric corrections), ISO 9613-2:1996 (which includes geometric divergence, ground effect, and atmospheric absorption based on temperature and humidity), and CONCAWE (Report 4/81, Manning 1981) which adds meteorological corrections for six atmospheric stability categories. It is intended as a screening tool to determine whether more accurate noise modelling and advice should be provided by an acoustic consultant.</div>
   <div class="h2" style="font-size:13px;margin-top:18px;">Data sources</div>
@@ -8398,7 +8398,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   <div class="p">Application of MBS 010 is triggered by the Noise and Emissions Overlay in the SA Planning and Design Code. The current version is Version 3 (1 May 2023). The tool determines overlay applicability using offline point-in-polygon lookup against a locally cached PlanSA GeoJSON layer (updated periodically from data.sa.gov.au); the aircraft noise (ANEF) contours are also sourced from the same dataset. Users should confirm overlay applicability and the current version of MBS 010 with the relevant consent authority.</div>
   </div>
   <div class="h2" style="font-size:12px;margin-top:10px;">User-imported site plans</div>
-  <div class="p">The Site plan overlay tool lets the user import a PDF, PNG, or JPEG site plan and position it on the map as a semi-transparent Leaflet overlay with adjustable opacity, position, scale, and rotation. Aspect ratio is preserved from the image&rsquo;s native dimensions on initial placement (with a <em>cos(lat)</em> compensation for 1&deg;&nbsp;lng &ne; 1&deg;&nbsp;lat in metres) and on corner-drag resizing by default; hold Shift to free-resize. PDF imports attempt to extract text from the title block to pre-fill the project name and, where present, a street address. Site plan overlays are purely visual &mdash; they do not participate in any calculation &mdash; and are serialised in saved assessments.</div>
+  <div class="p">The Site plan overlay tool lets the user import a PDF, PNG, or JPEG site plan and position it on the map as a semi-transparent Leaflet overlay with adjustable opacity, position, scale, and rotation. Multi-page PDFs display a page picker so any page can be selected for overlay; the tool also attempts to detect the plan scale and north orientation from the title block. Aspect ratio is preserved from the image&rsquo;s native dimensions on initial placement (with a <em>cos(lat)</em> compensation for 1&deg;&nbsp;lng &ne; 1&deg;&nbsp;lat in metres) and on corner-drag resizing by default; hold Shift to free-resize. PDF imports attempt to extract text from the title block to pre-fill the project name and, where present, a street address. Site plan overlays are purely visual &mdash; they do not participate in any calculation &mdash; and are serialised in saved assessments.</div>
   <div class="h2" style="font-size:13px;margin-top:18px;">Modelling methodology</div>
   <div class="h2" style="font-size:13px;">Zone detection</div>
   <div class="p">Receiver zones are detected automatically based on the receiver map location. SA zones are identified using offline point-in-polygon lookup against a locally cached PlanSA open-data GeoJSON layer (data.sa.gov.au); the SAPPA portal remains the authoritative reference for formal verification. VIC uses the Victorian Planning Authority API and NSW uses the NSW Planning Portal &mdash; both require an internet connection. Users should verify zone classifications independently, as data may not reflect recent planning amendments. Zone information is used to apply the applicable noise criteria for that receiver.</div>
@@ -8412,7 +8412,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   <div class="h2" style="font-size:13px;">Sound power spectra and period normalisation</div>
   <div class="p">Each spectrum-based source holds an 8-band octave sound power spectrum (63&thinsp;Hz to 8&thinsp;kHz) plus a broadband <em>L<sub>w</sub></em> per period (day / evening / night / <em>L<sub>max</sub></em>). Before propagation, a constant per-period offset <em>specAdj</em> = <em>L<sub>w</sub></em>(period) &minus; 10&middot;log<sub>10</sub>(&Sigma; 10<sup>L<sub>wi</sub>/10</sup>) is computed so that the 8-band energy sum matches the entered broadband <em>L<sub>w</sub></em> for that period. The shape of the spectrum is preserved; only its overall level is anchored to the period <em>L<sub>w</sub></em>. This lets the user enter a representative spectrum shape once and vary only the broadband <em>L<sub>w</sub></em> across day, evening, and night. For flat (uniform) spectra <em>specAdj</em>&nbsp;&asymp;&nbsp;0 and the ISO prediction converges to the simple-method result to within the ground-effect and barrier-effect contributions.</div>
   <div class="h2" style="font-size:13px;">Building sources</div>
-  <div class="p">Building sources model noise radiating from industrial or commercial building facades and roofs where the internal noise level (L<sub>p</sub>) is known. The user draws a building polygon on the map, enters the building height, internal L<sub>p</sub> per period, and wall and roof construction (R<sub>w</sub>). The radiated sound power per facade or roof panel is calculated as L<sub>w</sub>&thinsp;=&thinsp;L<sub>p</sub>&thinsp;&minus;&thinsp;R<sub>w</sub>&thinsp;+&thinsp;10&middot;log<sub>10</sub>(S)&thinsp;+&thinsp;6&thinsp;dB, where S is the facade or roof area. Facade elements (roller doors, louvres, glazing) with their own R<sub>w</sub> can be added per wall. Propagation from the resulting sub-sources uses the same method as point sources.</div>
+  <div class="p">Building sources model noise radiating from industrial or commercial building facades and roofs where the internal noise level (L<sub>p</sub>) is known. The user draws a building polygon on the map, enters the building height, internal L<sub>p</sub> per period, and wall and roof construction (R<sub>w</sub>). The radiated sound power per facade or roof panel is calculated as L<sub>w</sub>&thinsp;=&thinsp;L<sub>p</sub>&thinsp;&minus;&thinsp;R<sub>w</sub>&thinsp;+&thinsp;10&middot;log<sub>10</sub>(S)&thinsp;&minus;&thinsp;6&thinsp;dB, where S is the facade or roof area. The &minus;6&thinsp;dB term is the diffuse-field correction: in a reverberant room, sound is incident on the wall from all directions uniformly, so the net transmitted power is half (&minus;3&thinsp;dB) the incident intensity; a further &minus;3&thinsp;dB accounts for the boundary reflection factor at the surface (Bies &amp; Hansen &sect;8.2). Facade elements (roller doors, louvres, glazing) with their own R<sub>w</sub> can be added per wall. Propagation from the resulting sub-sources uses the same method as point sources.</div>
   <div class="h2" style="font-size:13px;">Line sources</div>
   <div class="p">Line sources model extended linear noise emitters (conveyors, pipelines, unbroken plant lines, rail corridors modelled outside CoRTN) where a length-normalised sound power is known. The user draws the line on the map and enters <em>L<sub>w</sub>&prime;</em> per period (dB re 1&thinsp;pW per metre) along with the source height. Each line is discretised into short segments with adaptive spacing based on total length; each segment is treated as a point sub-source with <em>L<sub>w,seg</sub></em> = <em>L<sub>w</sub>&prime;</em> + 10&middot;log<sub>10</sub>(<em>l<sub>seg</sub></em>) and propagated to each receiver using the selected propagation method. Per-receiver contributions are energy-summed across sub-sources. Barrier, terrain, ground, reflection, and octave-band spectrum treatments are identical to point sources. Noise-map rendering uses the same sub-source expansion per grid cell.</div>
   <div class="h2" style="font-size:13px;">Area sources</div>
@@ -8489,7 +8489,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
   <div class="h2" style="font-size:13px;">3D Scene Viewer</div>
   <div class="p">The 3D Scene Viewer is a read-only visualisation of the current assessment, intended for visual verification of spatial relationships &mdash; source heights relative to barriers, screening geometry, building obstruction, and terrain profile &mdash; in a single orbital view. It is not a calculation tool: no propagation, criteria, or noise-map result depends on it, and editing the assessment is done in the 2D map and side panels as before. The viewer is opened from the toolbar (3D View button) or with the <em>V</em> shortcut, and is available regardless of whether terrain is enabled (a flat fallback plane is rendered when no DEM data is cached for the current viewport).</div>
   <div class="p">Rendering uses Three.js (r128) loaded lazily on first open. The scene uses an equirectangular local projection with a <em>cos(centre&nbsp;latitude)</em> compensation for 1&deg;&nbsp;lng &ne; 1&deg;&nbsp;lat in metres; X is east, Z is &minus;north, and Y is elevation. Elevations are normalised to a local datum (the minimum sampled DEM elevation in the viewport at modal-open time is subtracted from every Y value), so a site at 30&thinsp;m ASL with 22&thinsp;m of relief renders anchored at Y=0 with a visible 22&thinsp;m variation rather than as a floating mesa above the building plane. Objects placed on top of a building footprint render at <em>roof + object_height</em> in 3D rather than <em>ground + object_height</em> &mdash; a rooftop fan with <em>height_m</em>&thinsp;=&thinsp;2 on a 10&thinsp;m custom building lands at Y=12, matching what the propagation engine sees.</div>
-  <div class="p">Objects rendered in the scene: terrain mesh (vertex-coloured green&ndash;brown&ndash;tan ramp by normalised elevation, with cells skipped where DEM coverage is missing); OSM buildings (single merged grey mesh, opacity 0.7); custom buildings (blue, opacity 0.8); building sources (orange, opacity 0.8); barriers (semi-transparent green walls with slope-following bases and a darker crest accent line); ground absorption zones (semi-transparent G-factor colour ramp from grey at G=0 through olive at G=0.5 to green at G=1); point sources (red spheres); line sources (red tubes following per-vertex elevation); area sources (semi-transparent red polygons); receivers (R1&ndash;R4-coloured spheres matching the 2D marker palette); and sprite labels for sources and receivers (drawn through geometry with anti-stacking offsets when multiple labels are placed within 5&thinsp;m of each other).</div>
+  <div class="p">Objects rendered in the scene: terrain mesh (vertex-coloured green&ndash;brown&ndash;tan ramp by normalised elevation, with cells skipped where DEM coverage is missing); OSM buildings (single merged grey mesh, opacity 0.7); custom buildings (blue, opacity 0.8); building sources (orange, opacity 0.8); barriers (semi-transparent green walls with slope-following bases and a darker crest accent line); ground absorption zones (semi-transparent G-factor colour ramp from grey at G=0 through olive at G=0.5 to green at G=1); point sources (red spheres); line sources (red tubes following per-vertex elevation); area sources (semi-transparent red polygons); receivers (R1&ndash;R8-coloured spheres matching the 2D marker palette); and sprite labels for sources and receivers (drawn through geometry with anti-stacking offsets when multiple labels are placed within 5&thinsp;m of each other).</div>
   <div class="h2" style="font-size:13px;margin-top:18px;">Code quality and validation</div>
   <div class="h2" style="font-size:12px;margin-top:10px;">ISO/TR 17534-3 validation</div>
   <div class="p">The core propagation calculations are validated against the reference test cases defined in ISO/TR 17534-3:2015 &mdash; Acoustics: Software for the calculation of sound outdoors. This technical report defines input geometries and reference output values for testing implementations of ISO 9613-2:1996. The in-app &ldquo;Run validation&rdquo; button (in the Propagation method panel) executes the three ground-attenuation test cases and reports the computed vs reference total for each:</div>
@@ -8515,7 +8515,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
     <li>Geometric divergence (&sect;7.1): fully implemented</li>
     <li>Barrier / building screening (&sect;7.4): implemented, single dominant path, top and lateral diffraction</li>
     <li>Terrain screening: partial &mdash; single dominant ridge, per-band Maekawa diffraction, DEM from Geoscience Australia WCS LiDAR (5&thinsp;m, primary) with Open-Elevation SRTM fallback</li>
-    <li>Meteorological correction (&sect;8): not implemented in the ISO 9613-2:1996 path (C<sub>met</sub> correction) &mdash; available via the CONCAWE propagation model, which provides explicit six-category meteorological corrections based on Pasquill stability class and vector wind speed</li>
+    <li>Meteorological correction (&sect;8): implemented &mdash; C<sub>0</sub> input (default 2&thinsp;dB) in the Propagation accordion; equations (21)&ndash;(22) applied after per-band energy summation; active only when ISO 9613-2:1996 is the selected method; excluded from L<sub>Amax</sub> paths. The CONCAWE model additionally provides explicit six-category meteorological corrections based on Pasquill stability class and vector wind speed.</li>
   </ul>
   <div class="h2" style="font-size:12px;margin-top:10px;">Security</div>
   <div class="p">User-entered data (source names, receiver names) is escaped before insertion into the interface using DOM-native <code>escapeHTML()</code> to prevent cross-site scripting (XSS). No user data is transmitted to any server &mdash; all calculations run entirely in the browser.</div>
@@ -47677,10 +47677,14 @@ if (window.pdfjsLib) {
           <li><strong>Point sources</strong> &mdash; click on the map or enter coordinates; library presets or custom <em>L<sub>w</sub></em> spectra</li>
           <li><strong>Line sources</strong> &mdash; click to draw a polyline (conveyors, pipelines, plant lines); enter <em>L<sub>w</sub>&prime;</em> per metre</li>
           <li><strong>Area sources</strong> &mdash; click to draw a polygon (yards, stockpiles, car parks); enter total <em>L<sub>w</sub></em> or <em>L<sub>w</sub></em>/m&sup2;</li>
-          <li><strong>Building sources</strong> &mdash; draw an emitting building envelope; enter internal <em>L<sub>p</sub></em> + facade/roof construction (R<sub>w</sub>)</li>
+          <li><strong>Building sources</strong> &mdash; draw an emitting building envelope; enter internal <em>L<sub>p</sub></em> + facade/roof construction (R<sub>w</sub>); select flat or draped roof geometry per building</li>
           <li><strong>Road sources (CoRTN)</strong> &mdash; draw a road polyline; enter flow, speed, %HV, gradient, surface; SA DIT speeds auto-fetched where available</li>
           <li>Set operating <strong>percentage of period</strong>, active periods (day / evening / night), units</li>
           <li>Source library is searchable; saved custom sources are stored in the assessment</li>
+        </ul>
+        <div class="help-sub">Spectrum shape</div>
+        <ul>
+          <li>Use the <strong>Apply spectrum shape</strong> pill to copy a library entry&rsquo;s octave-band spectrum shape onto any source type &mdash; the shape is anchored to the entered broadband <em>L<sub>w</sub></em></li>
         </ul>
         <div class="help-sub">Custom source library</div>
         <ul>
@@ -47696,6 +47700,7 @@ if (window.pdfjsLib) {
       <div class="help-body">
         <ul>
           <li>Up to <strong>8 receivers</strong>; drag markers to reposition; rename via the side panel</li>
+          <li>Receivers support <strong>multiple floors</strong> (GF&thinsp;+&thinsp;L1&ndash;L20) &mdash; collapse/expand floor rows in the side panel; per-floor calculations shown for each active period</li>
           <li>Zone is auto-detected from the state planning portal; criteria derive from the host zone</li>
         </ul>
         <div class="help-sub">SA</div>
@@ -47743,6 +47748,7 @@ if (window.pdfjsLib) {
         <div class="help-sub">Visibility</div>
         <ul>
           <li><strong>Show / hide objects</strong> <span class="help-tag">H</span> &mdash; toggle visibility of all sources, receivers, barriers, buildings, and ground zones</li>
+          <li><strong>North arrow and scale bar</strong> &mdash; displayed bottom-right of the map</li>
           <li><strong>Clear All</strong> &mdash; remove all modelling objects from the map; irreversible &mdash; save your assessment first</li>
         </ul>
       </div>
@@ -47828,8 +47834,11 @@ if (window.pdfjsLib) {
     <details>
       <summary><span class="help-arrow">&#9658;</span> Floating panels</summary>
       <div class="help-body">
-        <p style="margin:0 0 6px;">The <strong>Quick Reference</strong>, <strong>Suggested sources</strong>, and <strong>Objects</strong> panels can be repositioned by dragging their title bar. Look for the <strong>⠿</strong> grip icon on the left of the header.</p>
-        <p style="margin:0;">Source and site-element editing panels (barrier, line source, area source, building source) are also draggable by their header.</p>
+        <ul>
+          <li><strong>Objects</strong> &mdash; lists all placed sources, receivers, barriers, and custom buildings; unplaced sources show a <strong>&#8942;</strong> menu with Place / Delete options</li>
+          <li><strong>Quick Reference</strong>, <strong>Suggested sources</strong>, and <strong>Objects</strong> panels can be repositioned by dragging their title bar &mdash; look for the <strong>&#10783;</strong> grip icon on the left of the header</li>
+          <li>Source and site-element editing panels (barrier, line source, area source, building source) are also draggable by their header</li>
+        </ul>
       </div>
     </details>
 
@@ -47857,7 +47866,7 @@ if (window.pdfjsLib) {
           <li><kbd>A</kbd> &nbsp;Area source</li>
           <li><kbd>K</kbd> &nbsp;Building source</li>
           <li><kbd>W</kbd> &nbsp;Road (CoRTN) source</li>
-          <li><kbd>1</kbd>&ndash;<kbd>4</kbd> &nbsp;Receivers 1&ndash;4</li>
+          <li><kbd>1</kbd>&ndash;<kbd>8</kbd> &nbsp;Receivers 1&ndash;8</li>
         </ul>
         <div class="help-sub">Site elements</div>
         <ul>
