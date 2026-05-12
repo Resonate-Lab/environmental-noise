@@ -3019,7 +3019,7 @@ body.panel-resizing #map-column {
         <div class="card-header">
           <h2 style="margin:0;">Map</h2>
         </div>
-        <div class="p" id="mapDescPara">Set the <strong>site location</strong> (search or press S), then add <strong>sources</strong> and up to <strong>4 receiver</strong> locations. Straight-line distances are calculated automatically. Markers can be dragged to fine-tune positions.</div>
+        <div class="p" id="mapDescPara">Set the <strong>site location</strong> (search or press S), then add <strong>sources</strong> and up to <strong>8 receivers</strong>. Straight-line distances are calculated automatically. Markers can be dragged to fine-tune positions.</div>
 
         <!-- Location search -->
         <div style="display:flex;gap:6px;margin-bottom:14px;align-items:center;position:relative;">
@@ -3035,6 +3035,10 @@ body.panel-resizing #map-column {
           <span id="map-status-r2"     style="color:#16a34a;">&#9679; R2: not placed</span>
           <span id="map-status-r3"     style="color:#16a34a;">&#9679; R3: not placed</span>
           <span id="map-status-r4"     style="color:#16a34a;">&#9679; R4: not placed</span>
+          <span id="map-status-r5"     style="color:#16a34a;display:none;">&#9679; R5: not placed</span>
+          <span id="map-status-r6"     style="color:#16a34a;display:none;">&#9679; R6: not placed</span>
+          <span id="map-status-r7"     style="color:#16a34a;display:none;">&#9679; R7: not placed</span>
+          <span id="map-status-r8"     style="color:#16a34a;display:none;">&#9679; R8: not placed</span>
         </div>
 
         <!-- Map + floating panels wrapper -->
@@ -4082,6 +4086,10 @@ body.panel-resizing #map-column {
                   <button class="mp-btn map-mode-btn" id="mapMode-r2" title="Click map to place Receiver 2 (2)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 2<span class="mp-kbd">2</span></button>
                   <button class="mp-btn map-mode-btn" id="mapMode-r3" title="Click map to place Receiver 3 (3)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 3<span class="mp-kbd">3</span></button>
                   <button class="mp-btn map-mode-btn" id="mapMode-r4" title="Click map to place Receiver 4 (4)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 4<span class="mp-kbd">4</span></button>
+                  <button class="mp-btn map-mode-btn" id="mapMode-r5" title="Click map to place Receiver 5 (5)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 5<span class="mp-kbd">5</span></button>
+                  <button class="mp-btn map-mode-btn" id="mapMode-r6" title="Click map to place Receiver 6 (6)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 6<span class="mp-kbd">6</span></button>
+                  <button class="mp-btn map-mode-btn" id="mapMode-r7" title="Click map to place Receiver 7 (7)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 7<span class="mp-kbd">7</span></button>
+                  <button class="mp-btn map-mode-btn" id="mapMode-r8" title="Click map to place Receiver 8 (8)" style="border-left:3px solid #16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Receiver 8<span class="mp-kbd">8</span></button>
                 </div>
 
                 <div class="tc-button-group">
@@ -4367,7 +4375,7 @@ body.panel-resizing #map-column {
             <td class="num crit-lmax-col src-crit-shade">—</td>
           </tr>
 
-          <tr>
+          <tr id="recvRow_r1">
             <td><input type="text" class="recv-name-input" id="recvName1" value="Receiver 1" placeholder="Receiver 1"><span id="r1_cl6ind" class="sa-only" style="display:none;margin-left:4px;font-size:9px;color:#6b7280;cursor:help;vertical-align:super;" title="Cl 5(6) \u2014 intervening noise-designated zone detected; criteria based on receiver zone land use only">Cl 5(6)</span><br><span id="recvCoords_r1" style="font-size:9px;color:#9ca3af;display:block;"></span><span id="groundElev_r1" style="font-size:9px;color:#999;font-style:italic;"></span></td>
             <td class="zone-col">
               <div class="zone-text-wrap">
@@ -4392,7 +4400,7 @@ body.panel-resizing #map-column {
           <td id="r1_nightcrit" class="num crit-night-col"></td>
           <td id="r1_lmaxcrit" class="num crit-lmax-col"></td>
           </tr>
-          <tr>
+          <tr id="recvRow_r2">
             <td><input type="text" class="recv-name-input" id="recvName2" value="Receiver 2" placeholder="Receiver 2"><span id="r2_cl6ind" class="sa-only" style="display:none;margin-left:4px;font-size:9px;color:#6b7280;cursor:help;vertical-align:super;" title="Cl 5(6) \u2014 intervening noise-designated zone detected; criteria based on receiver zone land use only">Cl 5(6)</span><br><span id="recvCoords_r2" style="font-size:9px;color:#9ca3af;display:block;"></span><span id="groundElev_r2" style="font-size:9px;color:#999;font-style:italic;"></span></td>
             <td class="zone-col">
               <div class="zone-text-wrap">
@@ -4417,7 +4425,7 @@ body.panel-resizing #map-column {
           <td id="r2_nightcrit" class="num crit-night-col"></td>
           <td id="r2_lmaxcrit" class="num crit-lmax-col"></td>
           </tr>
-          <tr>
+          <tr id="recvRow_r3">
             <td><input type="text" class="recv-name-input" id="recvName3" value="Receiver 3" placeholder="Receiver 3"><span id="r3_cl6ind" class="sa-only" style="display:none;margin-left:4px;font-size:9px;color:#6b7280;cursor:help;vertical-align:super;" title="Cl 5(6) \u2014 intervening noise-designated zone detected; criteria based on receiver zone land use only">Cl 5(6)</span><br><span id="recvCoords_r3" style="font-size:9px;color:#9ca3af;display:block;"></span><span id="groundElev_r3" style="font-size:9px;color:#999;font-style:italic;"></span></td>
             <td class="zone-col">
               <div class="zone-text-wrap">
@@ -4442,7 +4450,7 @@ body.panel-resizing #map-column {
           <td id="r3_nightcrit" class="num crit-night-col"></td>
           <td id="r3_lmaxcrit" class="num crit-lmax-col"></td>
           </tr>
-          <tr>
+          <tr id="recvRow_r4">
             <td><input type="text" class="recv-name-input" id="recvName4" value="Receiver 4" placeholder="Receiver 4"><span id="r4_cl6ind" class="sa-only" style="display:none;margin-left:4px;font-size:9px;color:#6b7280;cursor:help;vertical-align:super;" title="Cl 5(6) \u2014 intervening noise-designated zone detected; criteria based on receiver zone land use only">Cl 5(6)</span><br><span id="recvCoords_r4" style="font-size:9px;color:#9ca3af;display:block;"></span><span id="groundElev_r4" style="font-size:9px;color:#999;font-style:italic;"></span></td>
             <td class="zone-col">
               <div class="zone-text-wrap">
@@ -4466,6 +4474,106 @@ body.panel-resizing #map-column {
           <td id="r4_evecrit" class="num vic-only crit-eve-col"></td>
           <td id="r4_nightcrit" class="num crit-night-col"></td>
           <td id="r4_lmaxcrit" class="num crit-lmax-col"></td>
+          </tr>
+          <tr id="recvRow_r5" style="display:none;">
+            <td><input type="text" class="recv-name-input" id="recvName5" value="Receiver 5" placeholder="Receiver 5"><span id="r5_cl6ind" class="sa-only" style="display:none;margin-left:4px;font-size:9px;color:#6b7280;cursor:help;vertical-align:super;" title="Cl 5(6) — intervening noise-designated zone detected; criteria based on receiver zone land use only">Cl 5(6)</span><br><span id="recvCoords_r5" style="font-size:9px;color:#9ca3af;display:block;"></span><span id="groundElev_r5" style="font-size:9px;color:#999;font-style:italic;"></span></td>
+            <td class="zone-col">
+              <div class="zone-text-wrap">
+                <div class="zone-display-text" id="r5_zdisp"><span class="zone-name-line">—</span><span class="zone-sub-line"></span></div>
+                <select id="r5" style="display:none;width:100%;margin-top:2px;" onchange="updateZoneDisplay('r5');render();"></select>
+                <button class="zone-edit-btn" onclick="toggleZoneEdit('r5')" title="Edit zone">&#x270F;</button>
+              </div>
+            </td>
+            <td id="r5_viczone" class="vic-only vic-zone-col"></td>
+            <td id="r5_land" class="left landuse-col"></td>
+            <td class="sa-only recv-type-col">
+              <div class="zone-text-wrap">
+                <span id="r5_recvtype_disp" class="zone-name-line" style="flex:1;cursor:default;">INL-5</span>
+                <select id="r5_recvtype" style="display:none;font-size:12px;padding:2px 4px;border-radius:5px;" onchange="updateRecvTypeDisplay('r5');render();">
+                  <option value="existing" selected>INL-5</option><option value="vacant">INL</option>
+                </select>
+                <button class="zone-edit-btn" onclick="toggleRecvTypeEdit('r5')" title="Edit criteria type">&#x270F;</button>
+              </div>
+            </td>
+          <td id="r5_daycrit" class="num crit-day-col"></td>
+          <td id="r5_evecrit" class="num vic-only crit-eve-col"></td>
+          <td id="r5_nightcrit" class="num crit-night-col"></td>
+          <td id="r5_lmaxcrit" class="num crit-lmax-col"></td>
+          </tr>
+          <tr id="recvRow_r6" style="display:none;">
+            <td><input type="text" class="recv-name-input" id="recvName6" value="Receiver 6" placeholder="Receiver 6"><span id="r6_cl6ind" class="sa-only" style="display:none;margin-left:4px;font-size:9px;color:#6b7280;cursor:help;vertical-align:super;" title="Cl 5(6) — intervening noise-designated zone detected; criteria based on receiver zone land use only">Cl 5(6)</span><br><span id="recvCoords_r6" style="font-size:9px;color:#9ca3af;display:block;"></span><span id="groundElev_r6" style="font-size:9px;color:#999;font-style:italic;"></span></td>
+            <td class="zone-col">
+              <div class="zone-text-wrap">
+                <div class="zone-display-text" id="r6_zdisp"><span class="zone-name-line">—</span><span class="zone-sub-line"></span></div>
+                <select id="r6" style="display:none;width:100%;margin-top:2px;" onchange="updateZoneDisplay('r6');render();"></select>
+                <button class="zone-edit-btn" onclick="toggleZoneEdit('r6')" title="Edit zone">&#x270F;</button>
+              </div>
+            </td>
+            <td id="r6_viczone" class="vic-only vic-zone-col"></td>
+            <td id="r6_land" class="left landuse-col"></td>
+            <td class="sa-only recv-type-col">
+              <div class="zone-text-wrap">
+                <span id="r6_recvtype_disp" class="zone-name-line" style="flex:1;cursor:default;">INL-5</span>
+                <select id="r6_recvtype" style="display:none;font-size:12px;padding:2px 4px;border-radius:5px;" onchange="updateRecvTypeDisplay('r6');render();">
+                  <option value="existing" selected>INL-5</option><option value="vacant">INL</option>
+                </select>
+                <button class="zone-edit-btn" onclick="toggleRecvTypeEdit('r6')" title="Edit criteria type">&#x270F;</button>
+              </div>
+            </td>
+          <td id="r6_daycrit" class="num crit-day-col"></td>
+          <td id="r6_evecrit" class="num vic-only crit-eve-col"></td>
+          <td id="r6_nightcrit" class="num crit-night-col"></td>
+          <td id="r6_lmaxcrit" class="num crit-lmax-col"></td>
+          </tr>
+          <tr id="recvRow_r7" style="display:none;">
+            <td><input type="text" class="recv-name-input" id="recvName7" value="Receiver 7" placeholder="Receiver 7"><span id="r7_cl6ind" class="sa-only" style="display:none;margin-left:4px;font-size:9px;color:#6b7280;cursor:help;vertical-align:super;" title="Cl 5(6) — intervening noise-designated zone detected; criteria based on receiver zone land use only">Cl 5(6)</span><br><span id="recvCoords_r7" style="font-size:9px;color:#9ca3af;display:block;"></span><span id="groundElev_r7" style="font-size:9px;color:#999;font-style:italic;"></span></td>
+            <td class="zone-col">
+              <div class="zone-text-wrap">
+                <div class="zone-display-text" id="r7_zdisp"><span class="zone-name-line">—</span><span class="zone-sub-line"></span></div>
+                <select id="r7" style="display:none;width:100%;margin-top:2px;" onchange="updateZoneDisplay('r7');render();"></select>
+                <button class="zone-edit-btn" onclick="toggleZoneEdit('r7')" title="Edit zone">&#x270F;</button>
+              </div>
+            </td>
+            <td id="r7_viczone" class="vic-only vic-zone-col"></td>
+            <td id="r7_land" class="left landuse-col"></td>
+            <td class="sa-only recv-type-col">
+              <div class="zone-text-wrap">
+                <span id="r7_recvtype_disp" class="zone-name-line" style="flex:1;cursor:default;">INL-5</span>
+                <select id="r7_recvtype" style="display:none;font-size:12px;padding:2px 4px;border-radius:5px;" onchange="updateRecvTypeDisplay('r7');render();">
+                  <option value="existing" selected>INL-5</option><option value="vacant">INL</option>
+                </select>
+                <button class="zone-edit-btn" onclick="toggleRecvTypeEdit('r7')" title="Edit criteria type">&#x270F;</button>
+              </div>
+            </td>
+          <td id="r7_daycrit" class="num crit-day-col"></td>
+          <td id="r7_evecrit" class="num vic-only crit-eve-col"></td>
+          <td id="r7_nightcrit" class="num crit-night-col"></td>
+          <td id="r7_lmaxcrit" class="num crit-lmax-col"></td>
+          </tr>
+          <tr id="recvRow_r8" style="display:none;">
+            <td><input type="text" class="recv-name-input" id="recvName8" value="Receiver 8" placeholder="Receiver 8"><span id="r8_cl6ind" class="sa-only" style="display:none;margin-left:4px;font-size:9px;color:#6b7280;cursor:help;vertical-align:super;" title="Cl 5(6) — intervening noise-designated zone detected; criteria based on receiver zone land use only">Cl 5(6)</span><br><span id="recvCoords_r8" style="font-size:9px;color:#9ca3af;display:block;"></span><span id="groundElev_r8" style="font-size:9px;color:#999;font-style:italic;"></span></td>
+            <td class="zone-col">
+              <div class="zone-text-wrap">
+                <div class="zone-display-text" id="r8_zdisp"><span class="zone-name-line">—</span><span class="zone-sub-line"></span></div>
+                <select id="r8" style="display:none;width:100%;margin-top:2px;" onchange="updateZoneDisplay('r8');render();"></select>
+                <button class="zone-edit-btn" onclick="toggleZoneEdit('r8')" title="Edit zone">&#x270F;</button>
+              </div>
+            </td>
+            <td id="r8_viczone" class="vic-only vic-zone-col"></td>
+            <td id="r8_land" class="left landuse-col"></td>
+            <td class="sa-only recv-type-col">
+              <div class="zone-text-wrap">
+                <span id="r8_recvtype_disp" class="zone-name-line" style="flex:1;cursor:default;">INL-5</span>
+                <select id="r8_recvtype" style="display:none;font-size:12px;padding:2px 4px;border-radius:5px;" onchange="updateRecvTypeDisplay('r8');render();">
+                  <option value="existing" selected>INL-5</option><option value="vacant">INL</option>
+                </select>
+                <button class="zone-edit-btn" onclick="toggleRecvTypeEdit('r8')" title="Edit criteria type">&#x270F;</button>
+              </div>
+            </td>
+          <td id="r8_daycrit" class="num crit-day-col"></td>
+          <td id="r8_evecrit" class="num vic-only crit-eve-col"></td>
+          <td id="r8_nightcrit" class="num crit-night-col"></td>
+          <td id="r8_lmaxcrit" class="num crit-lmax-col"></td>
           </tr>
         </table>
 
@@ -4651,6 +4759,66 @@ body.panel-resizing #map-column {
             <div>
               <label style="font-size:11px;font-weight:600;">Receiver 4</label>
               <select id="nswRecType4" class="nsw-recv-type-sel" onchange="render()">
+                <option value="residential">Residential</option>
+                <option value="hotel">Hotel / motel</option>
+                <option value="school">School (internal)</option>
+                <option value="hospital_internal">Hospital (internal)</option>
+                <option value="hospital_external">Hospital (external)</option>
+                <option value="worship">Place of worship (internal)</option>
+                <option value="recreation_passive">Passive recreation</option>
+                <option value="recreation_active">Active recreation</option>
+                <option value="commercial">Commercial</option>
+                <option value="industrial">Industrial</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;">Receiver 5</label>
+              <select id="nswRecType5" class="nsw-recv-type-sel" onchange="render()">
+                <option value="residential">Residential</option>
+                <option value="hotel">Hotel / motel</option>
+                <option value="school">School (internal)</option>
+                <option value="hospital_internal">Hospital (internal)</option>
+                <option value="hospital_external">Hospital (external)</option>
+                <option value="worship">Place of worship (internal)</option>
+                <option value="recreation_passive">Passive recreation</option>
+                <option value="recreation_active">Active recreation</option>
+                <option value="commercial">Commercial</option>
+                <option value="industrial">Industrial</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;">Receiver 6</label>
+              <select id="nswRecType6" class="nsw-recv-type-sel" onchange="render()">
+                <option value="residential">Residential</option>
+                <option value="hotel">Hotel / motel</option>
+                <option value="school">School (internal)</option>
+                <option value="hospital_internal">Hospital (internal)</option>
+                <option value="hospital_external">Hospital (external)</option>
+                <option value="worship">Place of worship (internal)</option>
+                <option value="recreation_passive">Passive recreation</option>
+                <option value="recreation_active">Active recreation</option>
+                <option value="commercial">Commercial</option>
+                <option value="industrial">Industrial</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;">Receiver 7</label>
+              <select id="nswRecType7" class="nsw-recv-type-sel" onchange="render()">
+                <option value="residential">Residential</option>
+                <option value="hotel">Hotel / motel</option>
+                <option value="school">School (internal)</option>
+                <option value="hospital_internal">Hospital (internal)</option>
+                <option value="hospital_external">Hospital (external)</option>
+                <option value="worship">Place of worship (internal)</option>
+                <option value="recreation_passive">Passive recreation</option>
+                <option value="recreation_active">Active recreation</option>
+                <option value="commercial">Commercial</option>
+                <option value="industrial">Industrial</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;">Receiver 8</label>
+              <select id="nswRecType8" class="nsw-recv-type-sel" onchange="render()">
                 <option value="residential">Residential</option>
                 <option value="hotel">Hotel / motel</option>
                 <option value="school">School (internal)</option>
@@ -5186,29 +5354,53 @@ body.panel-resizing #map-column {
             <th class="num vic-only crit-eve-col" style="width:25%;">Evening L<sub>eq</sub> penalty</th>
             <th class="num crit-night-col" style="width:25%;">Night L<sub>eq</sub> penalty</th>
           </tr>
-          <tr>
+          <tr id="penRow_r1">
             <td id="penR1Label">Receiver 1</td>
             <td class="center crit-day-col"><span id="penR1Day_wrap"></span></td>
             <td class="center vic-only crit-eve-col"><span id="penR1Eve_wrap"></span></td>
             <td class="center crit-night-col"><span id="penR1Night_wrap"></span></td>
           </tr>
-          <tr>
+          <tr id="penRow_r2">
             <td id="penR2Label">Receiver 2</td>
             <td class="center crit-day-col"><span id="penR2Day_wrap"></span></td>
             <td class="center vic-only crit-eve-col"><span id="penR2Eve_wrap"></span></td>
             <td class="center crit-night-col"><span id="penR2Night_wrap"></span></td>
           </tr>
-          <tr>
+          <tr id="penRow_r3">
             <td id="penR3Label">Receiver 3</td>
             <td class="center crit-day-col"><span id="penR3Day_wrap"></span></td>
             <td class="center vic-only crit-eve-col"><span id="penR3Eve_wrap"></span></td>
             <td class="center crit-night-col"><span id="penR3Night_wrap"></span></td>
           </tr>
-          <tr>
+          <tr id="penRow_r4">
             <td id="penR4Label">Receiver 4</td>
             <td class="center crit-day-col"><span id="penR4Day_wrap"></span></td>
             <td class="center vic-only crit-eve-col"><span id="penR4Eve_wrap"></span></td>
             <td class="center crit-night-col"><span id="penR4Night_wrap"></span></td>
+          </tr>
+          <tr id="penRow_r5" style="display:none;">
+            <td id="penR5Label">Receiver 5</td>
+            <td class="center crit-day-col"><span id="penR5Day_wrap"></span></td>
+            <td class="center vic-only crit-eve-col"><span id="penR5Eve_wrap"></span></td>
+            <td class="center crit-night-col"><span id="penR5Night_wrap"></span></td>
+          </tr>
+          <tr id="penRow_r6" style="display:none;">
+            <td id="penR6Label">Receiver 6</td>
+            <td class="center crit-day-col"><span id="penR6Day_wrap"></span></td>
+            <td class="center vic-only crit-eve-col"><span id="penR6Eve_wrap"></span></td>
+            <td class="center crit-night-col"><span id="penR6Night_wrap"></span></td>
+          </tr>
+          <tr id="penRow_r7" style="display:none;">
+            <td id="penR7Label">Receiver 7</td>
+            <td class="center crit-day-col"><span id="penR7Day_wrap"></span></td>
+            <td class="center vic-only crit-eve-col"><span id="penR7Eve_wrap"></span></td>
+            <td class="center crit-night-col"><span id="penR7Night_wrap"></span></td>
+          </tr>
+          <tr id="penRow_r8" style="display:none;">
+            <td id="penR8Label">Receiver 8</td>
+            <td class="center crit-day-col"><span id="penR8Day_wrap"></span></td>
+            <td class="center vic-only crit-eve-col"><span id="penR8Eve_wrap"></span></td>
+            <td class="center crit-night-col"><span id="penR8Night_wrap"></span></td>
           </tr>
         </table>
       </div>
@@ -7623,7 +7815,7 @@ var EARTH_RADIUS_M = 6371000; // WGS-84 mean Earth radius in metres
     var recvGeom = new THREE.SphereGeometry(0.8, 12, 8);
     var term = window._receiverTerm || 'Receiver';
 
-    for (var i = 1; i <= 4; i++) {
+    for (var i = 1; i <= 8; i++) {
       var key = 'r' + i;
       var pos = ll[key];
       if (!pos || !isFinite(pos.lat) || !isFinite(pos.lng)) continue;
@@ -10076,14 +10268,18 @@ function estimateAreaFractions(centerLat, centerLng, radiusM, zoneFeatures) {
   };
 }
 
+/* ── Receiver count constants ── */
+var MAX_RECEIVERS = 8;
+var ALL_RECV_KEYS = ['r1','r2','r3','r4','r5','r6','r7','r8'];
+
 /* ── Auto-IF state (per receiver) ── */
 // Per Pub 1826.5 Figure 1, IF is derived from zones around the RECEIVER (NSA), not the source.
-var autoIFPerReceiver = {r1: null, r2: null, r3: null, r4: null};
-var autoIFDataPerReceiver = {r1: null, r2: null, r3: null, r4: null};
+var autoIFPerReceiver = {r1: null, r2: null, r3: null, r4: null, r5: null, r6: null, r7: null, r8: null};
+var autoIFDataPerReceiver = {r1: null, r2: null, r3: null, r4: null, r5: null, r6: null, r7: null, r8: null};
 // Clause 20 (rural) distance-adjustment cache: null=not computed, 'pending'=in-flight, {adj,rule,detail}=result
-var _clause20Cache = {r1: null, r2: null, r3: null, r4: null};
+var _clause20Cache = {r1: null, r2: null, r3: null, r4: null, r5: null, r6: null, r7: null, r8: null};
 // SA Clause 5(6) intervening zone cache: null=not computed/N/A, 'pending'=in-flight, {applies:bool,widthM:num}=result
-var _cl6Cache = {r1: null, r2: null, r3: null, r4: null};
+var _cl6Cache = {r1: null, r2: null, r3: null, r4: null, r5: null, r6: null, r7: null, r8: null};
 // Legacy aliases for backward compat (used by detected-zones display, etc.)
 let autoIF = null;
 var autoIFData = null; // stores {zones140, zones400, fracs140, fracs400, IF}
@@ -11466,7 +11662,7 @@ var _reflectionsOn = false;
 
 // Characteristic penalty state (dB added to predicted Leq before comparison)
 // Per-receiver characteristic penalties {r1:{day:0,eve:0,night:0}, r2:..., r3:..., r4:...}
-let recvPenalties = {r1:{day:0,eve:0,night:0},r2:{day:0,eve:0,night:0},r3:{day:0,eve:0,night:0},r4:{day:0,eve:0,night:0}};
+let recvPenalties = {r1:{day:0,eve:0,night:0},r2:{day:0,eve:0,night:0},r3:{day:0,eve:0,night:0},r4:{day:0,eve:0,night:0},r5:{day:0,eve:0,night:0},r6:{day:0,eve:0,night:0},r7:{day:0,eve:0,night:0},r8:{day:0,eve:0,night:0}};
 // Legacy aliases for backward compat (used in some older code paths)
 let dayPenalty = 0;
 let nightPenalty = 0;
@@ -12106,7 +12302,7 @@ window._cortnClearAllReceiverResults = _cortnClearAllReceiverResults;
  *  ISO 9613-2:1996 sources are placed). Runs per render, cheap (O(roads × 4)). */
 function _cortnUpdateAllReceiverResults() {
   if (typeof cortnRoads === 'undefined' || cortnRoads.length === 0) return;
-  for (var ri = 0; ri < 4; ri++) {
+  for (var ri = 0; ri < 8; ri++) {
     var rk = 'r' + (ri + 1);
     var ll = (typeof window.getReceiverLatLng === 'function') ? window.getReceiverLatLng(rk) : null;
     if (!ll || ll.lat == null || ll.lng == null) continue;
@@ -12752,7 +12948,7 @@ function calcLineSourceAtReceiver(ls, period, ri) {
   if (!ls.vertices || ls.vertices.length < 2) return NaN;
 
   var allLL = window._getAllLatLngs ? window._getAllLatLngs() : {};
-  var recIds = ['r1','r2','r3','r4'];
+  var recIds = ALL_RECV_KEYS;
   var recLL = allLL[recIds[ri]];
   if (!recLL) return NaN;
 
@@ -12940,17 +13136,17 @@ let iso_temperature = 10;     // °C
 let iso_humidity = 70;        // % RH
 
 // Per-receiver height overrides (null = inherit global iso_receiverHeight)
-var recvHeights = { r1: null, r2: null, r3: null, r4: null };
-var recvDistToBoundary = { r1: null, r2: null, r3: null, r4: null };
+var recvHeights = { r1: null, r2: null, r3: null, r4: null, r5: null, r6: null, r7: null, r8: null };
+var recvDistToBoundary = { r1: null, r2: null, r3: null, r4: null, r5: null, r6: null, r7: null, r8: null };
 /* Zone HTML snippet per receiver — set by zone-detection callbacks, embedded in popup */
-var _recvZoneHTML = { r1: '', r2: '', r3: '', r4: '' };
-var recvGroundElevations = { r1: null, r2: null, r3: null, r4: null };
+var _recvZoneHTML = { r1: '', r2: '', r3: '', r4: '', r5: '', r6: '', r7: '', r8: '' };
+var recvGroundElevations = { r1: null, r2: null, r3: null, r4: null, r5: null, r6: null, r7: null, r8: null };
 
 // Multi-floor receiver config (null = GF only)
 // { firstFloorHeight: number, floorHeight: number, numFloors: number }
-var recvFloors = { r1: null, r2: null, r3: null, r4: null };
+var recvFloors = { r1: null, r2: null, r3: null, r4: null, r5: null, r6: null, r7: null, r8: null };
 // Expand state for floor sub-rows in the results table (survives render() calls)
-var _recvFloorsExpanded = { r1: false, r2: false, r3: false, r4: false };
+var _recvFloorsExpanded = { r1: false, r2: false, r3: false, r4: false, r5: false, r6: false, r7: false, r8: false };
 
 /** Get effective receiver height for a specific receiver (0-based index) */
 function getReceiverHeight(receiverIdx) {
@@ -13781,7 +13977,7 @@ function refreshAllTerrainIL() {
     var promises = [];
     sourcePins.forEach(function(src, si) {
       if (src.lat === null) return;
-      for (var ri = 0; ri < 4; ri++) {
+      for (var ri = 0; ri < 8; ri++) {
         promises.push(updateTerrainIL(si, ri));
       }
     });
@@ -13807,7 +14003,7 @@ let vicAreaType = 'urban'; // 'urban' | 'rural' (VIC only) — default urban (me
 let _vicAreaTypeManuallySet = false; // true when user clicked Major urban/Rural button — blocks auto-detection override
 var _lastDetectedZones = {}; // {src:'GRZ1', r1:'FZ', ...} — last detected raw zone codes for urban↔rural conversion
 var _lastDetectedZoneLabels = {}; // {src:'GRZ1 — GENERAL RESIDENTIAL ZONE', r1:'FZ — FARMING ZONE', ...}
-var _vicRecvLGA = {r1: null, r2: null, r3: null, r4: null}; // LGA name per receiver, from VicPlan point query
+var _vicRecvLGA = {r1: null, r2: null, r3: null, r4: null, r5: null, r6: null, r7: null, r8: null}; // LGA name per receiver, from VicPlan point query
 let detectedStateName = ''; // e.g. 'NSW', 'QLD' — for badge display in OTHER mode
 let detectedAusState = null; // e.g. 'SA','VIC','NSW','QLD','WA','TAS','NT','ACT' — for parcel lookup
 
@@ -13958,7 +14154,7 @@ function updateReceiverLabels(state) {
   var termLong = isVic ? 'noise sensitive area' : 'receiver';
 
   /* Map toolbar buttons */
-  for (var i = 1; i <= 4; i++) {
+  for (var i = 1; i <= 8; i++) {
     var btn = document.getElementById('mapMode-r' + i);
     if (btn) {
       /* Replace button text but keep the SVG icon */
@@ -13970,7 +14166,7 @@ function updateReceiverLabels(state) {
   }
 
   /* Status row labels (preserve existing placed-address text) */
-  for (var j = 1; j <= 4; j++) {
+  for (var j = 1; j <= 8; j++) {
     var status = document.getElementById('map-status-r' + j);
     if (status) {
       var zoneSub = status.querySelector('.zone-status-label');
@@ -13987,7 +14183,7 @@ function updateReceiverLabels(state) {
   }
 
   /* Table receiver name inputs (only update if still at default) */
-  for (var k = 1; k <= 4; k++) {
+  for (var k = 1; k <= 8; k++) {
     var inp = document.getElementById('recvName' + k);
     if (inp) {
       inp.placeholder = term + ' ' + k;
@@ -14255,7 +14451,7 @@ function updateOpTimeHeaders() {
 function rebuildZoneSelects() {
   if (currentState === 'OTHER' || currentState === 'NSW') {
     // In OTHER/NSW mode, zone columns are hidden — clear dropdowns
-    ['src','r1','r2','r3','r4'].forEach(function(id) {
+    ['src'].concat(ALL_RECV_KEYS).forEach(function(id) {
       var sel = document.getElementById(id);
       if (sel) { sel.innerHTML = ''; sel.value = ''; }
       updateZoneDisplay(id);
@@ -14263,12 +14459,12 @@ function rebuildZoneSelects() {
     return;
   }
   if (currentState === 'VIC') {
-    fillSelectVIC('src'); fillSelectVIC('r1'); fillSelectVIC('r2'); fillSelectVIC('r3'); fillSelectVIC('r4');
+    fillSelectVIC('src'); ALL_RECV_KEYS.forEach(function(k){ fillSelectVIC(k); });
   } else {
-    fillSelect('src'); fillSelect('r1'); fillSelect('r2'); fillSelect('r3'); fillSelect('r4');
+    fillSelect('src'); ALL_RECV_KEYS.forEach(function(k){ fillSelect(k); });
   }
   // Update text displays after options are rebuilt
-  ['src','r1','r2','r3','r4'].forEach(updateZoneDisplay);
+  ['src'].concat(ALL_RECV_KEYS).forEach(updateZoneDisplay);
 }
 
 // ── Zone text display helpers ────────────────────────────────────────────────
@@ -14376,7 +14572,7 @@ function refreshZonesAndCriteria() {
     if (autoName) autoName.src = true;
     window._subjectSiteOnPlaced(ssll);
   }
-  for (var i = 1; i <= 4; i++) {
+  for (var i = 1; i <= 8; i++) {
     var mode = 'r' + i;
     var rll = window.getReceiverLatLng ? window.getReceiverLatLng(mode) : null;
     if (rll && typeof window._recvOnPlaced === 'function') {
@@ -14834,7 +15030,7 @@ function _acRenderSummaryTable() {
 
   // Find placed receivers
   var receivers = [];
-  for (var ri = 1; ri <= 4; ri++) {
+  for (var ri = 1; ri <= 8; ri++) {
     var rk = 'r' + ri;
     var ll = window.getReceiverLatLng ? window.getReceiverLatLng(rk) : null;
     if (!ll) continue;
@@ -15072,7 +15268,7 @@ function _acRenderCase(c) {
       h += '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:6px;">';
       h += '<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px;">Predictions</div>';
       var anyPred = false;
-      for (var ri = 1; ri <= 4; ri++) {
+      for (var ri = 1; ri <= 8; ri++) {
         var rk = 'r' + ri;
         var recvLL2 = window.getReceiverLatLng ? window.getReceiverLatLng(rk) : null;
         if (!recvLL2) continue;
@@ -15464,7 +15660,7 @@ function runCasePredictions() {
       .filter(function(item) { return item !== null; });
 
     // Calculate for each placed receiver
-    for (var ri = 0; ri < 4; ri++) {
+    for (var ri = 0; ri < 8; ri++) {
       var recvKey = 'r' + (ri + 1);
       var recvLL = window.getReceiverLatLng ? window.getReceiverLatLng(recvKey) : null;
       if (!recvLL) continue;
@@ -17209,7 +17405,7 @@ function triggerRecalculation() {
     var hasSource = typeof sources !== 'undefined' && sources.some(function(s) { return s.lat !== null; });
     var hasReceiver = false;
     var allLL = window._getAllLatLngs ? window._getAllLatLngs() : {};
-    ['r1','r2','r3','r4'].forEach(function(k) { if (allLL[k]) hasReceiver = true; });
+    ALL_RECV_KEYS.forEach(function(k) { if (allLL[k]) hasReceiver = true; });
     if (!hasSource || !hasReceiver) { clearStaleIndicator(); return; }
     if (typeof render === 'function') render();
     // Also recompute noise map if active
@@ -19009,7 +19205,7 @@ function updateIFPlaceholder() {
   var ifInput = document.getElementById('vicIF');
   if (!ifInput || ifInput.value !== '') return;
   var vals = [];
-  ['r1','r2','r3','r4'].forEach(function(id) {
+  ALL_RECV_KEYS.forEach(function(id) {
     if (autoIFPerReceiver[id] !== null) vals.push(autoIFPerReceiver[id]);
   });
   if (vals.length === 0) { ifInput.placeholder = 'auto'; return; }
@@ -19024,7 +19220,7 @@ function updateIFPlaceholder() {
 }
 
 /** Per-receiver map visibility state */
-var _vicRecvMapVisible = {r1: false, r2: false, r3: false, r4: false};
+var _vicRecvMapVisible = {r1: false, r2: false, r3: false, r4: false, r5: false, r6: false, r7: false, r8: false};
 
 /** Build zone list HTML (reused by panel and map legend) */
 function _buildZoneListHTML(zones, fracs, label) {
@@ -19249,7 +19445,7 @@ function _buildVicNoiseLimitTableHTML(recvId) {
 
 /** Refresh all rendered VIC noise limit tables in place (called when background data changes) */
 function _refreshNoiseLimitTables() {
-  ['r1','r2','r3','r4'].forEach(function(id) {
+  ALL_RECV_KEYS.forEach(function(id) {
     var el = document.getElementById('vicNoiseLimitTable_' + id);
     if (el) el.outerHTML = _buildVicNoiseLimitTableHTML(id);
   });
@@ -19293,12 +19489,12 @@ function _updateMapStatusRowVisibility() {
 /** Render the detected zones into the UI panel — shows per-receiver IF data */
 function renderDetectedZones() {
   var el = document.getElementById('vicDetectedZones');
-  var hasAny = ['r1','r2','r3','r4'].some(function(id) { return autoIFDataPerReceiver[id] !== null; });
+  var hasAny = ALL_RECV_KEYS.some(function(id) { return autoIFDataPerReceiver[id] !== null; });
   if (!el || !hasAny) { if (el) el.style.display = 'none'; return; }
   el.style.display = 'block';
 
-  var NSA_LABELS = {r1: 'NSA 1', r2: 'NSA 2', r3: 'NSA 3', r4: 'NSA 4'};
-  var RECV_COLORS = {r1: '#16a34a', r2: '#16a34a', r3: '#16a34a', r4: '#16a34a'}; // uniform per Chunk 1
+  var NSA_LABELS = {r1: 'NSA 1', r2: 'NSA 2', r3: 'NSA 3', r4: 'NSA 4', r5: 'NSA 5', r6: 'NSA 6', r7: 'NSA 7', r8: 'NSA 8'};
+  var RECV_COLORS = {r1: '#16a34a', r2: '#16a34a', r3: '#16a34a', r4: '#16a34a', r5: '#16a34a', r6: '#16a34a', r7: '#16a34a', r8: '#16a34a'};
 
   var h = '<div style="font-size:10px;color:var(--muted);margin-bottom:6px;">Per Pub 1826.5 Figure 1, IF is derived from zones surrounding each <b>noise sensitive area</b> (NSA).</div>';
   h += '<div style="display:flex;gap:12px;margin-bottom:6px;font-size:10px;font-weight:600;">';
@@ -19308,7 +19504,7 @@ function renderDetectedZones() {
   h += '</div>';
 
   h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
-  ['r1','r2','r3','r4'].forEach(function(id) {
+  ALL_RECV_KEYS.forEach(function(id) {
     var data = autoIFDataPerReceiver[id];
     if (!data) return;
     var nameEl = document.getElementById('name_' + id);
@@ -19379,7 +19575,7 @@ function renderDetectedZones() {
   h += '</div>';
 
   // Zone area summary tables — one per placed receiver, below the badge grid
-  ['r1','r2','r3','r4'].forEach(function(id) {
+  ALL_RECV_KEYS.forEach(function(id) {
     var data = autoIFDataPerReceiver[id];
     if (!data) return;
     h += _buildZoneAreaTableHTML(id, data);
@@ -19403,7 +19599,7 @@ function triggerAutoIFAllReceivers() {
   if (currentState !== 'VIC' || vicAreaType !== 'urban') return;
   var getRecvLL = window.getReceiverLatLng;
   if (!getRecvLL) return;
-  ['r1','r2','r3','r4'].forEach(function(id) {
+  ALL_RECV_KEYS.forEach(function(id) {
     var ll = getRecvLL(id);
     if (ll) triggerAutoIF(id, ll);
   });
@@ -19557,7 +19753,7 @@ function runClause20ForReceiver(recvId) {
 function triggerClause20AllReceivers() {
   if (currentState !== 'VIC' || vicAreaType !== 'rural') return;
   var getLL = window.getReceiverLatLng;
-  ['r1','r2','r3','r4'].forEach(function(id) {
+  ALL_RECV_KEYS.forEach(function(id) {
     var ll = getLL ? getLL(id) : null;
     if (ll) runClause20ForReceiver(id);
     else _clause20Cache[id] = null;
@@ -19660,7 +19856,7 @@ function runClause6ForReceiver(recvId) {
 function triggerClause6AllReceivers() {
   if (currentState !== 'SA') return;
   var getLL = window.getReceiverLatLng;
-  ['r1','r2','r3','r4'].forEach(function(id) {
+  ALL_RECV_KEYS.forEach(function(id) {
     var ll = getLL ? getLL(id) : null;
     if (ll) runClause6ForReceiver(id);
     else _cl6Cache[id] = null;
@@ -19819,7 +20015,11 @@ var _vicPerNsaBg = {
   r1: {day: NaN, evening: NaN, night: NaN, class: 'auto'},
   r2: {day: NaN, evening: NaN, night: NaN, class: 'auto'},
   r3: {day: NaN, evening: NaN, night: NaN, class: 'auto'},
-  r4: {day: NaN, evening: NaN, night: NaN, class: 'auto'}
+  r4: {day: NaN, evening: NaN, night: NaN, class: 'auto'},
+  r5: {day: NaN, evening: NaN, night: NaN, class: 'auto'},
+  r6: {day: NaN, evening: NaN, night: NaN, class: 'auto'},
+  r7: {day: NaN, evening: NaN, night: NaN, class: 'auto'},
+  r8: {day: NaN, evening: NaN, night: NaN, class: 'auto'}
 };
 
 function getVicBackgroundClass() {
@@ -19946,7 +20146,7 @@ function getVicZoningLevelsForDisplay() {
     IF = Number(ifInput.value);
   } else {
     // Use first available receiver's auto-IF
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 8; i++) {
       var id = 'r' + (i + 1);
       if (autoIFPerReceiver[id] !== null) { IF = autoIFPerReceiver[id]; break; }
     }
@@ -19956,7 +20156,7 @@ function getVicZoningLevelsForDisplay() {
     if (IF === null) {
       // Try from receiver zone type
       var recVal = '';
-      ['r1','r2','r3','r4'].forEach(function(id) {
+      ALL_RECV_KEYS.forEach(function(id) {
         if (!recVal) {
           var el = document.getElementById(id);
           if (el && el.value) recVal = el.value;
@@ -19973,7 +20173,7 @@ function getVicZoningLevelsForDisplay() {
   } else {
     // Rural: get from first available receiver zone pair
     var recVal2 = '';
-    ['r1','r2','r3','r4'].forEach(function(id) {
+    ALL_RECV_KEYS.forEach(function(id) {
       if (!recVal2) {
         var el = document.getElementById(id);
         if (el && el.value) recVal2 = el.value;
@@ -21639,7 +21839,7 @@ function _getVicRuralBaseZoneLevels(srcCode, recCode) {
  *  Called immediately after _buildVicRuralCritTableHTML sets vicRuralCritTable.innerHTML.
  *  Uses 'change' (on blur / Enter) so render() fires once per edit, not on every keystroke. */
 function _attachVicRuralDistInputs() {
-  ['r1','r2','r3','r4'].forEach(function(key) {
+  ALL_RECV_KEYS.forEach(function(key) {
     var el = document.getElementById('vic-rural-dist-' + key);
     if (!el) return;
     el.addEventListener('change', function() {
@@ -21860,9 +22060,28 @@ function render() {
     }
   }
 
-  const ids = ["r1","r2","r3","r4"];
-  const rKeys = ids.map(id => document.getElementById(id).value);
+  const ids = ["r1","r2","r3","r4","r5","r6","r7","r8"];
+  const rKeys = ids.map(id => { var el = document.getElementById(id); return el ? el.value : ''; });
   const recs = rKeys.map(k => byKey.get(k));
+
+  // Show/hide criteria rows, penalty rows, and status spans; update receiver labels with R{N}: prefix
+  ALL_RECV_KEYS.forEach(function(rk, idx) {
+    var placed = typeof window.getReceiverLatLng === 'function' && window.getReceiverLatLng(rk) !== null;
+    var rowEl = document.getElementById('recvRow_' + rk);
+    if (rowEl) rowEl.style.display = placed ? '' : 'none';
+    var penEl = document.getElementById('penRow_' + rk);
+    if (penEl) penEl.style.display = placed ? '' : 'none';
+    var stEl = document.getElementById('map-status-' + rk);
+    if (stEl) stEl.style.display = placed ? '' : 'none';
+    // Update penalty label with "R{N}: {name}" prefix
+    var n = idx + 1;
+    var labelEl = document.getElementById('penR' + n + 'Label');
+    if (labelEl) {
+      var nameInp = document.getElementById('recvName' + n);
+      var rawName = nameInp && nameInp.value.trim() ? nameInp.value.trim() : ('Receiver ' + n);
+      labelEl.textContent = 'R' + n + ': ' + rawName;
+    }
+  });
 
   ids.forEach((id, idx) => {
     const rec = recs[idx];
@@ -21937,7 +22156,7 @@ function render() {
   // SA Clause 6 footnote badge — show when any receiver has Cl 5(6) active
   var saFootnoteBadge = document.getElementById('saClause6Badge');
   if (saFootnoteBadge && !isVIC && !isNSW && !isOTHER) {
-    var anyCl6 = ['r1','r2','r3','r4'].some(function(rid) {
+    var anyCl6 = ALL_RECV_KEYS.some(function(rid) {
       var e = _cl6Cache[rid];
       return e && e !== 'pending' && e.applies === true;
     });
@@ -22003,7 +22222,8 @@ function render() {
   recs.forEach((rec, i) => {
     const keyText = rKeys[i] || '';
     const nameInput = document.getElementById(`recvName${i+1}`);
-    const recvLabel = escapeHTML(nameInput && nameInput.value.trim() ? nameInput.value.trim() : `Receiver ${i+1}`);
+    const rawName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : `Receiver ${i+1}`;
+    const recvLabel = escapeHTML(`R${i+1}: ${rawName}`);
     let dayCrit, eveCrit, nightCrit, lmaxCrit;
     var _recCrit = null;  // Phase 2: captures crit for strip data collection
     if (isOTHER) {
@@ -22029,7 +22249,8 @@ function render() {
       lmaxCrit  = crit.lmax;
       if (isVIC && vicAreaType === 'rural' && crit.distAdj && crit.distAdj > 0) {
         if (!_vicRuralDistNotes) _vicRuralDistNotes = [];
-        var recvNameFn = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : ('Receiver ' + (i + 1));
+        var _rawNameFn = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : ('Receiver ' + (i + 1));
+        var recvNameFn = 'R' + (i + 1) + ': ' + _rawNameFn;
         _vicRuralDistNotes.push({ name: recvNameFn, dist: getReceiverDistance(i + 1), adj: crit.distAdj });
       }
     }
@@ -22338,7 +22559,7 @@ function _renderCortnPredDetail() {
     html += '<thead><tr style="color:#6b7280;"><th style="text-align:left;padding:2px 6px;">Receiver</th><th style="text-align:right;padding:2px 6px;">Dist (m)</th><th style="text-align:right;padding:2px 6px;">Angle (°)</th><th style="text-align:right;padding:2px 6px;">Day LA10</th><th style="text-align:right;padding:2px 6px;">Day LAeq</th><th style="text-align:right;padding:2px 6px;">Night LA10</th><th style="text-align:right;padding:2px 6px;">Night LAeq</th></tr></thead>';
     html += '<tbody>';
     var anyRecv = false;
-    for (var ri = 1; ri <= 4; ri++) {
+    for (var ri = 1; ri <= 8; ri++) {
       var rk = 'r' + ri;
       var rr = cr.receiverResults && cr.receiverResults[rk];
       if (!rr || (!rr.day && !rr.night)) continue;
@@ -22540,7 +22761,7 @@ function renderRecommendations() {
   if (!card || !body) return;
 
   var allLL    = window._getAllLatLngs ? window._getAllLatLngs() : {};
-  var recvIds  = ['r1','r2','r3','r4'];
+  var recvIds  = ['r1','r2','r3','r4','r5','r6','r7','r8'];
   var periods  = [
     {key:'day',   label:'Day'},
     {key:'eve',   label:'Evening'},
@@ -23149,7 +23370,7 @@ function initPropagationMethod() {
     for (var si = 0; si < sourcePins.length; si++) {
       if (sourcePins[si].lat !== null) { srcLL = { lat: sourcePins[si].lat, lng: sourcePins[si].lng }; break; }
     }
-    for (var ri = 1; ri <= 4; ri++) {
+    for (var ri = 1; ri <= 8; ri++) {
       var rk = 'r' + ri;
       if (allLL[rk]) { recLL = allLL[rk]; break; }
     }
@@ -23780,7 +24001,7 @@ function initPropagationMethod() {
           for (var k in recvGroundElevations) recvGroundElevations[k] = null;
         }
         // Clear receiver elevation display text
-        for (var ri = 1; ri <= 4; ri++) {
+        for (var ri = 1; ri <= 8; ri++) {
           var el = document.getElementById('groundElev_r' + ri);
           if (el) el.textContent = '';
         }
@@ -23851,7 +24072,7 @@ function initPenaltyTable() {
   }
 
   var periods = ['Day', 'Eve', 'Night'];
-  var recvIds = ['R1', 'R2', 'R3', 'R4'];
+  var recvIds = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8'];
 
   recvIds.forEach(function(rid) {
     periods.forEach(function(per) {
@@ -23884,13 +24105,13 @@ function initPenaltyTable() {
 
   // Update receiver labels (VIC uses NSA, others use Receiver)
   var prefix = isVIC ? 'NSA' : 'Receiver';
-  for (var li = 1; li <= 4; li++) {
+  for (var li = 1; li <= 8; li++) {
     var lbl = document.getElementById('penR' + li + 'Label');
     if (lbl) lbl.textContent = prefix + ' ' + li;
   }
 
   // Reset all per-receiver penalties to 0
-  recvPenalties = {r1:{day:0,eve:0,night:0},r2:{day:0,eve:0,night:0},r3:{day:0,eve:0,night:0},r4:{day:0,eve:0,night:0}};
+  recvPenalties = {r1:{day:0,eve:0,night:0},r2:{day:0,eve:0,night:0},r3:{day:0,eve:0,night:0},r4:{day:0,eve:0,night:0},r5:{day:0,eve:0,night:0},r6:{day:0,eve:0,night:0},r7:{day:0,eve:0,night:0},r8:{day:0,eve:0,night:0}};
 }
 
 function updatePenaltyFromTable(el) {
@@ -23991,7 +24212,7 @@ function getSpectrumData(prefix, sourceIdx) {
 
   // Combined spectrum per receiver (energy sum of all sources, then propagation)
   var receivers = [];
-  for (var ri = 1; ri <= 4; ri++) {
+  for (var ri = 1; ri <= 8; ri++) {
     var dist = getReceiverDistance(ri);
     if (!Number.isFinite(dist) || dist <= 0) continue;
 
@@ -24249,7 +24470,7 @@ function renderNSWDerivTable() {
   // Collect derivation data per receiver
   var recvNames = [];
   var derivRows = [];
-  for (var i = 1; i <= 4; i++) {
+  for (var i = 1; i <= 8; i++) {
     var nameEl = document.getElementById('recvName' + i);
     var name = nameEl ? nameEl.value.trim() : ('Receiver ' + i);
     var distEl = document.getElementById('dist_r' + i);
@@ -24328,13 +24549,10 @@ function updateOtherCritSelection() {
   render();
 }
 
-["src","r1","r2","r3","r4"].forEach(fillSelect);
-["src","r1","r2","r3","r4"].forEach(id => document.getElementById(id).addEventListener('change', () => {
+["src","r1","r2","r3","r4","r5","r6","r7","r8"].forEach(fillSelect);
+["src","r1","r2","r3","r4","r5","r6","r7","r8"].forEach(id => { var _el = document.getElementById(id); if (!_el) return; _el.addEventListener('change', () => {
   // If a receiver selection changes, clear predicted values for that receiver row
-  if (id === "r1") clearPredRow(1);
-  if (id === "r2") clearPredRow(2);
-  if (id === "r3") clearPredRow(3);
-  if (id === "r4") clearPredRow(4);
+  var _rn = id.match(/^r(\d+)$/); if (_rn) clearPredRow(parseInt(_rn[1]));
   render();
   // Re-trigger Clause 20 when zone code changes in rural VIC mode
   if (currentState === 'VIC' && vicAreaType === 'rural') {
@@ -24354,7 +24572,7 @@ function updateOtherCritSelection() {
       runClause6ForReceiver(id);
     }
   }
-}));
+}); });
 
 function renderScenariosTable() {
   var container = document.getElementById('scenariosTableContainer');
@@ -24565,7 +24783,7 @@ function renderContributions() {
     table.appendChild(thead);
     var tbody = document.createElement('tbody');
 
-    ['r1','r2','r3','r4'].forEach(function(rid, ri) {
+    ALL_RECV_KEYS.forEach(function(rid, ri) {
       var d0 = getDistanceForSourceReceiver(0, ri);
       var distEl = document.getElementById('dist_r' + (ri + 1));
       var recLL = allLL[rid];
@@ -24577,7 +24795,8 @@ function renderContributions() {
       if (!hasRecv) return;
 
       var nameInput = document.getElementById('recvName' + (ri + 1));
-      var recvLabel = nameInput && nameInput.value.trim() ? nameInput.value.trim() : ('Receiver ' + (ri + 1));
+      var _rawName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : ('Receiver ' + (ri + 1));
+      var recvLabel = 'R' + (ri + 1) + ': ' + _rawName;
 
       var recvHdr = document.createElement('tr');
       recvHdr.className = 'contrib-recv-hdr';
@@ -24832,7 +25051,7 @@ function renderContributions() {
       lmaxTable.appendChild(lmaxThead);
       var lmaxTbody = document.createElement('tbody');
 
-      ['r1','r2','r3','r4'].forEach(function(rid, ri) {
+      ALL_RECV_KEYS.forEach(function(rid, ri) {
         var d0 = getDistanceForSourceReceiver(0, ri);
         var distElLmax = document.getElementById('dist_r' + (ri + 1));
         var hasRecvLmax = Number.isFinite(d0) && d0 > 0;
@@ -24843,7 +25062,8 @@ function renderContributions() {
         if (!hasRecvLmax) return;
 
         var nameInputLmax = document.getElementById('recvName' + (ri + 1));
-        var recvLabelLmax = nameInputLmax && nameInputLmax.value.trim() ? nameInputLmax.value.trim() : ('Receiver ' + (ri + 1));
+        var _rawNameLmax = nameInputLmax && nameInputLmax.value.trim() ? nameInputLmax.value.trim() : ('Receiver ' + (ri + 1));
+        var recvLabelLmax = 'R' + (ri + 1) + ': ' + _rawNameLmax;
 
         var recvHdrLmax = document.createElement('tr');
         recvHdrLmax.className = 'contrib-recv-hdr';
@@ -24949,12 +25169,12 @@ function renderEmergencyEquipCriteria() {
   thead.innerHTML = hdr;
 
   // Build body
-  var ids = ['r1','r2','r3','r4'];
+  var ids = ['r1','r2','r3','r4','r5','r6','r7','r8'];
   var srcVal = document.getElementById('src') ? document.getElementById('src').value : '';
   var source = srcVal ? byKey.get(srcVal) : null;
   var html = '';
 
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i < 8; i++) {
     var nameEl = document.getElementById('recvName' + (i+1));
     var label = nameEl && nameEl.value.trim() ? nameEl.value.trim() : ('Receiver ' + (i+1));
     var recVal = document.getElementById(ids[i]) ? document.getElementById(ids[i]).value : '';
@@ -25310,7 +25530,7 @@ setInitialCollapseState();
       try {
         var data = {};
         data._format = 'resonate-noise-tool';
-        data._version = 8;
+        data._version = 9;
         data._exportedAt = new Date().toISOString();
 
         // Map view at save time, so reopening returns to the saved framing
@@ -25376,27 +25596,27 @@ setInitialCollapseState();
 
         // Zone selections
         data.zones = {};
-        ['src','r1','r2','r3','r4'].forEach(function(id) {
+        ['src'].concat(ALL_RECV_KEYS).forEach(function(id) {
           var el = document.getElementById(id);
           if (el) data.zones[id] = el.value;
         });
 
         // SA receiver types
         data.saRecvTypes = {};
-        ['r1','r2','r3','r4'].forEach(function(id) {
+        ALL_RECV_KEYS.forEach(function(id) {
           var el = document.getElementById(id + '_recvtype');
           if (el) data.saRecvTypes[id] = el.value;
         });
 
         // Receiver names
         data.receiverNames = {};
-        for (var ri = 1; ri <= 4; ri++) {
+        for (var ri = 1; ri <= 8; ri++) {
           var nameEl = document.getElementById('recvName' + ri);
           if (nameEl && nameEl.value) data.receiverNames['recvName' + ri] = nameEl.value;
         }
         // Receiver auto-name flags (true = geocode can overwrite; false = user edited)
         data.recvAutoName = {};
-        for (var ri = 1; ri <= 4; ri++) {
+        for (var ri = 1; ri <= 8; ri++) {
           var rKey = 'r' + ri;
           data.recvAutoName[rKey] = (window._recvAutoName && window._recvAutoName[rKey] !== false);
         }
@@ -25406,7 +25626,7 @@ setInitialCollapseState();
 
         // Predicted levels
         data.predictions = {};
-        ['r1','r2','r3','r4'].forEach(function(rid) {
+        ALL_RECV_KEYS.forEach(function(rid) {
           ['day','eve','night','lmax'].forEach(function(per) {
             var v = loadPred(rid + '_' + per);
             if (v) data.predictions[rid + '_' + per] = v;
@@ -25419,7 +25639,7 @@ setInitialCollapseState();
         // Per-receiver heights (only save non-null overrides)
         var rh = {};
         var anyRh = false;
-        ['r1','r2','r3','r4'].forEach(function(k) {
+        ALL_RECV_KEYS.forEach(function(k) {
           if (recvHeights[k] !== null && Number.isFinite(recvHeights[k])) {
             rh[k] = recvHeights[k];
             anyRh = true;
@@ -25429,7 +25649,7 @@ setInitialCollapseState();
 
         // Per-receiver floor configuration
         var rf = {}, anyRf = false;
-        ['r1','r2','r3','r4'].forEach(function(k) {
+        ALL_RECV_KEYS.forEach(function(k) {
           if (recvFloors[k]) { rf[k] = recvFloors[k]; anyRf = true; }
         });
         if (anyRf) data.recvFloors = rf;
@@ -25437,7 +25657,7 @@ setInitialCollapseState();
         // Per-receiver site boundary distances (reference only)
         var rdb = {};
         var anyRdb = false;
-        ['r1','r2','r3','r4'].forEach(function(k) {
+        ALL_RECV_KEYS.forEach(function(k) {
           if (recvDistToBoundary[k] !== null && Number.isFinite(recvDistToBoundary[k])) {
             rdb[k] = recvDistToBoundary[k];
             anyRdb = true;
@@ -25493,7 +25713,7 @@ setInitialCollapseState();
         if (nswRE && nswRE.value) data.nsw.rblEve = nswRE.value;
         var nswRN = document.getElementById('nswRblNight');
         if (nswRN && nswRN.value) data.nsw.rblNight = nswRN.value;
-        for (var ni = 1; ni <= 4; ni++) {
+        for (var ni = 1; ni <= 8; ni++) {
           var nrt = document.getElementById('nswRecType' + ni);
           if (nrt) data.nsw['recType' + ni] = nrt.value;
         }
@@ -25582,7 +25802,7 @@ setInitialCollapseState();
             }
           });
         }
-        for (var ti = 1; ti <= 4; ti++) {
+        for (var ti = 1; ti <= 8; ti++) {
           var rKey = 'r' + ti;
           var rElev = (typeof recvGroundElevations !== 'undefined') ? recvGroundElevations[rKey] : undefined;
           if (rElev !== null && rElev !== undefined) {
@@ -25909,7 +26129,7 @@ setInitialCollapseState();
     function buildReceiverFeatures() {
       var features = [];
       var allLL = window._getAllLatLngs ? window._getAllLatLngs() : {};
-      var recs = ['r1', 'r2', 'r3', 'r4'];
+      var recs = ['r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8'];
       recs.forEach(function(rk, i) {
         var ll = allLL[rk];
         if (!ll) return;
@@ -26845,7 +27065,7 @@ setInitialCollapseState();
       if (data.recvPenalties) {
         recvPenalties = JSON.parse(JSON.stringify(data.recvPenalties));
         // Update the UI controls
-        ['r1','r2','r3','r4'].forEach(function(rid) {
+        ALL_RECV_KEYS.forEach(function(rid) {
           ['day','eve','night'].forEach(function(per) {
             var RID = rid.charAt(0).toUpperCase() + rid.slice(1);
             var PER = per.charAt(0).toUpperCase() + per.slice(1);
@@ -26861,21 +27081,21 @@ setInitialCollapseState();
 
       // 8a2. Per-receiver heights (stored in recvHeights{}; UI is now in the marker popup)
       if (data.recvHeights) {
-        ['r1','r2','r3','r4'].forEach(function(k) {
+        ALL_RECV_KEYS.forEach(function(k) {
           recvHeights[k] = (data.recvHeights[k] !== undefined) ? data.recvHeights[k] : null;
         });
       }
 
       // 8a2b. Per-receiver floor configuration
       if (data.recvFloors) {
-        ['r1','r2','r3','r4'].forEach(function(k) {
+        ALL_RECV_KEYS.forEach(function(k) {
           recvFloors[k] = data.recvFloors[k] || null;
         });
       }
 
       // 8a3. Per-receiver site boundary distances (VIC rural table inputs — rebuilt on render())
       if (data.recvDistToBoundary) {
-        ['r1','r2','r3','r4'].forEach(function(k) {
+        ALL_RECV_KEYS.forEach(function(k) {
           var v = data.recvDistToBoundary[k];
           recvDistToBoundary[k] = (v !== undefined && Number.isFinite(v)) ? v : null;
           // Note: the inline inputs live inside the VIC rural criteria table, which is rebuilt
@@ -27004,7 +27224,7 @@ setInitialCollapseState();
         if (data.vic.perNsaBg) {
           _vicPerNsaBg = JSON.parse(JSON.stringify(data.vic.perNsaBg));
           // Restore NaN values (JSON serializes NaN as null)
-          ['r1','r2','r3','r4'].forEach(function(rid) {
+          ALL_RECV_KEYS.forEach(function(rid) {
             if (_vicPerNsaBg[rid]) {
               ['day','evening','night'].forEach(function(p) {
                 if (_vicPerNsaBg[rid][p] === null) _vicPerNsaBg[rid][p] = NaN;
@@ -27039,7 +27259,7 @@ setInitialCollapseState();
         if (nswRE && data.nsw.rblEve) nswRE.value = data.nsw.rblEve;
         var nswRN = document.getElementById('nswRblNight');
         if (nswRN && data.nsw.rblNight) nswRN.value = data.nsw.rblNight;
-        for (var ni = 1; ni <= 4; ni++) {
+        for (var ni = 1; ni <= 8; ni++) {
           var nrt = document.getElementById('nswRecType' + ni);
           if (nrt && data.nsw['recType' + ni]) nrt.value = data.nsw['recType' + ni];
         }
@@ -27096,16 +27316,16 @@ setInitialCollapseState();
           }
           // Clear ALL receiver markers first (handles orphaned markers from undo/redo),
           // then re-place only those present in the snapshot
-          ['r1','r2','r3','r4'].forEach(function(rk) {
+          ALL_RECV_KEYS.forEach(function(rk) {
             if (window._clearMarker) window._clearMarker(rk);
           });
-          for (var mi = 1; mi <= 4; mi++) {
+          for (var mi = 1; mi <= 8; mi++) {
             var rKey = 'r' + mi;
             if (data.markers[rKey]) window._placeMarker(rKey, data.markers[rKey]);
           }
           if (window._recvGeoSetLoading) window._recvGeoSetLoading(false);
           // Update coordinate spans now that markers are loaded
-          for (var ci = 1; ci <= 4; ci++) {
+          for (var ci = 1; ci <= 8; ci++) {
             var cmode = 'r' + ci;
             if (data.markers && data.markers[cmode] && typeof window._recvOnDragEnd === 'function') {
               window._recvOnDragEnd(cmode, data.markers[cmode]);
@@ -27220,7 +27440,7 @@ setInitialCollapseState();
           });
         }
         if (data.terrain.receiverElevations) {
-          for (var rk = 1; rk <= 4; rk++) {
+          for (var rk = 1; rk <= 8; rk++) {
             var elev = data.terrain.receiverElevations['receiver-' + rk];
             if (elev !== undefined && typeof recvGroundElevations !== 'undefined') {
               recvGroundElevations['r' + rk] = elev;
@@ -28329,14 +28549,14 @@ setInitialCollapseState();
 
       // Zone selections
       data.zones = {};
-      ['src','r1','r2','r3','r4'].forEach(function(id) {
+      ['src','r1','r2','r3','r4','r5','r6','r7','r8'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) data.zones[id] = el.value;
       });
 
       // SA receiver types
       data.saRecvTypes = {};
-      ['r1','r2','r3','r4'].forEach(function(id) {
+      ALL_RECV_KEYS.forEach(function(id) {
         var el = document.getElementById(id + '_recvtype');
         if (el) data.saRecvTypes[id] = el.value;
       });
@@ -28344,7 +28564,7 @@ setInitialCollapseState();
       // Receiver names + auto-name flags
       data.receiverNames = {};
       data.recvAutoName  = {};
-      for (var ri = 1; ri <= 4; ri++) {
+      for (var ri = 1; ri <= 8; ri++) {
         var nameEl = document.getElementById('recvName' + ri);
         if (nameEl && nameEl.value) data.receiverNames['recvName' + ri] = nameEl.value;
         data.recvAutoName['r' + ri] = (window._recvAutoName && window._recvAutoName['r' + ri] !== false);
@@ -28354,21 +28574,21 @@ setInitialCollapseState();
       data.recvPenalties = typeof recvPenalties !== 'undefined' ? JSON.parse(JSON.stringify(recvPenalties)) : {};
       var rh = {}, anyRh = false;
       if (typeof recvHeights !== 'undefined') {
-        ['r1','r2','r3','r4'].forEach(function(k) {
+        ALL_RECV_KEYS.forEach(function(k) {
           if (recvHeights[k] !== null && Number.isFinite(recvHeights[k])) { rh[k] = recvHeights[k]; anyRh = true; }
         });
       }
       if (anyRh) data.recvHeights = rh;
       var rf = {}, anyRf = false;
       if (typeof recvFloors !== 'undefined') {
-        ['r1','r2','r3','r4'].forEach(function(k) {
+        ALL_RECV_KEYS.forEach(function(k) {
           if (recvFloors[k]) { rf[k] = recvFloors[k]; anyRf = true; }
         });
       }
       if (anyRf) data.recvFloors = rf;
       var rdb = {}, anyRdb = false;
       if (typeof recvDistToBoundary !== 'undefined') {
-        ['r1','r2','r3','r4'].forEach(function(k) {
+        ALL_RECV_KEYS.forEach(function(k) {
           if (recvDistToBoundary[k] !== null && Number.isFinite(recvDistToBoundary[k])) { rdb[k] = recvDistToBoundary[k]; anyRdb = true; }
         });
       }
@@ -28417,7 +28637,7 @@ setInitialCollapseState();
         var el = document.getElementById(id);
         if (el && el.value) data.nsw[id.replace('nsw','')] = el.value;
       });
-      for (var ni = 1; ni <= 4; ni++) {
+      for (var ni = 1; ni <= 8; ni++) {
         var nrt = document.getElementById('nswRecType' + ni);
         if (nrt) data.nsw['recType' + ni] = nrt.value;
       }
@@ -28534,7 +28754,7 @@ setInitialCollapseState();
       try {
         if (typeof loadPred === 'function') {
           var _pr = {};
-          ['r1','r2','r3','r4'].forEach(function(rid) {
+          ALL_RECV_KEYS.forEach(function(rid) {
             ['day','eve','night','lmax'].forEach(function(per) {
               var v = loadPred(rid + '_' + per);
               if (v) _pr[rid + '_' + per] = v;
@@ -28762,7 +28982,7 @@ setInitialCollapseState();
     });
 
     // Receiver name changes (blur, not every keystroke)
-    for (var ri = 1; ri <= 4; ri++) {
+    for (var ri = 1; ri <= 8; ri++) {
       (function(i) {
         var inp = document.getElementById('recvName' + i);
         if (inp) inp.addEventListener('blur', function() { pushState('Edit receiver R' + i + ' name'); });
@@ -28770,13 +28990,13 @@ setInitialCollapseState();
     }
 
     // Receiver zone changes (manual dropdown override)
-    ['r1','r2','r3','r4'].forEach(function(id) {
+    ALL_RECV_KEYS.forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.addEventListener('change', function() { pushState('Change zone for ' + id.toUpperCase()); });
     });
 
     // SA receiver type (INL / INL-5) changes
-    ['r1','r2','r3','r4'].forEach(function(id) {
+    ALL_RECV_KEYS.forEach(function(id) {
       var el = document.getElementById(id + '_recvtype');
       if (el) el.addEventListener('change', function() { pushState('Change criteria type for ' + id.toUpperCase()); });
     });
@@ -29215,7 +29435,11 @@ if (window.pdfjsLib) {
     r1:     { color: '#16a34a', get label(){ return recvLabel(1); },   initial: '1', distId: 'dist_r1' },
     r2:     { color: '#16a34a', get label(){ return recvLabel(2); },   initial: '2', distId: 'dist_r2' },
     r3:     { color: '#16a34a', get label(){ return recvLabel(3); },   initial: '3', distId: 'dist_r3' },
-    r4:     { color: '#16a34a', get label(){ return recvLabel(4); },   initial: '4', distId: 'dist_r4' }
+    r4:     { color: '#16a34a', get label(){ return recvLabel(4); },   initial: '4', distId: 'dist_r4' },
+    r5:     { color: '#16a34a', get label(){ return recvLabel(5); },   initial: '5', distId: 'dist_r5' },
+    r6:     { color: '#16a34a', get label(){ return recvLabel(6); },   initial: '6', distId: 'dist_r6' },
+    r7:     { color: '#16a34a', get label(){ return recvLabel(7); },   initial: '7', distId: 'dist_r7' },
+    r8:     { color: '#16a34a', get label(){ return recvLabel(8); },   initial: '8', distId: 'dist_r8' }
   };
   /** Get config for source_N modes (dynamic, colour-coded per source) */
   function getModeCfg(mode) {
@@ -29230,7 +29454,7 @@ if (window.pdfjsLib) {
     }
     return CFG.source; // fallback
   }
-  var ORDER = ['source', 'r1', 'r2', 'r3', 'r4'];
+  var ORDER = ['source', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8'];
 
   function initMap() {
     if (typeof L === 'undefined') { console.warn('Leaflet not loaded'); return; }
@@ -29970,7 +30194,7 @@ if (window.pdfjsLib) {
     /* --- Expose zone re-query for use by detectStateFromCoords() (outside IIFE) --- */
     window._requeryAllZones = function() {
       if (latlngs['source']) queryAndSetZone('source', latlngs['source']);
-      for (var i = 1; i <= 4; i++) {
+      for (var i = 1; i <= 8; i++) {
         var key = 'r' + i;
         if (latlngs[key]) queryAndSetZone(key, latlngs[key]);
       }
@@ -31740,7 +31964,7 @@ if (window.pdfjsLib) {
       for (var si = 0; si < numSources; si++) {
         sd[si] = [];
         var srcLL = latlngs['source_' + si] || (si === 0 ? latlngs['source'] : null);
-        ['r1','r2','r3','r4'].forEach(function(rid, ri) {
+        ALL_RECV_KEYS.forEach(function(rid, ri) {
           var recLL = latlngs[rid];
           sd[si][ri] = (srcLL && recLL) ? haversine(srcLL, recLL) : NaN;
         });
@@ -31754,7 +31978,7 @@ if (window.pdfjsLib) {
       var src = latlngs['source_0'] || latlngs['source'];
 
       // Update legacy distance inputs (Source 0 → each receiver) for backward compat
-      ['r1','r2','r3','r4'].forEach(function(id, ri) {
+      ALL_RECV_KEYS.forEach(function(id, ri) {
         var rec = latlngs[id];
         var cfg = CFG[id];
         var statusEl = document.getElementById('map-status-' + id);
@@ -31792,7 +32016,7 @@ if (window.pdfjsLib) {
     var concentricCircles = [];
     var vicZonePolygonLayers = [];
     var _recvMapLegends = {}; // {r1: L.control, ...}
-    var RECV_CIRCLE_COLORS = {r1: '#16a34a', r2: '#16a34a', r3: '#16a34a', r4: '#16a34a'}; // uniform per Chunk 1
+    var RECV_CIRCLE_COLORS = {r1: '#16a34a', r2: '#16a34a', r3: '#16a34a', r4: '#16a34a', r5: '#16a34a', r6: '#16a34a', r7: '#16a34a', r8: '#16a34a'}; // uniform per Chunk 1
 
     function updateConcentricCircles() {
       // Clear existing circles and zone polygons
@@ -31811,7 +32035,7 @@ if (window.pdfjsLib) {
       var TYPE_COLORS = {1: '#059669', 2: '#d97706', 3: '#dc2626'};
       var TYPE_LABELS = {1: 'Type 1 (Residential)', 2: 'Type 2 (Commercial)', 3: 'Type 3 (Industrial)'};
 
-      ['r1','r2','r3','r4'].forEach(function(id) {
+      ALL_RECV_KEYS.forEach(function(id) {
         if (!_vicRecvMapVisible[id]) return; // only show toggled-on receivers
         var ll = latlngs[id];
         if (!ll) return;
@@ -31875,7 +32099,7 @@ if (window.pdfjsLib) {
         _recvMapLegendContainer = null;
       }
       // Also remove any old per-receiver legends (backwards compat)
-      ['r1','r2','r3','r4'].forEach(function(id) {
+      ALL_RECV_KEYS.forEach(function(id) {
         if (_recvMapLegends[id]) {
           map.removeControl(_recvMapLegends[id]);
           _recvMapLegends[id] = null;
@@ -31883,11 +32107,11 @@ if (window.pdfjsLib) {
       });
       if (currentState !== 'VIC' || vicAreaType !== 'urban') return;
 
-      var NSA_LABELS = {r1: 'NSA 1', r2: 'NSA 2', r3: 'NSA 3', r4: 'NSA 4'};
+      var NSA_LABELS = {r1: 'NSA 1', r2: 'NSA 2', r3: 'NSA 3', r4: 'NSA 4', r5: 'NSA 5', r6: 'NSA 6', r7: 'NSA 7', r8: 'NSA 8'};
 
       // Collect visible receivers
       var visibleIds = [];
-      ['r1','r2','r3','r4'].forEach(function(id) {
+      ALL_RECV_KEYS.forEach(function(id) {
         if (_vicRecvMapVisible[id]) {
           var data = window.autoIFDataPerReceiver ? window.autoIFDataPerReceiver[id] : null;
           if (data) visibleIds.push(id);
@@ -32950,7 +33174,7 @@ if (window.pdfjsLib) {
 
     /* ── Receiver popup: rebuild with fresh values on every open ── */
     map.on('popupopen', function(e) {
-      ['r1','r2','r3','r4'].forEach(function(mode) {
+      ALL_RECV_KEYS.forEach(function(mode) {
         if (markers[mode] && markers[mode].getPopup && markers[mode].getPopup() === e.popup) {
           markers[mode].setPopupContent(buildRecvPopupHTML(mode, latlngs[mode]));
           e.popup.update();
@@ -33261,7 +33485,8 @@ if (window.pdfjsLib) {
         if (typeof clearAutoIF === 'function') clearAutoIF();
 
         /* reset distance inputs + zone labels */
-        ['r1','r2','r3','r4'].forEach(function (id) {
+        ALL_RECV_KEYS.forEach(function (id) {
+          if (!CFG[id]) return;
           var inp = CFG[id].distId ? document.getElementById(CFG[id].distId) : null;
           if (inp) {
             inp.value = '';
@@ -45582,13 +45807,14 @@ if (window.pdfjsLib) {
       html += '</div>';
 
       // Receivers group
-      var rcvColors = ['#2563eb', '#16a34a', '#d97706', '#7c3aed'];
-      var rcvModes  = ['r1', 'r2', 'r3', 'r4'];
+      var rcvColors = ['#16a34a', '#16a34a', '#16a34a', '#16a34a', '#16a34a', '#16a34a', '#16a34a', '#16a34a'];
       html += '<div style="margin-bottom:10px;">';
       html += '<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Receivers</div>';
-      rcvModes.forEach(function(modeKey, i) {
+      ALL_RECV_KEYS.forEach(function(modeKey, i) {
         var ll = latlngs[modeKey];
         var placed = !!ll;
+        // r5–r8: only show row if placed
+        if (!placed && i >= 4) return;
         var nameEl = document.getElementById('recvName' + (i + 1));
         var name = escapeHTML((nameEl && nameEl.value) || ('Receiver ' + (i + 1)));
         html += '<div class="obj-row" data-obj-type="receiver" data-obj-idx="' + i + '" style="display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:4px;cursor:pointer;">';
@@ -45757,7 +45983,7 @@ if (window.pdfjsLib) {
         if (ls._poly) { ls._poly.setStyle({ weight: 7, opacity: 1.0 }); setTimeout(function() { ls._poly.setStyle(LS_STYLE); }, 1000); }
         if (typeof openLsPanel === 'function') openLsPanel(ls.id, Math.round(window.innerWidth / 2), Math.round(window.innerHeight / 2));
       } else if (type === 'receiver') {
-        var modeKey = ['r1', 'r2', 'r3', 'r4'][idx];
+        var modeKey = ALL_RECV_KEYS[idx];
         if (!modeKey) return;
         ll = latlngs[modeKey];
         if (!ll) {
@@ -45948,7 +46174,7 @@ if (window.pdfjsLib) {
 
     function _objDelete(type, idx) {
       if (type === 'receiver') {
-        var modeKey = ['r1', 'r2', 'r3', 'r4'][idx];
+        var modeKey = ALL_RECV_KEYS[idx];
         if (!modeKey) return;
         if (!markers[modeKey]) return; // already not placed
         if (!confirm('Remove Receiver ' + (idx + 1) + ' from the map?')) return;
@@ -47437,7 +47663,7 @@ if (window.pdfjsLib) {
           <li>Optionally click <strong>Upload proposal</strong> to auto-fill project details from a Resonate proposal PDF</li>
           <li><strong>Set the site location</strong> — search for an address (auto-places the site pin) or press <kbd>S</kbd> then click the map. The site pin determines the regulatory framework (SA / VIC / NSW). <span class="help-tag">Tools</span></li>
           <li>Place a source from the library or as a custom source <span class="help-tag">Tools</span></li>
-          <li>Place up to 4 receivers (drag to reposition) <span class="help-tag">Tools</span></li>
+          <li>Place up to 8 receivers (drag to reposition) <span class="help-tag">Tools</span></li>
           <li>Criteria are auto-derived from each receiver's location and shown in the Criteria &amp; compliance panel</li>
           <li>See <em>Methodology</em> for full details on calculations and policy logic</li>
         </ul>
@@ -47469,7 +47695,7 @@ if (window.pdfjsLib) {
       <summary><span class="help-arrow">&#9658;</span> Receivers &amp; criteria</summary>
       <div class="help-body">
         <ul>
-          <li>Up to <strong>4 receivers</strong>; drag markers to reposition; rename via the side panel</li>
+          <li>Up to <strong>8 receivers</strong>; drag markers to reposition; rename via the side panel</li>
           <li>Zone is auto-detected from the state planning portal; criteria derive from the host zone</li>
         </ul>
         <div class="help-sub">SA</div>
@@ -48839,13 +49065,13 @@ if (window.pdfjsLib) {
 
   // Per-receiver flag: true = geocode may set name; false = user has edited it
   // 'src' key covers the subject site (S1 location)
-  var _autoName = { r1: true, r2: true, r3: true, r4: true, src: true };
+  var _autoName = { r1:true, r2:true, r3:true, r4:true, r5:true, r6:true, r7:true, r8:true, src:true };
   // Debounce timers (avoid flooding Nominatim on drag)
-  var _geocodeTimers = { r1: null, r2: null, r3: null, r4: null, src: null };
+  var _geocodeTimers = { r1:null, r2:null, r3:null, r4:null, r5:null, r6:null, r7:null, r8:null, src:null };
   // Suppress geocoding while loading from JSON
   var _isLoading = false;
   // Track last-geocoded position to detect movement on drag
-  var _lastHash = { r1: '', r2: '', r3: '', r4: '', src: '' };
+  var _lastHash = { r1:'', r2:'', r3:'', r4:'', r5:'', r6:'', r7:'', r8:'', src:'' };
 
   // ── Expose for save/load integration ─────────────────────────────────────
   window._recvAutoName      = _autoName;
@@ -48914,7 +49140,7 @@ if (window.pdfjsLib) {
 
   // ── Wire input events to track manual edits ───────────────────────────────
   function wireInputs() {
-    for (var i = 1; i <= 4; i++) {
+    for (var i = 1; i <= 8; i++) {
       (function(idx) {
         var mode = 'r' + idx;
         var inp  = document.getElementById('recvName' + idx);
@@ -48925,7 +49151,7 @@ if (window.pdfjsLib) {
         inp.addEventListener('blur', function() {
           // If cleared / reset to generic default, re-enable auto-geocoding
           var v = inp.value.trim();
-          if (!v || /^Receiver [1-4]$/.test(v)) {
+          if (!v || /^Receiver [1-8]$/.test(v)) {
             _autoName[mode] = true;
             var ll = window.getReceiverLatLng ? window.getReceiverLatLng(mode) : null;
             if (ll) scheduleGeocode(mode, ll.lat, ll.lng);
@@ -48994,7 +49220,7 @@ if (window.pdfjsLib) {
   var _origROL = window._renderObjectList;
   window._renderObjectList = function() {
     if (typeof _origROL === 'function') _origROL();
-    for (var i = 1; i <= 4; i++) {
+    for (var i = 1; i <= 8; i++) {
       var mode = 'r' + i;
       var ll   = window.getReceiverLatLng ? window.getReceiverLatLng(mode) : null;
       if (ll) updateCoordsSpan(mode, ll);
@@ -49023,7 +49249,7 @@ if (window.pdfjsLib) {
 
     // Receivers: name, zone label, day/night criteria
     var receivers = [];
-    for (var ri = 1; ri <= 4; ri++) {
+    for (var ri = 1; ri <= 8; ri++) {
       var nameEl   = document.getElementById('recvName' + ri);
       var zoneEl   = document.getElementById('r' + ri);
       var dcEl     = document.getElementById('r' + ri + '_daycrit');
@@ -49127,7 +49353,7 @@ if (window.pdfjsLib) {
           });
         }
         var preds = [];
-        for (var ri = 1; ri <= 4; ri++) {
+        for (var ri = 1; ri <= 8; ri++) {
           var rk = 'r' + ri;
           var recvLL = window.getReceiverLatLng ? window.getReceiverLatLng(rk) : null;
           if (!recvLL) continue;
@@ -49685,6 +49911,10 @@ if (window.pdfjsLib) {
       case '2': _btn('mapMode-r2'); _kbToast('Receiver 2 (2)'); e.preventDefault(); break;
       case '3': _btn('mapMode-r3'); _kbToast('Receiver 3 (3)'); e.preventDefault(); break;
       case '4': _btn('mapMode-r4'); _kbToast('Receiver 4 (4)'); e.preventDefault(); break;
+      case '5': _btn('mapMode-r5'); _kbToast('Receiver 5 (5)'); e.preventDefault(); break;
+      case '6': _btn('mapMode-r6'); _kbToast('Receiver 6 (6)'); e.preventDefault(); break;
+      case '7': _btn('mapMode-r7'); _kbToast('Receiver 7 (7)'); e.preventDefault(); break;
+      case '8': _btn('mapMode-r8'); _kbToast('Receiver 8 (8)'); e.preventDefault(); break;
 
       /* ── Site elements ───────────────────────────────────────── */
       case 'b': case 'B':
