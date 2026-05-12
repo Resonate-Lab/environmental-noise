@@ -4044,7 +4044,7 @@ body.panel-resizing #map-column {
                 <div class="tc-button-group">
                   <button class="mp-btn" id="gisImportBtn" title="Import shapefile (.zip), GeoJSON, or KML file" onclick="document.getElementById('gisFileInput').click()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Import GIS file&hellip;</button>
                   <input type="file" id="gisFileInput" accept=".zip,.shp,.dbf,.shx,.prj,.cpg,.geojson,.json,.kml" multiple style="display:none;">
-                  <button class="mp-btn" id="sitePlanOverlayBtn" title="Upload a site plan image or PDF and position it as a map overlay" onclick="soOpenPicker()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Site plan overlay</button>
+                  <button class="mp-btn" id="sitePlanOverlayBtn" title="Upload a site plan image or PDF and position it as a map overlay" onclick="soOpenPicker()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Site plan overlay (pdf)</button>
                   <input type="file" id="soFileInput" accept=".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf" style="display:none;">
                 </div>
               </section>
@@ -33903,15 +33903,38 @@ if (window.pdfjsLib) {
       var northResult = opts.northResult;
       var defaultRot  = northResult ? northResult.rotation : 0;
 
-      // -- Scale row (only when detected) -------------------------------------------
+      // -- Scale row (editable — shown when detected or always for manual entry) -------
       var scaleHtml = '';
       if (scaleResult) {
         scaleHtml =
-          '<label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;cursor:pointer;">' +
-          '<input type="checkbox" id="_soApplyScale" checked style="margin-top:2px;flex-shrink:0;">' +
-          '<span><strong style="font-size:13px;color:#1e293b;">Scale 1:' + scaleResult.ratio + '</strong><br>' +
-          '<span style="color:#64748b;font-size:12px;">Overlay will be sized to approx. ' +
-          scaleResult.widthM + ' m × ' + scaleResult.heightM + ' m</span></span></label>';
+          '<div style="margin-bottom:16px;">' +
+          '<label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;">' +
+          '<input type="checkbox" id="_soApplyScale" checked style="flex-shrink:0;">' +
+          '<strong style="font-size:13px;color:#1e293b;">Scale</strong>' +
+          '</label>' +
+          '<div style="display:flex;align-items:center;gap:6px;padding-left:24px;">' +
+          '<span style="font-size:13px;color:#1e293b;">1 :</span>' +
+          '<input type="number" id="_soScaleRatio" value="' + scaleResult.ratio + '" min="10" max="100000" step="1" ' +
+            'style="width:90px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;text-align:center;">' +
+          '</div>' +
+          '<div id="_soScaleDims" style="color:#64748b;font-size:12px;padding-left:24px;margin-top:5px;">' +
+          'Overlay will be sized to approx. ' + scaleResult.widthM + ' m \xd7 ' + scaleResult.heightM + ' m' +
+          '</div>' +
+          '</div>';
+      } else {
+        scaleHtml =
+          '<div style="margin-bottom:16px;">' +
+          '<label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;">' +
+          '<input type="checkbox" id="_soApplyScale" style="flex-shrink:0;">' +
+          '<strong style="font-size:13px;color:#1e293b;">Set scale manually</strong>' +
+          '</label>' +
+          '<div style="display:flex;align-items:center;gap:6px;padding-left:24px;">' +
+          '<span style="font-size:13px;color:#475569;">1 :</span>' +
+          '<input type="number" id="_soScaleRatio" placeholder="e.g. 500" min="10" max="100000" step="1" disabled ' +
+            'style="width:90px;padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;text-align:center;background:#f8fafc;color:#94a3b8;">' +
+          '</div>' +
+          '<div id="_soScaleDims" style="color:#64748b;font-size:12px;padding-left:24px;margin-top:5px;"></div>' +
+          '</div>';
       }
 
       // -- North status badge --------------------------------------------------------
@@ -33977,15 +34000,51 @@ if (window.pdfjsLib) {
         '</div>';
       document.body.appendChild(dlg);
 
+      // Wire scale ratio input — live dimension preview + checkbox enable/disable
+      var _soRatioInput = document.getElementById('_soScaleRatio');
+      var _soScaleChkEl = document.getElementById('_soApplyScale');
+      var _soDimsEl     = document.getElementById('_soScaleDims');
+      function _soUpdateDimsPreview() {
+        var r = parseInt(_soRatioInput.value, 10);
+        if (r >= 10 && r <= 100000 && opts.viewport0) {
+          var ptToMm = 25.4 / 72;
+          var wm = Math.round(opts.viewport0.width  * ptToMm * r / 1000);
+          var hm = Math.round(opts.viewport0.height * ptToMm * r / 1000);
+          _soDimsEl.textContent = 'Overlay will be sized to approx. ' + wm + ' m \xd7 ' + hm + ' m';
+        } else {
+          _soDimsEl.textContent = '';
+        }
+      }
+      if (_soRatioInput) {
+        _soRatioInput.addEventListener('input', _soUpdateDimsPreview);
+      }
+      if (_soScaleChkEl && _soRatioInput) {
+        _soScaleChkEl.addEventListener('change', function() {
+          var on = _soScaleChkEl.checked;
+          _soRatioInput.disabled    = !on;
+          _soRatioInput.style.background   = on ? '#fff'     : '#f8fafc';
+          _soRatioInput.style.color        = on ? '#1e293b'  : '#94a3b8';
+          _soRatioInput.style.borderColor  = on ? '#cbd5e1'  : '#e2e8f0';
+          if (!on) _soDimsEl.textContent = '';
+          else _soUpdateDimsPreview();
+        });
+      }
+
       document.getElementById('_soSnApply').onclick = function() {
         // Read values BEFORE removing dialog (elements are destroyed by dlg.remove())
         var rotVal   = parseInt(document.getElementById('_soRotInput').value, 10) || 0;
-        var scaleChk = document.getElementById('_soApplyScale');
-        var useScale = scaleChk && scaleChk.checked;
+        var chk      = document.getElementById('_soApplyScale');
+        var ratioEl  = document.getElementById('_soScaleRatio');
+        var useScale = chk && chk.checked;
+        var ratio    = ratioEl ? parseInt(ratioEl.value, 10) : 0;
         dlg.remove();
-        var addOpts  = { imageSrc: opts.imageSrc, name: opts.name };
-        if (useScale && scaleResult)
-          addOpts.bounds = _soCalcScaleBounds(scaleResult.widthM, scaleResult.heightM);
+        var addOpts = { imageSrc: opts.imageSrc, name: opts.name };
+        if (useScale && ratio >= 10 && ratio <= 100000 && opts.viewport0) {
+          var ptToMm = 25.4 / 72;
+          var wm = Math.round(opts.viewport0.width  * ptToMm * ratio / 1000);
+          var hm = Math.round(opts.viewport0.height * ptToMm * ratio / 1000);
+          addOpts.bounds = _soCalcScaleBounds(wm, hm);
+        }
         if (rotVal) addOpts.rotation = ((rotVal % 360) + 360) % 360;
         _soAddOverlay(addOpts);
       };
@@ -34017,7 +34076,8 @@ if (window.pdfjsLib) {
 
           // Always show dialog so user can set rotation even when nothing is detected
           _soShowScaleNorthDialog({ imageSrc: dataUrl, name: name,
-                                    scaleResult: scaleResult, northResult: northResult });
+                                    scaleResult: scaleResult, northResult: northResult,
+                                    viewport0: viewport0 });
         }).catch(function(e) {
           console.error('PDF render/text error:', e);
           alert('Could not render the PDF page as an image.');
@@ -34407,6 +34467,13 @@ if (window.pdfjsLib) {
         ovr.bounds = [[nb.getSouth(), nb.getWest()], [nb.getNorth(), nb.getEast()]];
         ovr._layer.setBounds(nb);
         _soApplyRotation(ovr); // re-apply CSS transform after Leaflet repositions the element
+        // Keep toolbar width input in sync when corner handles are dragged
+        var wInput = ovr._toolbar && ovr._toolbar.querySelector('.so-width');
+        if (wInput) {
+          var _bc = nb.getCenter();
+          var _mPerDegLng = 111320 * Math.cos(_bc.lat * Math.PI / 180);
+          wInput.value = Math.round((nb.getEast() - nb.getWest()) * _mPerDegLng);
+        }
       }
 
       // Reposition ALL handles to match current ovr.bounds + ovr.rotation
@@ -34423,6 +34490,7 @@ if (window.pdfjsLib) {
           if (ovr._rotLine) ovr._rotLine.setLatLngs([_soRotHandleLatLng(ovr, 0), hl]);
         }
       }
+      ovr._syncHandles = syncHandles;
 
       // ── corner icons ──
       var cursors = ['sw-resize', 'nw-resize', 'ne-resize', 'se-resize'];
@@ -34591,6 +34659,9 @@ if (window.pdfjsLib) {
         // Update line from rotated top-centre to current drag position
         rotLine.setLatLngs([_soRotHandleLatLng(ovr, 0), [ll.lat, ll.lng]]);
         rotMark.setTooltipContent(Math.round(ovr.rotation) + '\u00b0');
+        // Keep toolbar rotation input in sync
+        var rotInput = ovr._toolbar && ovr._toolbar.querySelector('.so-rotation');
+        if (rotInput) rotInput.value = Math.round(ovr.rotation);
       });
       rotMark.on('dragend', function() {
         // Snap handle back to correct position on the rotation circle
@@ -34632,6 +34703,16 @@ if (window.pdfjsLib) {
 
     function _soShowPlacementToolbar(ovr) {
       if (ovr._toolbar) { ovr._toolbar.remove(); ovr._toolbar = null; }
+
+      // Compute initial overlay width in metres for the Width input
+      var _soTbWidthM = (function() {
+        if (!ovr.bounds) return 0;
+        var b = L.latLngBounds(ovr.bounds[0], ovr.bounds[1]);
+        var c = b.getCenter();
+        return Math.round((b.getEast() - b.getWest()) * 111320 * Math.cos(c.lat * Math.PI / 180));
+      })();
+
+      var numInputStyle = 'border:1px solid #ddd;border-radius:4px;padding:2px 5px;font-size:12px;text-align:center;';
       var tb = document.createElement('div');
       tb.className = 'so-placement-toolbar';
       tb.style.cssText = 'position:absolute;top:54px;right:10px;z-index:1100;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.15);padding:7px 12px;display:flex;align-items:center;gap:10px;font-size:12px;font-family:sans-serif;pointer-events:all;white-space:nowrap;';
@@ -34639,7 +34720,9 @@ if (window.pdfjsLib) {
         '<button class="so-done" style="padding:4px 12px;background:#1d4ed8;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;">Done</button>' +
         '<button class="so-cancel" style="padding:4px 10px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:12px;">Cancel</button>' +
         '<button class="so-toggle-vis" style="padding:4px 10px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:12px;" title="Toggle overlay visibility">' + (ovr.visible ? 'Hide' : 'Show') + '</button>' +
-        '<label style="display:flex;align-items:center;gap:5px;">Opacity&nbsp;<input type="range" class="so-opacity" min="0" max="100" value="' + Math.round(ovr.opacity * 100) + '" style="width:80px;cursor:pointer;"></label>';
+        '<label style="display:flex;align-items:center;gap:5px;">Opacity&nbsp;<input type="range" class="so-opacity" min="0" max="100" value="' + Math.round(ovr.opacity * 100) + '" style="width:80px;cursor:pointer;"></label>' +
+        '<label style="display:flex;align-items:center;gap:4px;">Rotation&nbsp;<input type="number" class="so-rotation" min="0" max="359" value="' + Math.round(ovr.rotation || 0) + '" style="width:52px;' + numInputStyle + '">°</label>' +
+        '<label style="display:flex;align-items:center;gap:4px;">Width&nbsp;<input type="number" class="so-width" min="1" step="1" value="' + _soTbWidthM + '" style="width:62px;' + numInputStyle + '">&nbsp;m</label>';
 
       tb.querySelector('.so-done').onclick = function() {
         ovr.locked = true;
@@ -34656,6 +34739,33 @@ if (window.pdfjsLib) {
       tb.querySelector('.so-opacity').oninput = function() {
         ovr.opacity = this.value / 100;
         if (ovr._layer) ovr._layer.setOpacity(ovr.visible ? ovr.opacity : 0);
+      };
+      tb.querySelector('.so-rotation').onchange = function() {
+        var val = parseInt(this.value, 10) || 0;
+        ovr.rotation = ((val % 360) + 360) % 360;
+        this.value = Math.round(ovr.rotation);
+        _soApplyRotation(ovr);
+        if (ovr._syncHandles) ovr._syncHandles();
+        if (ovr._rotHandle) ovr._rotHandle.setTooltipContent(Math.round(ovr.rotation) + '°');
+      };
+      tb.querySelector('.so-width').onchange = function() {
+        var newWidthM = parseFloat(this.value);
+        if (!newWidthM || newWidthM <= 0 || !ovr.bounds || !ovr._layer) return;
+        var b = L.latLngBounds(ovr.bounds[0], ovr.bounds[1]);
+        var c = b.getCenter();
+        var mPerDegLat = 111320;
+        var mPerDegLng = 111320 * Math.cos(c.lat * Math.PI / 180);
+        var currentWidthM  = (b.getEast()  - b.getWest())  * mPerDegLng;
+        var currentHeightM = (b.getNorth() - b.getSouth()) * mPerDegLat;
+        var aspectM = currentHeightM / currentWidthM;
+        var newHeightM = newWidthM * aspectM;
+        var halfLng = (newWidthM  / 2) / mPerDegLng;
+        var halfLat = (newHeightM / 2) / mPerDegLat;
+        var newBounds = L.latLngBounds([c.lat - halfLat, c.lng - halfLng], [c.lat + halfLat, c.lng + halfLng]);
+        ovr.bounds = [[newBounds.getSouth(), newBounds.getWest()], [newBounds.getNorth(), newBounds.getEast()]];
+        ovr._layer.setBounds(newBounds);
+        _soApplyRotation(ovr);
+        if (ovr._syncHandles) ovr._syncHandles();
       };
 
       var mc = map.getContainer();
@@ -47401,7 +47511,7 @@ if (window.pdfjsLib) {
           <li><strong>Custom buildings</strong> &mdash; user-drawn occluders for proposed structures</li>
           <li><strong>Barriers</strong> &mdash; draw, set height + base elevation; can be suppressed without deleting</li>
           <li><strong>Ground absorption zones</strong> &mdash; per-zone <em>G</em> factor (0&nbsp;=&nbsp;hard, 1&nbsp;=&nbsp;soft); overrides global <em>G</em> in those areas</li>
-          <li><strong>Site plan overlay</strong> &mdash; import PDF / PNG / JPEG; opacity, scale, rotation; PDFs auto-scan for project name and suggested sources</li>
+          <li><strong>Site plan overlay (pdf)</strong> &mdash; import PDF / PNG / JPEG; opacity, scale, rotation; PDFs auto-scan for project name and suggested sources</li>
           <li><strong>Move</strong> &mdash; activate move mode to drag any barrier, building, or source to a new position</li>
         </ul>
         <div class="help-sub">Visibility</div>
@@ -47589,7 +47699,7 @@ if (window.pdfjsLib) {
     <button id="suggestPanelClose" title="Close">&#x2715;</button>
   </div>
   <div id="suggestPanelContent">
-    <div class="suggest-empty" id="suggestEmptyState">No PDF uploaded yet.<br>Upload a site plan via <b>Tools &rarr; Site plan overlay</b>.</div>
+    <div class="suggest-empty" id="suggestEmptyState">No PDF uploaded yet.<br>Upload a site plan via <b>Tools &rarr; Site plan overlay (pdf)</b>.</div>
     <div class="suggest-group" id="suggestGroupsContainer" style="display:none;"></div>
   </div>
   <div id="suggestPanelFooter" style="display:none;">
@@ -47825,7 +47935,7 @@ if (window.pdfjsLib) {
     /* No PDF — show all facilities with note */
     if (groups === null) {
       emptyEl.innerHTML = 'No PDF loaded \u2014 showing all facility groups.<br>'
-        + '<small>Upload a site plan via <b>Tools &rarr; Site plan overlay</b> to auto-detect.</small>';
+        + '<small>Upload a site plan via <b>Tools &rarr; Site plan overlay (pdf)</b> to auto-detect.</small>';
       emptyEl.style.display = '';
       var allHtml = '';
       FACILITY_SUGGESTIONS.forEach(function(fac, fi) {
